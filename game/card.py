@@ -27,8 +27,11 @@ class CardSubtype(Enum):
     """卡牌子类型枚举"""
     # 基本牌子类型
     ATTACK = "attack"         # 杀
+    FIRE_ATTACK = "fire_attack"   # 火杀
+    THUNDER_ATTACK = "thunder_attack"  # 雷杀
     DODGE = "dodge"           # 闪
     HEAL = "heal"             # 桃
+    ALCOHOL = "alcohol"       # 酒
     
     # 锦囊牌子类型
     SINGLE_TARGET = "single_target"   # 单体锦囊
@@ -37,12 +40,22 @@ class CardSubtype(Enum):
     ALL = "all"                       # 全体锦囊
     COUNTER = "counter"               # 反制锦囊
     DELAY = "delay"                   # 延时锦囊
+    CHAIN = "chain"                   # 连环锦囊（铁索连环）
     
     # 装备牌子类型
     WEAPON = "weapon"         # 武器
     ARMOR = "armor"           # 防具
+    TREASURE = "treasure"     # 宝物
     HORSE_PLUS = "horse_plus" # +1马（防御马）
     HORSE_MINUS = "horse_minus"  # -1马（攻击马）
+
+
+class DamageType(Enum):
+    """伤害类型枚举 (军争篇)"""
+    NORMAL = "normal"       # 普通伤害
+    FIRE = "fire"           # 火焰伤害
+    THUNDER = "thunder"     # 雷电伤害
+    LOST_HP = "lost_hp"     # 体力流失（不可传导）
 
 
 class CardSuit(Enum):

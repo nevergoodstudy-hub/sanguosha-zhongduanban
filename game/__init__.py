@@ -8,7 +8,7 @@
 - 新增动作/请求系统 (actions.py) 实现 UI/逻辑分离
 """
 
-from .card import Card, CardType, CardSuit, Deck
+from .card import Card, CardType, CardSubtype, CardSuit, Deck, DamageType
 from .hero import Hero, Skill, Kingdom
 from .player import Player, Identity
 from .engine import GameEngine, GamePhase, GameState
@@ -22,7 +22,7 @@ from .actions import (
 
 __all__ = [
     # 卡牌系统
-    'Card', 'CardType', 'CardSuit', 'Deck',
+    'Card', 'CardType', 'CardSubtype', 'CardSuit', 'Deck', 'DamageType',
     # 武将系统
     'Hero', 'Skill', 'Kingdom',
     # 玩家系统

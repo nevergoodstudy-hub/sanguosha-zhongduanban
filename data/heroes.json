@@ -76,18 +76,26 @@
     },
     {
       "id": "guanyu",
-      "name": "关羽",
+      "name": "界关羽",
       "kingdom": "shu",
       "max_hp": 4,
       "gender": "male",
-      "title": "美髯公",
+      "title": "武神",
       "skills": [
         {
           "id": "wusheng",
           "name": "武圣",
-          "description": "你可以将一张红色牌当【杀】使用或打出。",
+          "description": "你可以将一张红色牌当【杀】使用或打出；你使用方块【杀】无距离限制。",
           "type": "transform",
           "target_card": "sha"
+        },
+        {
+          "id": "yijue",
+          "name": "义绝",
+          "description": "出牌阶段限一次，你可以弃置一张牌并选择一名有手牌的其他角色，令其展示一张手牌。若此牌为黑色，则其本回合非锁定技失效且不能使用或打出手牌；若此牌为红色，则你获得此牌。",
+          "type": "active",
+          "phase": "play",
+          "limit_per_turn": 1
         }
       ]
     },
@@ -176,7 +184,7 @@
     },
     {
       "id": "zhaoyun",
-      "name": "赵云",
+      "name": "界赵云",
       "kingdom": "shu",
       "max_hp": 4,
       "gender": "male",
@@ -187,6 +195,13 @@
           "name": "龙胆",
           "description": "你可以将【杀】当【闪】使用或打出，或将【闪】当【杀】使用或打出。",
           "type": "transform"
+        },
+        {
+          "id": "yajiao",
+          "name": "涯角",
+          "description": "当你于回合外使用或打出手牌时，你可以亮出牌堆顶的一张牌。若两牌类别相同，你可将之交给一名角色；若不同，你可将之置入弃牌堆。",
+          "type": "trigger",
+          "timing": "card_used_outside_turn"
         }
       ]
     },
@@ -278,7 +293,7 @@
     },
     {
       "id": "zhangliao",
-      "name": "张辽",
+      "name": "界张辽",
       "kingdom": "wei",
       "max_hp": 4,
       "gender": "male",
@@ -287,7 +302,7 @@
         {
           "id": "tuxi",
           "name": "突袭",
-          "description": "摸牌阶段，你可以少摸任意张牌，然后获得等量的其他角色各一张手牌。",
+          "description": "摸牌阶段，你可以少摸任意张牌（至少一张），然后选择等量的其他角色，获得这些角色各一张手牌。",
           "type": "active",
           "phase": "draw"
         }

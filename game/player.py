@@ -225,6 +225,11 @@ class Player:
     # 濒死状态
     is_dying: bool = field(default=False, repr=False)
     
+    # 军争篇状态
+    is_chained: bool = field(default=False, repr=False)  # 铁索连环状态
+    is_drunk: bool = field(default=False, repr=False)    # 酒状态（下一张杀伤害+1）
+    alcohol_used: bool = field(default=False, repr=False)  # 本回合是否使用过酒
+    
     def __post_init__(self):
         """初始化后处理"""
         if isinstance(self.identity, str):
@@ -380,8 +385,43 @@ class Player:
         """重置回合状态"""
         self.sha_count = 0
         self.skill_used.clear()
+        self.is_drunk = False
+        self.alcohol_used = False
         if self.hero:
             self.hero.reset_skills()
+    
+    def toggle_chain(self) -> None:
+        """切换铁索连环状态"""
+        self.is_chained = not self.is_chained
+    
+    def break_chain(self) -> None:
+        """解除铁索连环状态"""
+        self.is_chained = False
+    
+    def use_alcohol(self) -> bool:
+        """
+        使用酒
+        
+        Returns:
+            是否成功使用
+        """
+        if not self.alcohol_used:
+            self.is_drunk = True
+            self.alcohol_used = True
+            return True
+        return False
+    
+    def consume_drunk(self) -> bool:
+        """
+        消耗酒状态（使用杀时调用）
+        
+        Returns:
+            是否有酒加成
+        """
+        if self.is_drunk:
+            self.is_drunk = False
+            return True
+        return False
     
     def can_use_sha(self) -> bool:
         """检查是否可以使用杀"""

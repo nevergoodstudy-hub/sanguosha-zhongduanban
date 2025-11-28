@@ -429,6 +429,186 @@
       "number": 12,
       "description": "出牌阶段，对自己使用。回复1点体力。",
       "count": 1
+    },
+    {
+      "id": "jiu_spade_3",
+      "name": "酒",
+      "type": "basic",
+      "subtype": "alcohol",
+      "suit": "spade",
+      "number": 3,
+      "description": "出牌阶段使用，本回合使用的下一张【杀】伤害+1；濒死状态使用，回复1点体力。每回合限用一次。",
+      "count": 1
+    },
+    {
+      "id": "jiu_spade_9",
+      "name": "酒",
+      "type": "basic",
+      "subtype": "alcohol",
+      "suit": "spade",
+      "number": 9,
+      "description": "出牌阶段使用，本回合使用的下一张【杀】伤害+1；濒死状态使用，回复1点体力。每回合限用一次。",
+      "count": 1
+    },
+    {
+      "id": "jiu_club_3",
+      "name": "酒",
+      "type": "basic",
+      "subtype": "alcohol",
+      "suit": "club",
+      "number": 3,
+      "description": "出牌阶段使用，本回合使用的下一张【杀】伤害+1；濒死状态使用，回复1点体力。每回合限用一次。",
+      "count": 1
+    },
+    {
+      "id": "jiu_club_9",
+      "name": "酒",
+      "type": "basic",
+      "subtype": "alcohol",
+      "suit": "club",
+      "number": 9,
+      "description": "出牌阶段使用，本回合使用的下一张【杀】伤害+1；濒死状态使用，回复1点体力。每回合限用一次。",
+      "count": 1
+    },
+    {
+      "id": "jiu_diamond_3",
+      "name": "酒",
+      "type": "basic",
+      "subtype": "alcohol",
+      "suit": "diamond",
+      "number": 3,
+      "description": "出牌阶段使用，本回合使用的下一张【杀】伤害+1；濒死状态使用，回复1点体力。每回合限用一次。",
+      "count": 1
+    },
+    {
+      "id": "huosha_heart_4",
+      "name": "火杀",
+      "type": "basic",
+      "subtype": "fire_attack",
+      "suit": "heart",
+      "number": 4,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点火焰伤害。",
+      "count": 1
+    },
+    {
+      "id": "huosha_heart_7",
+      "name": "火杀",
+      "type": "basic",
+      "subtype": "fire_attack",
+      "suit": "heart",
+      "number": 7,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点火焰伤害。",
+      "count": 1
+    },
+    {
+      "id": "huosha_diamond_4",
+      "name": "火杀",
+      "type": "basic",
+      "subtype": "fire_attack",
+      "suit": "diamond",
+      "number": 4,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点火焰伤害。",
+      "count": 1
+    },
+    {
+      "id": "huosha_diamond_5",
+      "name": "火杀",
+      "type": "basic",
+      "subtype": "fire_attack",
+      "suit": "diamond",
+      "number": 5,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点火焰伤害。",
+      "count": 1
+    },
+    {
+      "id": "leisha_spade_4",
+      "name": "雷杀",
+      "type": "basic",
+      "subtype": "thunder_attack",
+      "suit": "spade",
+      "number": 4,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点雷电伤害。",
+      "count": 1
+    },
+    {
+      "id": "leisha_spade_5",
+      "name": "雷杀",
+      "type": "basic",
+      "subtype": "thunder_attack",
+      "suit": "spade",
+      "number": 5,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点雷电伤害。",
+      "count": 1
+    },
+    {
+      "id": "leisha_spade_6",
+      "name": "雷杀",
+      "type": "basic",
+      "subtype": "thunder_attack",
+      "suit": "spade",
+      "number": 6,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点雷电伤害。",
+      "count": 1
+    },
+    {
+      "id": "leisha_spade_7",
+      "name": "雷杀",
+      "type": "basic",
+      "subtype": "thunder_attack",
+      "suit": "spade",
+      "number": 7,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点雷电伤害。",
+      "count": 1
+    },
+    {
+      "id": "leisha_spade_8",
+      "name": "雷杀",
+      "type": "basic",
+      "subtype": "thunder_attack",
+      "suit": "spade",
+      "number": 8,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点雷电伤害。",
+      "count": 1
+    },
+    {
+      "id": "leisha_club_5",
+      "name": "雷杀",
+      "type": "basic",
+      "subtype": "thunder_attack",
+      "suit": "club",
+      "number": 5,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点雷电伤害。",
+      "count": 1
+    },
+    {
+      "id": "leisha_club_6",
+      "name": "雷杀",
+      "type": "basic",
+      "subtype": "thunder_attack",
+      "suit": "club",
+      "number": 6,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点雷电伤害。",
+      "count": 1
+    },
+    {
+      "id": "leisha_club_7",
+      "name": "雷杀",
+      "type": "basic",
+      "subtype": "thunder_attack",
+      "suit": "club",
+      "number": 7,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点雷电伤害。",
+      "count": 1
+    },
+    {
+      "id": "leisha_club_8",
+      "name": "雷杀",
+      "type": "basic",
+      "subtype": "thunder_attack",
+      "suit": "club",
+      "number": 8,
+      "description": "出牌阶段，对攻击范围内的一名角色使用。造成1点雷电伤害。",
+      "count": 1
     }
   ],
   "trick_cards": [
@@ -771,6 +951,76 @@
       "number": 12,
       "description": "出牌阶段，对自己使用。将此牌置于你的判定区。判定阶段进行判定：若结果为黑桃2-9，你受到3点雷电伤害；无论结果如何，将此牌移动到下家的判定区。",
       "count": 1
+    },
+    {
+      "id": "tiesuo_spade_J",
+      "name": "铁索连环",
+      "type": "trick",
+      "subtype": "chain",
+      "suit": "spade",
+      "number": 11,
+      "description": "出牌阶段，选择1至2名角色，横置或重置其武将牌。处于连环状态的角色受到属性伤害后，会传导给其他连环角色。可重铸。",
+      "count": 1
+    },
+    {
+      "id": "tiesuo_spade_Q",
+      "name": "铁索连环",
+      "type": "trick",
+      "subtype": "chain",
+      "suit": "spade",
+      "number": 12,
+      "description": "出牌阶段，选择1至2名角色，横置或重置其武将牌。处于连环状态的角色受到属性伤害后，会传导给其他连环角色。可重铸。",
+      "count": 1
+    },
+    {
+      "id": "tiesuo_club_J",
+      "name": "铁索连环",
+      "type": "trick",
+      "subtype": "chain",
+      "suit": "club",
+      "number": 11,
+      "description": "出牌阶段，选择1至2名角色，横置或重置其武将牌。处于连环状态的角色受到属性伤害后，会传导给其他连环角色。可重铸。",
+      "count": 1
+    },
+    {
+      "id": "tiesuo_club_Q",
+      "name": "铁索连环",
+      "type": "trick",
+      "subtype": "chain",
+      "suit": "club",
+      "number": 12,
+      "description": "出牌阶段，选择1至2名角色，横置或重置其武将牌。处于连环状态的角色受到属性伤害后，会传导给其他连环角色。可重铸。",
+      "count": 1
+    },
+    {
+      "id": "huogong_heart_2",
+      "name": "火攻",
+      "type": "trick",
+      "subtype": "single_target",
+      "suit": "heart",
+      "number": 2,
+      "description": "出牌阶段，对一名有手牌的角色使用。目标角色展示一张手牌，若你弃置一张与之花色相同的手牌，则对其造成1点火焰伤害。",
+      "count": 1
+    },
+    {
+      "id": "huogong_heart_3",
+      "name": "火攻",
+      "type": "trick",
+      "subtype": "single_target",
+      "suit": "heart",
+      "number": 3,
+      "description": "出牌阶段，对一名有手牌的角色使用。目标角色展示一张手牌，若你弃置一张与之花色相同的手牌，则对其造成1点火焰伤害。",
+      "count": 1
+    },
+    {
+      "id": "huogong_diamond_Q",
+      "name": "火攻",
+      "type": "trick",
+      "subtype": "single_target",
+      "suit": "diamond",
+      "number": 12,
+      "description": "出牌阶段，对一名有手牌的角色使用。目标角色展示一张手牌，若你弃置一张与之花色相同的手牌，则对其造成1点火焰伤害。",
+      "count": 1
     }
   ],
   "equipment_cards": [
@@ -956,6 +1206,58 @@
       "number": 13,
       "description": "-1马：其他角色与你的距离+1。",
       "distance_modifier": -1,
+      "count": 1
+    },
+    {
+      "id": "tengjia_spade_2",
+      "name": "藤甲",
+      "type": "equipment",
+      "subtype": "armor",
+      "suit": "spade",
+      "number": 2,
+      "description": "锁定技，【南蛮入侵】、【万箭齐发】和普通【杀】对你无效；当你受到火焰伤害时，此伤害+1。",
+      "count": 1
+    },
+    {
+      "id": "tengjia_club_2",
+      "name": "藤甲",
+      "type": "equipment",
+      "subtype": "armor",
+      "suit": "club",
+      "number": 2,
+      "description": "锁定技，【南蛮入侵】、【万箭齐发】和普通【杀】对你无效；当你受到火焰伤害时，此伤害+1。",
+      "count": 1
+    },
+    {
+      "id": "baiyinshizi_club_A",
+      "name": "白银狮子",
+      "type": "equipment",
+      "subtype": "armor",
+      "suit": "club",
+      "number": 1,
+      "description": "锁定技，当你受到大于1点的伤害时，防止多余的伤害；当你失去装备区里的此牌时，你回复1点体力。",
+      "count": 1
+    },
+    {
+      "id": "gudingdao_spade_A",
+      "name": "古锭刀",
+      "type": "equipment",
+      "subtype": "weapon",
+      "suit": "spade",
+      "number": 1,
+      "description": "攻击范围：2。锁定技，当你使用【杀】对目标角色造成伤害时，若其没有手牌，此伤害+1。",
+      "range": 2,
+      "count": 1
+    },
+    {
+      "id": "zhuqueyushan_diamond_A",
+      "name": "朱雀羽扇",
+      "type": "equipment",
+      "subtype": "weapon",
+      "suit": "diamond",
+      "number": 1,
+      "description": "攻击范围：4。你可以将普通【杀】当火【杀】使用。",
+      "range": 4,
       "count": 1
     }
   ]
