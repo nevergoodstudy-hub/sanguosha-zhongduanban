@@ -14,10 +14,12 @@ from pathlib import Path
 from .card import Card, CardType, CardSubtype, CardSuit, Deck, CardName
 from .hero import Hero, HeroRepository, Kingdom, Skill, SkillType
 from .player import Player, Identity, EquipmentSlot
+from .events import EventBus, EventType, GameEvent, EventEmitter
 
 if TYPE_CHECKING:
     from ai.bot import AIBot
     from ui.terminal import TerminalUI
+    from .skill import SkillSystem
 
 
 class GamePhase(Enum):
@@ -59,6 +61,11 @@ class GameEngine:
     """
     游戏引擎类
     负责管理整个游戏流程
+    
+    重构说明：
+    - 集成事件总线系统，实现模块解耦
+    - UI 通过订阅事件来获取游戏状态变化
+    - 技能系统通过监听事件来触发
     """
     
     def __init__(self, data_dir: str = "data"):
@@ -70,6 +77,9 @@ class GameEngine:
         """
         # 获取正确的数据目录路径
         base_path = Path(__file__).parent.parent / data_dir
+        
+        # 事件总线（核心解耦组件）
+        self.event_bus: EventBus = EventBus()
         
         # 核心组件
         self.deck: Deck = Deck(str(base_path / "cards.json"))
@@ -86,7 +96,7 @@ class GameEngine:
         self.round_count: int = 0
         self.winner_identity: Optional[Identity] = None
         
-        # 事件日志
+        # 事件日志（保留兼容）
         self.event_log: List[GameEvent] = []
         self.max_log_size: int = 100
         
@@ -111,31 +121,28 @@ class GameEngine:
                   card: Optional[Card] = None,
                   **extra_data) -> None:
         """
-        记录游戏事件
+        记录游戏事件并通过事件总线发布
         
         Args:
-            event_type: 事件类型
+            event_type: 事件类型（字符串，兼容旧代码）
             message: 事件消息
             source: 事件来源玩家
             target: 事件目标玩家
             card: 相关卡牌
             **extra_data: 额外数据
         """
-        event = GameEvent(
-            event_type=event_type,
+        # 通过事件总线发布日志消息
+        self.event_bus.emit(
+            EventType.LOG_MESSAGE,
             message=message,
+            log_type=event_type,
             source=source,
             target=target,
             card=card,
-            extra_data=extra_data
+            **extra_data
         )
-        self.event_log.append(event)
         
-        # 限制日志大小
-        if len(self.event_log) > self.max_log_size:
-            self.event_log = self.event_log[-self.max_log_size:]
-        
-        # 如果有UI，显示日志
+        # 兼容旧的 UI 调用方式
         if self.ui:
             self.ui.show_log(message)
     
