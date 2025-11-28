@@ -1,0 +1,566 @@
+{
+  "heroes": [
+    {
+      "id": "liubei",
+      "name": "刘备",
+      "kingdom": "shu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "乱世的枭雄",
+      "skills": [
+        {
+          "id": "rende",
+          "name": "仁德",
+          "description": "出牌阶段，你可以将任意数量的手牌交给其他角色。每回合你以此法给出第二张牌时，回复1点体力。",
+          "type": "active",
+          "phase": "play"
+        },
+        {
+          "id": "jijiang",
+          "name": "激将",
+          "description": "主公技。当你需要使用或打出【杀】时，你可以令其他蜀势力角色选择是否打出一张【杀】。",
+          "type": "trigger",
+          "is_lord_skill": true
+        }
+      ]
+    },
+    {
+      "id": "caocao",
+      "name": "曹操",
+      "kingdom": "wei",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "魏武帝",
+      "skills": [
+        {
+          "id": "jianxiong",
+          "name": "奸雄",
+          "description": "当你受到伤害后，你可以获得造成伤害的牌。",
+          "type": "trigger",
+          "timing": "after_damaged"
+        },
+        {
+          "id": "hujia",
+          "name": "护驾",
+          "description": "主公技。当你需要使用或打出【闪】时，你可以令其他魏势力角色选择是否打出一张【闪】。",
+          "type": "trigger",
+          "is_lord_skill": true
+        }
+      ]
+    },
+    {
+      "id": "sunquan",
+      "name": "孙权",
+      "kingdom": "wu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "年轻的贤君",
+      "skills": [
+        {
+          "id": "zhiheng",
+          "name": "制衡",
+          "description": "出牌阶段限一次，你可以弃置任意数量的牌，然后摸等量的牌。",
+          "type": "active",
+          "phase": "play",
+          "limit_per_turn": 1
+        },
+        {
+          "id": "jiuyuan",
+          "name": "救援",
+          "description": "主公技。锁定技。其他吴势力角色对你使用【桃】时，你额外回复1点体力。",
+          "type": "trigger",
+          "is_lord_skill": true,
+          "is_compulsory": true
+        }
+      ]
+    },
+    {
+      "id": "guanyu",
+      "name": "关羽",
+      "kingdom": "shu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "美髯公",
+      "skills": [
+        {
+          "id": "wusheng",
+          "name": "武圣",
+          "description": "你可以将一张红色牌当【杀】使用或打出。",
+          "type": "transform",
+          "target_card": "sha"
+        }
+      ]
+    },
+    {
+      "id": "zhangfei",
+      "name": "张飞",
+      "kingdom": "shu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "万夫不当",
+      "skills": [
+        {
+          "id": "paoxiao",
+          "name": "咆哮",
+          "description": "锁定技。出牌阶段，你使用【杀】无次数限制。",
+          "type": "passive",
+          "is_compulsory": true
+        }
+      ]
+    },
+    {
+      "id": "zhugeliang",
+      "name": "诸葛亮",
+      "kingdom": "shu",
+      "max_hp": 3,
+      "gender": "male",
+      "title": "迟暮的丞相",
+      "skills": [
+        {
+          "id": "guanxing",
+          "name": "观星",
+          "description": "准备阶段，你可以观看牌堆顶的X张牌（X为存活角色数且至多为5），然后将这些牌以任意顺序放置于牌堆顶或牌堆底。",
+          "type": "active",
+          "phase": "prepare"
+        },
+        {
+          "id": "kongcheng",
+          "name": "空城",
+          "description": "锁定技。若你没有手牌，你不是【杀】和【决斗】的合法目标。",
+          "type": "passive",
+          "is_compulsory": true
+        }
+      ]
+    },
+    {
+      "id": "zhouyu",
+      "name": "周瑜",
+      "kingdom": "wu",
+      "max_hp": 3,
+      "gender": "male",
+      "title": "大都督",
+      "skills": [
+        {
+          "id": "yingzi",
+          "name": "英姿",
+          "description": "摸牌阶段，你可以多摸一张牌。",
+          "type": "trigger",
+          "phase": "draw"
+        },
+        {
+          "id": "fanjian",
+          "name": "反间",
+          "description": "出牌阶段限一次，你可以选择一名其他角色并展示一张手牌，令其选择一种花色后获得此牌。若此牌花色与其所选花色不同，你对其造成1点伤害。",
+          "type": "active",
+          "phase": "play",
+          "limit_per_turn": 1
+        }
+      ]
+    },
+    {
+      "id": "lvbu",
+      "name": "吕布",
+      "kingdom": "qun",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "武的化身",
+      "skills": [
+        {
+          "id": "wushuang",
+          "name": "无双",
+          "description": "锁定技。你使用【杀】指定目标后，目标角色需使用两张【闪】才能抵消此【杀】；你使用【决斗】指定目标后，或成为【决斗】的目标后，对方每次需打出两张【杀】。",
+          "type": "passive",
+          "is_compulsory": true
+        }
+      ]
+    },
+    {
+      "id": "zhaoyun",
+      "name": "赵云",
+      "kingdom": "shu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "少年将军",
+      "skills": [
+        {
+          "id": "longdan",
+          "name": "龙胆",
+          "description": "你可以将【杀】当【闪】使用或打出，或将【闪】当【杀】使用或打出。",
+          "type": "transform"
+        }
+      ]
+    },
+    {
+      "id": "machao",
+      "name": "马超",
+      "kingdom": "shu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "一骑当千",
+      "skills": [
+        {
+          "id": "mashu",
+          "name": "马术",
+          "description": "锁定技。你计算与其他角色的距离-1。",
+          "type": "passive",
+          "is_compulsory": true
+        },
+        {
+          "id": "tieji",
+          "name": "铁骑",
+          "description": "当你使用【杀】指定目标后，你可以进行判定，若结果为红色，该角色不能使用【闪】响应此【杀】。",
+          "type": "trigger"
+        }
+      ]
+    },
+    {
+      "id": "huangyueying",
+      "name": "黄月英",
+      "kingdom": "shu",
+      "max_hp": 3,
+      "gender": "female",
+      "title": "归隐的杰女",
+      "skills": [
+        {
+          "id": "jizhi",
+          "name": "集智",
+          "description": "当你使用非延时锦囊牌时，你可以摸一张牌。",
+          "type": "trigger"
+        },
+        {
+          "id": "qicai",
+          "name": "奇才",
+          "description": "锁定技。你使用锦囊牌无距离限制。",
+          "type": "passive",
+          "is_compulsory": true
+        }
+      ]
+    },
+    {
+      "id": "simayi",
+      "name": "司马懿",
+      "kingdom": "wei",
+      "max_hp": 3,
+      "gender": "male",
+      "title": "狼顾之鬼",
+      "skills": [
+        {
+          "id": "fankui",
+          "name": "反馈",
+          "description": "当你受到伤害后，你可以获得伤害来源的一张牌。",
+          "type": "trigger",
+          "timing": "after_damaged"
+        },
+        {
+          "id": "guicai",
+          "name": "鬼才",
+          "description": "在一名角色的判定牌生效前，你可以打出一张手牌代替之。",
+          "type": "trigger"
+        }
+      ]
+    },
+    {
+      "id": "xiahoudun",
+      "name": "夏侯惇",
+      "kingdom": "wei",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "独眼的罗刹",
+      "skills": [
+        {
+          "id": "ganglie",
+          "name": "刚烈",
+          "description": "当你受到伤害后，你可以进行判定，若结果不为红桃，伤害来源须弃置两张手牌或受到1点伤害。",
+          "type": "trigger",
+          "timing": "after_damaged"
+        }
+      ]
+    },
+    {
+      "id": "zhangliao",
+      "name": "张辽",
+      "kingdom": "wei",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "前将军",
+      "skills": [
+        {
+          "id": "tuxi",
+          "name": "突袭",
+          "description": "摸牌阶段，你可以少摸任意张牌，然后获得等量的其他角色各一张手牌。",
+          "type": "active",
+          "phase": "draw"
+        }
+      ]
+    },
+    {
+      "id": "daqiao",
+      "name": "大乔",
+      "kingdom": "wu",
+      "max_hp": 3,
+      "gender": "female",
+      "title": "矜持之花",
+      "skills": [
+        {
+          "id": "guose",
+          "name": "国色",
+          "description": "你可以将一张方块牌当【乐不思蜀】使用。",
+          "type": "transform"
+        },
+        {
+          "id": "liuli",
+          "name": "流离",
+          "description": "当你成为【杀】的目标时，你可以弃置一张牌并选择你攻击范围内的一名其他角色，将此【杀】转移给该角色。",
+          "type": "trigger"
+        }
+      ]
+    },
+    {
+      "id": "huatuo",
+      "name": "华佗",
+      "kingdom": "qun",
+      "max_hp": 3,
+      "gender": "male",
+      "title": "神医",
+      "skills": [
+        {
+          "id": "qingnang",
+          "name": "青囊",
+          "description": "出牌阶段限一次，你可以弃置一张手牌，令一名角色回复1点体力。",
+          "type": "active",
+          "phase": "play",
+          "limit_per_turn": 1
+        },
+        {
+          "id": "jijiu",
+          "name": "急救",
+          "description": "你的回合外，你可以将一张红色牌当【桃】使用。",
+          "type": "transform"
+        }
+      ]
+    },
+    {
+      "id": "diaochan",
+      "name": "貂蝉",
+      "kingdom": "qun",
+      "max_hp": 3,
+      "gender": "female",
+      "title": "绝世的舞姬",
+      "skills": [
+        {
+          "id": "lijian",
+          "name": "离间",
+          "description": "出牌阶段限一次，你可以弃置一张牌并选择两名其他男性角色，令其中一名角色视为对另一名角色使用一张【决斗】。",
+          "type": "active",
+          "phase": "play",
+          "limit_per_turn": 1
+        },
+        {
+          "id": "biyue",
+          "name": "闭月",
+          "description": "结束阶段，你可以摸一张牌。",
+          "type": "trigger",
+          "timing": "end"
+        }
+      ]
+    },
+    {
+      "id": "huangzhong",
+      "name": "黄忠",
+      "kingdom": "shu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "老当益壮",
+      "skills": [
+        {
+          "id": "liegong",
+          "name": "烈弓",
+          "description": "当你于出牌阶段内使用【杀】指定一个目标后，若该角色的手牌数不小于你的体力值，或不大于你的攻击范围，则其不能使用【闪】响应此【杀】。",
+          "type": "trigger"
+        }
+      ]
+    },
+    {
+      "id": "weiyan",
+      "name": "魏延",
+      "kingdom": "shu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "嗜血的独狼",
+      "skills": [
+        {
+          "id": "kuanggu",
+          "name": "狂骨",
+          "description": "当你对距离1以内的一名角色造成1点伤害后，你可以回复1点体力。",
+          "type": "trigger"
+        }
+      ]
+    },
+    {
+      "id": "xuhuang",
+      "name": "徐晃",
+      "kingdom": "wei",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "周亚夫之风",
+      "skills": [
+        {
+          "id": "duanliang",
+          "name": "断粮",
+          "description": "你可以将一张黑色基本牌或黑色装备牌当【兵粮寸断】使用；你使用【兵粮寸断】的距离限制为+1。",
+          "type": "transform"
+        }
+      ]
+    },
+    {
+      "id": "caoren",
+      "name": "曹仁",
+      "kingdom": "wei",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "大将军",
+      "skills": [
+        {
+          "id": "jushou",
+          "name": "据守",
+          "description": "结束阶段，你可以摸三张牌，然后将你的武将牌翻面。",
+          "type": "trigger",
+          "timing": "end"
+        }
+      ]
+    },
+    {
+      "id": "ganning",
+      "name": "甘宁",
+      "kingdom": "wu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "锦帆游侠",
+      "skills": [
+        {
+          "id": "qixi",
+          "name": "奇袭",
+          "description": "你可以将一张黑色牌当【过河拆桥】使用。",
+          "type": "transform"
+        }
+      ]
+    },
+    {
+      "id": "lvmeng",
+      "name": "吕蒙",
+      "kingdom": "wu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "白衣渡江",
+      "skills": [
+        {
+          "id": "keji",
+          "name": "克己",
+          "description": "若你未于出牌阶段内使用或打出过【杀】，你可以跳过弃牌阶段。",
+          "type": "trigger"
+        }
+      ]
+    },
+    {
+      "id": "huanggai",
+      "name": "黄盖",
+      "kingdom": "wu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "轻身为国",
+      "skills": [
+        {
+          "id": "kurou",
+          "name": "苦肉",
+          "description": "出牌阶段，你可以失去1点体力，然后摸两张牌。",
+          "type": "active",
+          "phase": "play"
+        }
+      ]
+    },
+    {
+      "id": "xiahouyuan",
+      "name": "夏侯渊",
+      "kingdom": "wei",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "疾行的猎豹",
+      "skills": [
+        {
+          "id": "shensu",
+          "name": "神速",
+          "description": "你可以做出如下选择：1.跳过判定阶段和摸牌阶段；2.跳过出牌阶段并弃置一张装备牌。你每做出一项选择，视为对一名其他角色使用一张【杀】。",
+          "type": "active"
+        }
+      ]
+    },
+    {
+      "id": "sunshangxiang",
+      "name": "孙尚香",
+      "kingdom": "wu",
+      "max_hp": 3,
+      "gender": "female",
+      "title": "弓腰姬",
+      "skills": [
+        {
+          "id": "jieyin",
+          "name": "结姻",
+          "description": "出牌阶段限一次，你可以弃置两张手牌并选择一名已受伤的男性角色，你与其各回复1点体力。",
+          "type": "active",
+          "phase": "play",
+          "limit_per_turn": 1
+        },
+        {
+          "id": "xiaoji",
+          "name": "枭姬",
+          "description": "当你失去装备区里的牌后，你可以摸两张牌。",
+          "type": "trigger"
+        }
+      ]
+    }
+  ],
+  "kingdoms": {
+    "wei": {
+      "name": "魏",
+      "color": "blue",
+      "description": "曹魏势力"
+    },
+    "shu": {
+      "name": "蜀",
+      "color": "red",
+      "description": "蜀汉势力"
+    },
+    "wu": {
+      "name": "吴",
+      "color": "green",
+      "description": "东吴势力"
+    },
+    "qun": {
+      "name": "群",
+      "color": "yellow",
+      "description": "群雄势力"
+    }
+  },
+  "identities": {
+    "lord": {
+      "name": "主公",
+      "description": "杀死所有反贼和内奸获胜",
+      "color": "red"
+    },
+    "loyalist": {
+      "name": "忠臣",
+      "description": "保护主公，杀死所有反贼和内奸获胜",
+      "color": "yellow"
+    },
+    "rebel": {
+      "name": "反贼",
+      "description": "杀死主公获胜",
+      "color": "green"
+    },
+    "spy": {
+      "name": "内奸",
+      "description": "最后存活获胜（需杀死其他所有人，最后与主公单挑）",
+      "color": "blue"
+    }
+  }
+}

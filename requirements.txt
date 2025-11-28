@@ -1,0 +1,9 @@
+# 三国杀 - 命令行版 依赖列表
+# Python 3.8+ required
+
+# 可选依赖 - 彩色输出支持
+colorama>=0.4.4
+
+# 测试依赖
+pytest>=7.0.0
+pytest-cov>=4.0.0
