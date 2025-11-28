@@ -69,6 +69,7 @@ class SkillTiming(Enum):
     BEFORE_DYING = "before_dying"       # 濒死前
     ON_DEATH = "on_death"               # 死亡时
     RESPOND = "respond"                 # 响应时（需要出闪/杀时）
+    CARD_USED_OUTSIDE_TURN = "card_used_outside_turn"   # 回合外使用牌时
 
 
 @dataclass
