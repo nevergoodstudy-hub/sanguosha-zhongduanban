@@ -4,12 +4,26 @@
   <strong>一款在命令行终端中运行的三国杀卡牌游戏</strong>
 </p>
 
+<p align="center">
+  <a href="https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban/releases/latest">
+    <img src="https://img.shields.io/github/v/release/nevergoodstudy-hub/sanguosha-zhongduanban?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC" alt="Latest Release">
+  </a>
+  <img src="https://img.shields.io/badge/Python-3.8%2B-blue" alt="Python">
+  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-green" alt="Platform">
+</p>
+
 ```
 ╔══════════════════════════════════════════════════════════════╗
 ║                    【 三 国 杀 】                              ║
-║                   命令行终端版 v1.0                           ║
+║                   命令行终端版 v1.1                           ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
+
+## 📥 下载
+
+**Windows 用户**：直接下载可执行文件，无需安装 Python！
+
+👉 [点击下载 sanguosha.exe](https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban/releases/latest)
 
 ## 📋 目录
 
@@ -23,6 +37,7 @@
 - [操作指南](#操作指南)
 - [项目结构](#项目结构)
 - [开发说明](#开发说明)
+- [路线图](#路线图)
 
 ## ✨ 功能特性
 
@@ -31,16 +46,27 @@
 - ✅ 完整的身份模式：主公、忠臣、反贼、内奸
 - ✅ 回合制游戏流程：准备→判定→摸牌→出牌→弃牌→结束
 - ✅ 体力值系统和手牌上限机制
+- ✅ 事件驱动架构与动作系统 ✨**New**
+
+### 军争篇机制 ✨**v1.1.0 New**
+- 🍺 **酒**：出牌阶段使下一张杀伤害+1，濒死时回复1点体力
+- 🔥 **火杀/雷杀**：属性伤害类型，可触发铁索连环传导
+- 🔗 **铁索连环**：横置/重置角色，属性伤害传导给其他被连环角色
+- 🛡️ **藤甲**：普通杀无效，火焰伤害+1
 
 ### 卡牌系统
 - ✅ **基本牌**：杀、闪、桃
+- ✅ **军争基本牌**：🍺酒、🔥火杀、⚡雷杀 ✨**New**
 - ✅ **锦囊牌**：决斗、南蛮入侵、万箭齐发、无中生有、过河拆桥、顺手牵羊、桃园结义、无懈可击
+- ✅ **军争锦囊**：🔗铁索连环 ✨**New**
 - ✅ **装备牌**：
   - 武器：青龙偃月刀、丈八蛇矛、诸葛连弩、贯石斧、麒麟弓、方天画戟、寒冰剑
-  - 防具：八卦阵、仁王盾
+  - 防具：八卦阵、仁王盾、藤甲 ✨**New**
   - 坐骑：赤兔、的卢、爪黄飞电、绝影、大宛、紫骍
 
-### 武将系统（8个武将）
+### 武将系统（20+ 武将）
+
+**标准版武将**：
 | 武将 | 势力 | 技能 |
 |------|------|------|
 | 刘备 | 蜀 | 仁德、激将（主公技）|
@@ -51,6 +77,25 @@
 | 诸葛亮 | 蜀 | 观星、空城 |
 | 周瑜 | 吴 | 英姿、反间 |
 | 吕布 | 群 | 无双 |
+
+**扩展武将**：
+| 武将 | 势力 | 技能 |
+|------|------|------|
+| 马超 | 蜀 | 马术、铁骑 |
+| 黄月英 | 蜀 | 集智、奇才 |
+| 司马懿 | 魏 | 反馈、鬼才 |
+| 夏侯惇 | 魏 | 刚烈 |
+| 张辽 | 魏 | 突袭 |
+| 大乔 | 吴 | 国色、流离 |
+| 吕蒙 | 吴 | 克己 |
+| 甘宁 | 吴 | 奇袭 |
+| 黄盖 | 吴 | 苦肉 |
+| 华佗 | 群 | 青囊、急救 |
+| 貂蝉 | 群 | 离间、闭月 |
+| 魏延 | 蜀 | 狂骨 |
+| 徐晃 | 魏 | 断粮 |
+| 曹仁 | 魏 | 据守 |
+| 孙尚香 | 吴 | 结姻、枭姬 |
 
 ### AI系统
 - 🟢 **简单模式**：随机出牌
@@ -131,6 +176,8 @@ python main.py
 - 手牌上限等于当前体力值
 - 杀死反贼摸3张牌
 - 主公杀忠臣需弃置所有牌
+- 🍺 每回合只能使用一张酒（濒死时不限）
+- 🔗 属性伤害（火/雷）会触发铁索连环传导
 
 ## ⚔️ 武将介绍
 
@@ -170,8 +217,11 @@ python main.py
 | 卡牌 | 效果 |
 |------|------|
 | 杀 | 对攻击范围内一名角色使用，需出闪否则受1点伤害 |
+| 🔥 火杀 | 造成火焰伤害，可触发铁索连环传导、藤甲+1伤害 |
+| ⚡ 雷杀 | 造成雷电伤害，可触发铁索连环传导 |
 | 闪 | 被杀时打出，抵消杀的效果 |
 | 桃 | 回复1点体力，或濒死时救援 |
+| 🍺 酒 | 出牌阶段使下一张杀+1伤害；濒死时回复1体力 |
 
 ### 锦囊牌
 
@@ -185,6 +235,7 @@ python main.py
 | 顺手牵羊 | 单体 | 获得距离为1的目标区域里的一张牌 |
 | 桃园结义 | 全体 | 所有角色回复1点体力 |
 | 无懈可击 | 反制 | 抵消一张锦囊牌的效果 |
+| 🔗 铁索连环 | 连环 | 选择1-2名角色横置/重置；或重铸摸一张牌 |
 
 ### 装备牌
 
@@ -204,6 +255,7 @@ python main.py
 |------|------|
 | 八卦阵 | 需要闪时可判定，红色视为出闪 |
 | 仁王盾 | 黑色的杀对你无效 |
+| 🌿 藤甲 | 锁定技，普通杀/南蛮/万箭无效；火焰伤害+1 |
 
 #### 坐骑
 | 装备 | 类型 | 效果 |
@@ -260,28 +312,39 @@ python main.py
 
 ```
 sanguosha/
-├── main.py              # 游戏入口
-├── README.md            # 说明文档
-├── requirements.txt     # 依赖列表
-├── game/                # 游戏核心模块
+├── main.py                      # 游戏入口
+├── README.md                    # 说明文档
+├── PROJECT_ROADMAP.md           # 项目路线图
+├── IMPROVEMENT_PLAN.md          # 改进计划
+├── GAMEPLAY_IMPROVEMENTS.md     # 玩法扩展计划
+├── requirements.txt             # 依赖列表
+├── game/                        # 游戏核心模块
 │   ├── __init__.py
-│   ├── engine.py        # 游戏引擎
-│   ├── player.py        # 玩家类
-│   ├── card.py          # 卡牌类
-│   ├── hero.py          # 武将类
-│   └── skill.py         # 技能系统
-├── ai/                  # AI模块
+│   ├── engine.py                # 游戏引擎（含 headless 接口）
+│   ├── player.py                # 玩家类
+│   ├── card.py                  # 卡牌类（含军争类型）
+│   ├── hero.py                  # 武将类
+│   ├── skill.py                 # 技能系统
+│   ├── events.py                # 事件总线
+│   └── actions.py               # 动作系统
+├── ai/                          # AI模块
 │   ├── __init__.py
-│   └── bot.py           # AI逻辑
-├── ui/                  # 界面模块
+│   └── bot.py                   # AI逻辑（嘘讽值系统）
+├── ui/                          # 界面模块
 │   ├── __init__.py
-│   ├── terminal.py      # 终端显示
-│   └── ascii_art.py     # ASCII艺术
-├── data/                # 数据文件
-│   ├── cards.json       # 卡牌数据
-│   └── heroes.json      # 武将数据
-└── tests/               # 测试文件
-    └── test_game.py     # 单元测试
+│   ├── terminal.py              # 终端显示
+│   └── ascii_art.py             # ASCII艺术
+├── data/                        # 数据文件
+│   ├── cards.json               # 卡牌数据
+│   └── heroes.json              # 武将数据
+├── tests/                       # 测试文件
+│   ├── test_game.py             # 基础单元测试
+│   ├── test_events.py           # 事件系统测试
+│   ├── test_juunzheng.py        # 军争机制测试 ✨New
+│   ├── test_auto_battle.py      # 自动对战测试
+│   └── test_auto_battle_stress.py  # 压力测试（100局+）
+└── dist/                        # 打包产物
+    └── sanguosha.exe            # Windows 可执行文件
 ```
 
 ## 🔧 开发说明
@@ -309,8 +372,14 @@ sanguosha/
 ### 运行测试
 
 ```bash
-python -m pytest tests/test_game.py -v
-python -m tests.test_auto_battle  # 自动化对局测试
+# 单元测试
+python -m pytest tests/ -v
+
+# 军争机制测试
+python -m pytest tests/test_juunzheng.py -v
+
+# 压力测试（100局 AI 对战）
+python tests/test_auto_battle_stress.py
 ```
 
 ### 打包为可执行文件
@@ -326,13 +395,34 @@ pyinstaller sanguosha.spec --noconfirm
 
 打包完成后，可执行文件位于 `dist/三国杀.exe`，可直接运行无需Python环境。
 
+## 📍 路线图
+
+详细的项目演进规划请查看 **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)**
+
+**已完成**：
+- ✅ 阶段1 T1-1：统一压力测试与正式引擎逻辑
+- ✅ 阶段1 T1-2：打通军争基础机制（酒/火杀/雷杀/铁索连环）
+- ✅ 阶段1 T1-3：补充关键规则单元测试
+
+**规划中**：
+- ⏳ 阶段2：扩展军争牌与精选武将
+- ⏳ 阶段2：AI 价值评估与困难模式增强
+- ⏳ 阶段3：技能原子化与数据驱动 SkillSystem
+
 ## 📝 版本历史
+
+### v1.1.0 (2025-11) ✨ Latest
+- **军争基础机制**：酒、火杀/雷杀、铁索连环、藤甲
+- **统一引擎接口**：新增 headless 对战 API
+- **压力测试重构**：使用正式引擎规则
+- **新增测试用例**：13 个军争机制测试
+- **Windows 可执行文件**：打包 sanguosha.exe
 
 ### v1.0.0 (2024)
 - 初始版本
 - 完整的基础游戏机制
-- 8个武将
-- 3种AI难度
+- 8 个标准版武将
+- 3 种 AI 难度
 - 命令行界面
 
 ## 📄 许可证
@@ -343,6 +433,10 @@ pyinstaller sanguosha.spec --noconfirm
 
 欢迎提交 Issue 和 Pull Request！
 
+建议先阅读 [PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md) 了解项目规划。
+
 ---
 
 **享受游戏！** 🎮
+
+⭐ 如果觉得这个项目有帮助，请给个 Star 支持一下！
