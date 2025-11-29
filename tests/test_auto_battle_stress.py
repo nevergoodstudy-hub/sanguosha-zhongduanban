@@ -2,6 +2,11 @@
 """
 压力测试模块
 进行100+次随机对局，检测潜在问题
+
+重构说明 (T1-1)：
+- 使用 GameEngine 提供的 headless 接口运行对局
+- 统一规则逻辑，避免压测与正式引擎的差异
+- 保留错误统计与诊断能力
 """
 
 import sys
@@ -17,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from game.engine import GameEngine, GameState
 from game.player import Player, Identity
-from game.card import Card, CardType, CardName
+from game.card import Card, CardType
 from game.hero import Hero
 from ai.bot import AIBot, AIDifficulty
 
@@ -36,7 +41,12 @@ class BattleResult:
 
 
 class StressTester:
-    """压力测试器"""
+    """
+    压力测试器
+    
+    使用 GameEngine 的 headless 接口运行对局，
+    确保压测逻辑与正式游戏一致。
+    """
     
     def __init__(self, num_battles: int = 100):
         self.num_battles = num_battles
@@ -45,7 +55,15 @@ class StressTester:
         self.issues_found: List[str] = []
         
     def run_single_battle(self, battle_id: int) -> BattleResult:
-        """运行单场对局"""
+        """
+        运行单场对局（使用正式引擎接口）
+        
+        Args:
+            battle_id: 对局编号
+            
+        Returns:
+            对局结果
+        """
         start_time = datetime.now()
         
         try:
@@ -55,73 +73,23 @@ class StressTester:
             # 随机玩家数量 (2-4)
             num_players = random.choice([2, 3, 4])
             
-            # 随机分配身份
-            identities = self._get_random_identities(num_players)
+            # 随机 AI 难度
+            difficulty = random.choice(["easy", "normal", "hard"])
             
-            # 随机选择武将
-            all_heroes = engine.hero_repo.get_all_heroes()
-            selected_heroes = random.sample(all_heroes, min(num_players, len(all_heroes)))
+            # 使用引擎的 headless 接口设置游戏
+            engine.setup_headless_game(num_players, difficulty)
             
-            # 创建玩家
-            for i in range(num_players):
-                player = Player(
-                    id=i,
-                    name=f"AI_{i}",
-                    identity=identities[i],
-                    is_ai=True
-                )
-                player.hero = selected_heroes[i]
-                player.max_hp = selected_heroes[i].max_hp
-                player.hp = player.max_hp
-                engine.players.append(player)
-            
-            # 设置主公
-            for p in engine.players:
-                if p.identity == Identity.LORD:
-                    p.max_hp += 1
-                    p.hp = p.max_hp
-                    break
-            
-            # 创建 AI
-            difficulty = random.choice([AIDifficulty.EASY, AIDifficulty.NORMAL, AIDifficulty.HARD])
-            bots = {p.id: AIBot(p, difficulty) for p in engine.players}
-            
-            # 发初始手牌
-            for player in engine.players:
-                cards = engine.deck.draw(4)
-                player.draw_cards(cards)
-            
-            # 开始游戏
-            engine.state = GameState.IN_PROGRESS
-            
-            # 运行对局（最多100回合防止死循环）
-            max_rounds = 100
-            round_count = 0
-            
-            while engine.state == GameState.IN_PROGRESS and round_count < max_rounds:
-                round_count += 1
-                
-                for player in engine.players:
-                    if not player.is_alive:
-                        continue
-                    
-                    if engine.state != GameState.IN_PROGRESS:
-                        break
-                    
-                    # AI 回合
-                    self._run_ai_turn(engine, player, bots[player.id])
-                    
-                    # 检查游戏是否结束
-                    self._check_game_over(engine)
+            # 运行完整对局
+            result = engine.run_headless_battle(max_rounds=100)
             
             duration = (datetime.now() - start_time).total_seconds() * 1000
             
             return BattleResult(
                 battle_id=battle_id,
-                winner=engine.winner_identity.chinese_name if engine.winner_identity else "超时",
-                rounds=round_count,
-                players=[p.name for p in engine.players],
-                heroes=[p.hero.name if p.hero else "无" for p in engine.players],
+                winner=result["winner"],
+                rounds=result["rounds"],
+                players=result["players"],
+                heroes=result["heroes"],
                 duration_ms=int(duration)
             )
             
@@ -139,252 +107,8 @@ class StressTester:
                 duration_ms=int(duration)
             )
     
-    def _get_random_identities(self, num_players: int) -> List[Identity]:
-        """随机分配身份"""
-        if num_players == 2:
-            return [Identity.LORD, Identity.REBEL]
-        elif num_players == 3:
-            return [Identity.LORD, Identity.REBEL, Identity.SPY]
-        else:  # 4人
-            return [Identity.LORD, Identity.LOYALIST, Identity.REBEL, Identity.SPY]
-    
-    def _run_ai_turn(self, engine: GameEngine, player: Player, bot: AIBot) -> None:
-        """运行 AI 回合"""
-        if not player.is_alive:
-            return
-        
-        # 准备阶段 - 处理延时锦囊
-        self._handle_delay_tricks(engine, player)
-        
-        # 判定阶段
-        # （略）
-        
-        # 摸牌阶段
-        cards = engine.deck.draw(2)
-        player.draw_cards(cards)
-        
-        # 出牌阶段
-        self._ai_play_phase(engine, player, bot)
-        
-        # 弃牌阶段
-        self._ai_discard_phase(engine, player)
-        
-        # 重置回合状态
-        player.reset_turn()
-    
-    def _handle_delay_tricks(self, engine: GameEngine, player: Player) -> None:
-        """处理延时锦囊（简化版本）"""
-        # 简化处理：跳过延时锦囊逻辑
-        pass
-    
-    def _ai_play_phase(self, engine: GameEngine, player: Player, bot: AIBot) -> None:
-        """AI 出牌阶段"""
-        # 最多操作20次防止死循环
-        for _ in range(20):
-            if not player.is_alive:
-                break
-            
-            action = self._ai_choose_action(engine, player, bot)
-            if action is None:
-                break
-            
-            action_type, data = action
-            
-            if action_type == "use_card":
-                card, target = data
-                self._use_card(engine, player, card, target)
-            elif action_type == "equip":
-                card = data
-                self._equip_card(engine, player, card)
-            elif action_type == "end":
-                break
-    
-    def _ai_choose_action(self, engine: GameEngine, player: Player, bot: AIBot) -> Optional[Tuple[str, Any]]:
-        """AI 选择行动"""
-        # 优先使用装备
-        for card in player.hand:
-            if card.card_type == CardType.EQUIPMENT:
-                return ("equip", card)
-        
-        # 使用锦囊
-        for card in player.hand:
-            if card.card_type == CardType.TRICK:
-                target = self._choose_target(engine, player, card)
-                if target is not None or card.name in ["无中生有", "桃园结义", "南蛮入侵", "万箭齐发"]:
-                    return ("use_card", (card, target))
-        
-        # 使用杀
-        if player.can_use_sha():
-            sha_cards = [c for c in player.hand if c.name in ["杀", "火杀", "雷杀"]]
-            if sha_cards:
-                card = sha_cards[0]
-                target = self._choose_attack_target(engine, player)
-                if target:
-                    return ("use_card", (card, target))
-        
-        # 使用桃（低血量时）
-        if player.hp < player.max_hp:
-            tao_cards = [c for c in player.hand if c.name == "桃"]
-            if tao_cards:
-                return ("use_card", (tao_cards[0], player))
-        
-        return None
-    
-    def _choose_target(self, engine: GameEngine, player: Player, card: Card) -> Optional[Player]:
-        """选择目标"""
-        alive = [p for p in engine.players if p.is_alive and p != player]
-        if not alive:
-            return None
-        
-        # 根据身份选择目标
-        enemies = self._get_enemies(player, alive)
-        if enemies:
-            return random.choice(enemies)
-        
-        return random.choice(alive) if alive else None
-    
-    def _choose_attack_target(self, engine: GameEngine, player: Player) -> Optional[Player]:
-        """选择攻击目标（简化版本）"""
-        alive = [p for p in engine.players if p.is_alive and p != player]
-        if not alive:
-            return None
-        
-        # 简化：假设所有人都在范围内
-        enemies = self._get_enemies(player, alive)
-        if enemies:
-            return random.choice(enemies)
-        
-        return random.choice(alive)
-    
-    def _get_enemies(self, player: Player, candidates: List[Player]) -> List[Player]:
-        """获取敌人列表"""
-        enemies = []
-        for p in candidates:
-            if player.identity == Identity.LORD or player.identity == Identity.LOYALIST:
-                if p.identity in [Identity.REBEL, Identity.SPY]:
-                    enemies.append(p)
-            elif player.identity == Identity.REBEL:
-                if p.identity in [Identity.LORD, Identity.LOYALIST]:
-                    enemies.append(p)
-            elif player.identity == Identity.SPY:
-                # 内奸策略复杂，暂时随机
-                enemies.append(p)
-        return enemies
-    
-    def _use_card(self, engine: GameEngine, player: Player, card: Card, target: Optional[Player]) -> None:
-        """使用卡牌"""
-        player.remove_card(card)
-        
-        if card.name in ["杀", "火杀", "雷杀"]:
-            player.use_sha()
-            if target:
-                # 简化处理：50%概率造成伤害
-                if random.random() > 0.5:
-                    damage = 1
-                    if card.name == "火杀":
-                        damage_type = "fire"
-                    elif card.name == "雷杀":
-                        damage_type = "thunder"
-                    else:
-                        damage_type = "normal"
-                    target.take_damage(damage, player)
-                    self._check_dying(engine, target)
-        
-        elif card.name == "桃":
-            if target:
-                target.heal(1)
-        
-        elif card.name == "无中生有":
-            cards = engine.deck.draw(2)
-            player.draw_cards(cards)
-        
-        elif card.name in ["南蛮入侵", "万箭齐发"]:
-            for p in engine.players:
-                if p.is_alive and p != player:
-                    # 简化：50%概率受伤
-                    if random.random() > 0.5:
-                        p.take_damage(1, player)
-                        self._check_dying(engine, p)
-        
-        elif card.name == "决斗":
-            if target:
-                # 简化：随机决定胜负
-                loser = random.choice([player, target])
-                loser.take_damage(1, player if loser == target else target)
-                self._check_dying(engine, loser)
-        
-        elif card.name in ["顺手牵羊", "过河拆桥"]:
-            if target and target.hand:
-                stolen = random.choice(target.hand)
-                target.remove_card(stolen)
-                if card.name == "顺手牵羊":
-                    player.draw_cards([stolen])
-                else:
-                    engine.deck.discard([stolen])
-        
-        engine.deck.discard([card])
-    
-    def _equip_card(self, engine: GameEngine, player: Player, card: Card) -> None:
-        """装备卡牌"""
-        player.remove_card(card)
-        old_equip = player.equip_card(card)
-        if old_equip:
-            engine.deck.discard([old_equip])
-    
-    def _ai_discard_phase(self, engine: GameEngine, player: Player) -> None:
-        """AI 弃牌阶段"""
-        while player.hand_count > player.hand_limit:
-            if player.hand:
-                # 弃置价值最低的牌
-                card = player.hand[0]
-                player.remove_card(card)
-                engine.deck.discard([card])
-            else:
-                break
-    
-    def _check_dying(self, engine: GameEngine, player: Player) -> None:
-        """检查濒死"""
-        while player.hp <= 0 and player.is_alive:
-            # 尝试求桃
-            saved = False
-            for p in engine.players:
-                if p.is_alive:
-                    tao_cards = [c for c in p.hand if c.name == "桃"]
-                    if tao_cards and (p == player or random.random() > 0.5):
-                        card = tao_cards[0]
-                        p.remove_card(card)
-                        engine.deck.discard([card])
-                        player.heal(1)
-                        saved = True
-                        break
-            
-            if not saved:
-                player.die()
-                break
-    
-    def _check_game_over(self, engine: GameEngine) -> None:
-        """检查游戏是否结束"""
-        alive_players = [p for p in engine.players if p.is_alive]
-        
-        # 检查主公是否死亡
-        lord_alive = any(p.identity == Identity.LORD for p in alive_players)
-        
-        if not lord_alive:
-            # 检查是否只剩内奸
-            if len(alive_players) == 1 and alive_players[0].identity == Identity.SPY:
-                engine.winner_identity = Identity.SPY
-            else:
-                engine.winner_identity = Identity.REBEL
-            engine.state = GameState.FINISHED
-            return
-        
-        # 检查反贼和内奸是否全灭
-        rebels_alive = any(p.identity == Identity.REBEL for p in alive_players)
-        spies_alive = any(p.identity == Identity.SPY for p in alive_players)
-        
-        if not rebels_alive and not spies_alive:
-            engine.winner_identity = Identity.LORD
-            engine.state = GameState.FINISHED
+    # 以下方法已废弃，保留空实现以兼容旧测试代码
+    # 所有对局逻辑已迁移到 GameEngine.run_headless_battle()
     
     def run_all_battles(self) -> None:
         """运行所有对局"""

@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Any, Callable, Tuple, TYPE_CHECKING
 import random
 from pathlib import Path
 
-from .card import Card, CardType, CardSubtype, CardSuit, Deck, CardName
+from .card import Card, CardType, CardSubtype, CardSuit, Deck, CardName, DamageType
 from .hero import Hero, HeroRepository, Kingdom, Skill, SkillType
 from .player import Player, Identity, EquipmentSlot
 from .events import EventBus, EventType, GameEvent, EventEmitter
@@ -507,7 +507,8 @@ class GameEngine:
             player.remove_card(card)
         
         # 根据卡牌类型处理
-        if card.name == CardName.SHA:
+        # 杀类卡牌（普通杀/火杀/雷杀）
+        if card.name == CardName.SHA or card.subtype in [CardSubtype.ATTACK, CardSubtype.FIRE_ATTACK, CardSubtype.THUNDER_ATTACK]:
             return self._use_sha(player, card, targets)
         elif card.name == CardName.TAO:
             return self._use_tao(player, card)
@@ -525,6 +526,10 @@ class GameEngine:
             return self._use_shunshou(player, card, targets)
         elif card.name == CardName.TAOYUAN:
             return self._use_taoyuan(player, card)
+        elif card.subtype == CardSubtype.ALCOHOL:
+            return self._use_jiu(player, card)
+        elif card.subtype == CardSubtype.CHAIN:
+            return self._use_tiesuo(player, card, targets)
         elif card.is_type(CardType.EQUIPMENT):
             return self._use_equipment(player, card)
         
@@ -533,7 +538,17 @@ class GameEngine:
         return True
     
     def _use_sha(self, player: Player, card: Card, targets: List[Player]) -> bool:
-        """使用杀"""
+        """
+        使用杀（支持酒加成、火杀/雷杀属性伤害）
+        
+        Args:
+            player: 使用者
+            card: 杀牌
+            targets: 目标列表
+            
+        Returns:
+            是否成功使用
+        """
         if not targets:
             self.deck.discard([card])
             return False
@@ -558,17 +573,47 @@ class GameEngine:
             player.draw_cards([card])
             return False
         
-        # 检查仁王盾
-        if card.is_black and target.equipment.armor and target.equipment.armor.name == CardName.RENWANG:
-            self.log_event("equipment", f"{target.name} 的【仁王盾】使黑色的【杀】无效")
-            player.use_sha()
-            self.deck.discard([card])
-            return True
+        # 确定杀的类型和伤害类型
+        card_name = card.name
+        if card.subtype == CardSubtype.FIRE_ATTACK:
+            card_name = "火杀"
+            damage_type = "fire"
+        elif card.subtype == CardSubtype.THUNDER_ATTACK:
+            card_name = "雷杀"
+            damage_type = "thunder"
+        else:
+            damage_type = "normal"
+        
+        # 检查仁王盾（只对黑色普通杀有效）
+        if card.is_black and damage_type == "normal" and target.equipment.armor:
+            if target.equipment.armor.name == CardName.RENWANG:
+                self.log_event("equipment", f"{target.name} 的【仁王盾】使黑色的【杀】无效")
+                player.use_sha()
+                self.deck.discard([card])
+                return True
+        
+        # 藤甲对普通杀无效（火杀在 deal_damage 中处理伤害加成）
+        if damage_type == "normal" and target.equipment.armor:
+            if target.equipment.armor.name == "藤甲":
+                self.log_event("equipment", f"{target.name} 的【藤甲】使普通【杀】无效")
+                player.use_sha()
+                self.deck.discard([card])
+                return True
+        
+        # 消耗酒状态，计算伤害
+        base_damage = 1
+        is_drunk = player.consume_drunk()
+        if is_drunk:
+            base_damage += 1
+            self.log_event("effect", f"  🍺 {player.name} 的酒劲发作，伤害+1！")
         
         player.use_sha()
         dist = self.calculate_distance(player, target)
+        
+        # 显示杀的类型
+        type_icon = {"fire": "🔥", "thunder": "⚡"}.get(damage_type, "⚔")
         self.log_event("use_card", 
-            f"⚔ {player.name} → {target.name} 使用【杀】{card.suit.symbol}{card.number_str} (距离:{dist})", 
+            f"{type_icon} {player.name} → {target.name} 使用【{card_name}】{card.suit.symbol}{card.number_str} (距离:{dist})", 
             source=player, target=target, card=card)
         
         # 无双技能：需要两张闪
@@ -586,8 +631,8 @@ class GameEngine:
             if player.equipment.weapon and player.equipment.weapon.name == CardName.QINGLONG:
                 self._trigger_qinglong(player, target)
         else:
-            # 造成伤害
-            self.deal_damage(player, target, 1)
+            # 造成伤害（传递属性伤害类型）
+            self.deal_damage(player, target, base_damage, damage_type)
         
         self.deck.discard([card])
         return True
@@ -891,6 +936,73 @@ class GameEngine:
         self.deck.discard([card])
         return True
     
+    def _use_jiu(self, player: Player, card: Card) -> bool:
+        """
+        使用酒（军争篇）
+        
+        效果：
+        - 出牌阶段对自己使用，下一张杀伤害+1（本回合限一次）
+        - 濒死时对自己使用，回复1点体力
+        """
+        # 濒死时使用酒回复体力
+        if player.is_dying:
+            player.heal(1)
+            self.log_event("use_card", f"🍺 {player.name} 使用了【酒】回复1点体力！", 
+                          source=player, card=card)
+            self.deck.discard([card])
+            return True
+        
+        # 出牌阶段使用酒（本回合限一次）
+        if player.alcohol_used:
+            self.log_event("error", f"{player.name} 本回合已经使用过酒了")
+            player.draw_cards([card])
+            return False
+        
+        if player.use_alcohol():
+            self.log_event("use_card", f"🍺 {player.name} 使用了【酒】，下一张杀伤害+1！", 
+                          source=player, card=card)
+            self.deck.discard([card])
+            return True
+        
+        player.draw_cards([card])
+        return False
+    
+    def _use_tiesuo(self, player: Player, card: Card, 
+                    targets: Optional[List[Player]] = None) -> bool:
+        """
+        使用铁索连环（军争篇）
+        
+        效果：
+        - 选择1-2名角色，横置/重置其武将牌
+        - 或重铸此牌
+        """
+        if targets is None:
+            targets = []
+        
+        # 如果没有目标，视为重铸
+        if not targets:
+            self.log_event("use_card", f"🔗 {player.name} 重铸了【铁索连环】", 
+                          source=player, card=card)
+            self.deck.discard([card])
+            new_cards = self.deck.draw(1)
+            player.draw_cards(new_cards)
+            if new_cards:
+                self.log_event("effect", f"{player.name} 摸了 1 张牌")
+            return True
+        
+        # 对目标使用
+        target_names = "、".join(t.name for t in targets[:2])  # 最多2个目标
+        self.log_event("use_card", f"🔗 {player.name} 对 {target_names} 使用了【铁索连环】", 
+                      source=player, card=card)
+        
+        for target in targets[:2]:
+            target.toggle_chain()
+            status = "横置" if target.is_chained else "重置"
+            self.log_event("effect", f"  🔗 {target.name} 的武将牌被{status}（连环状态: {target.is_chained}）")
+        
+        self.deck.discard([card])
+        return True
+    
     def _use_equipment(self, player: Player, card: Card) -> bool:
         """使用装备牌"""
         old_equipment = player.equip_card(card)
@@ -970,29 +1082,56 @@ class GameEngine:
     # ==================== 伤害和死亡 ====================
     
     def deal_damage(self, source: Optional[Player], target: Player, 
-                    damage: int, damage_type: str = "normal") -> None:
+                    damage: int, damage_type: str = "normal",
+                    _chain_propagating: bool = False) -> None:
         """
-        造成伤害
+        造成伤害（支持属性伤害与铁索连环传导）
         
         Args:
             source: 伤害来源
             target: 目标
             damage: 伤害值
-            damage_type: 伤害类型
+            damage_type: 伤害类型 ("normal", "fire", "thunder")
+            _chain_propagating: 内部参数，标记是否为连环传导伤害
         """
         source_name = source.name if source else "系统"
         old_hp = target.hp
+        
+        # 伤害类型显示
+        damage_type_display = {
+            "normal": "",
+            "fire": "🔥火焰",
+            "thunder": "⚡雷电"
+        }.get(damage_type, "")
+        
+        # 藤甲效果：火焰伤害+1，普通杀无效（后续可扩展）
+        if damage_type == "fire" and target.equipment.armor:
+            if target.equipment.armor.name == "藤甲":
+                damage += 1
+                self.log_event("equipment", f"  🔥 {target.name} 的【藤甲】被火焰点燃，伤害+1！")
         
         target.take_damage(damage, source)
         
         # 详细的伤害日志
         self.log_event("damage", 
-            f"💔 {target.name} 受到 {source_name} 的 {damage} 点伤害 "
+            f"💔 {target.name} 受到 {source_name} 的 {damage} 点{damage_type_display}伤害 "
             f"[{old_hp}→{target.hp}/{target.max_hp}]")
         
         # 奸雄技能：获得造成伤害的牌
         if target.has_skill("jianxiong") and source:
             self.log_event("skill", f"  ⚔ {target.name} 可发动【奸雄】获得伤害牌")
+        
+        # 铁索连环传导：属性伤害会传导给其他被连环的角色
+        if damage_type in ["fire", "thunder"] and target.is_chained and not _chain_propagating:
+            target.break_chain()  # 解除当前目标的连环状态
+            self.log_event("chain", f"  🔗 {target.name} 的铁索连环被触发！伤害传导中...")
+            
+            # 传导给其他被连环的角色（按座位顺序）
+            for p in self.players:
+                if p.is_alive and p != target and p.is_chained:
+                    self.log_event("chain", f"  🔗 伤害传导至 {p.name}！")
+                    p.break_chain()  # 解除连环状态
+                    self.deal_damage(source, p, damage, damage_type, _chain_propagating=True)
         
         # 检查濒死
         if target.is_dying:
@@ -1156,3 +1295,166 @@ class GameEngine:
         elif self.winner_identity == Identity.SPY:
             return "内奸获胜！"
         return "游戏结束"
+    
+    # ==================== 无 UI 对战接口（用于压测/AI研究） ====================
+    
+    def setup_headless_game(self, player_count: int, 
+                            ai_difficulty: str = "normal") -> None:
+        """
+        设置无 UI 对战（用于压力测试与 AI 研究）
+        
+        Args:
+            player_count: 玩家数量（2-8）
+            ai_difficulty: AI 难度 ("easy", "normal", "hard")
+        """
+        from ai.bot import AIBot, AIDifficulty
+        
+        if player_count < 2 or player_count > 8:
+            raise ValueError("玩家数量必须在2-8之间")
+        
+        # 创建玩家（全部为 AI）
+        self.players.clear()
+        self._assign_identities_for_count(player_count)
+        
+        # 随机选择武将
+        all_heroes = self.hero_repo.get_all_heroes()
+        random.shuffle(all_heroes)
+        
+        # 设置 AI 难度
+        difficulty_map = {
+            "easy": AIDifficulty.EASY,
+            "normal": AIDifficulty.NORMAL,
+            "hard": AIDifficulty.HARD
+        }
+        difficulty = difficulty_map.get(ai_difficulty, AIDifficulty.NORMAL)
+        
+        for i in range(player_count):
+            player = Player(
+                id=i,
+                name=f"AI_{i + 1}",
+                is_ai=True,
+                seat=i
+            )
+            self.players.append(player)
+            
+            # 分配武将
+            if i < len(all_heroes):
+                import copy
+                hero = copy.deepcopy(all_heroes[i])
+                player.set_hero(hero)
+            
+            # 创建 AI
+            self.ai_bots[player.id] = AIBot(player, difficulty)
+        
+        # 分配身份
+        self._assign_identities()
+        
+        # 主公额外 +1 体力（set_hero 已处理，但需要确保身份先分配）
+        for p in self.players:
+            if p.identity == Identity.LORD and p.hero:
+                # 重新应用主公加成
+                if p.hp == p.max_hp:  # 还没受伤
+                    pass  # set_hero 已经处理了
+        
+        # 重置牌堆
+        self.deck.reset()
+        
+        # 发初始手牌
+        for player in self.players:
+            cards = self.deck.draw(4)
+            player.draw_cards(cards)
+        
+        self.state = GameState.IN_PROGRESS
+        self.current_player_index = 0
+        self.round_count = 1
+    
+    def _assign_identities_for_count(self, player_count: int) -> None:
+        """为指定人数分配身份配置"""
+        # 预配置身份（稍后在 _assign_identities 中使用）
+        pass  # _assign_identities 会处理
+    
+    def run_headless_turn(self, max_actions: int = 50) -> bool:
+        """
+        执行当前玩家的无 UI 回合
+        
+        Args:
+            max_actions: 单回合最大操作数（防止死循环）
+            
+        Returns:
+            回合是否正常完成
+        """
+        player = self.current_player
+        
+        if not player.is_alive:
+            self.next_turn()
+            return True
+        
+        player.reset_turn()
+        
+        # 准备阶段
+        self.phase = GamePhase.PREPARE
+        if self.skill_system and player.hero:
+            for skill in player.hero.skills:
+                if skill.timing and skill.timing.value == "prepare":
+                    self.skill_system.trigger_skill(skill.id, player, self)
+        
+        # 判定阶段（简化：跳过延时锦囊）
+        self.phase = GamePhase.JUDGE
+        
+        # 摸牌阶段
+        self.phase = GamePhase.DRAW
+        draw_count = 2
+        if player.has_skill("yingzi"):
+            draw_count += 1
+        cards = self.deck.draw(draw_count)
+        player.draw_cards(cards)
+        
+        # 出牌阶段
+        self.phase = GamePhase.PLAY
+        if player.id in self.ai_bots:
+            bot = self.ai_bots[player.id]
+            bot.play_phase(player, self)
+        
+        # 弃牌阶段
+        self.phase = GamePhase.DISCARD
+        discard_count = player.need_discard
+        if discard_count > 0 and player.id in self.ai_bots:
+            bot = self.ai_bots[player.id]
+            cards_to_discard = bot.choose_discard(player, discard_count, self)
+            self.discard_cards(player, cards_to_discard)
+        
+        # 结束阶段
+        self.phase = GamePhase.END
+        
+        return True
+    
+    def run_headless_battle(self, max_rounds: int = 100) -> Dict[str, Any]:
+        """
+        运行完整的无 UI 对局
+        
+        Args:
+            max_rounds: 最大回合数
+            
+        Returns:
+            对局结果字典
+        """
+        round_count = 0
+        
+        while self.state == GameState.IN_PROGRESS and round_count < max_rounds:
+            round_count += 1
+            
+            for _ in range(len(self.players)):
+                if self.state != GameState.IN_PROGRESS:
+                    break
+                
+                self.run_headless_turn()
+                self.next_turn()
+        
+        return {
+            "winner": self.winner_identity.chinese_name if self.winner_identity else "超时",
+            "rounds": round_count,
+            "players": [p.name for p in self.players],
+            "heroes": [p.hero.name if p.hero else "无" for p in self.players],
+            "identities": [p.identity.chinese_name for p in self.players],
+            "finished": self.state == GameState.FINISHED
+        }
