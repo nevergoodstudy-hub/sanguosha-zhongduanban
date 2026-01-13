@@ -120,6 +120,30 @@ class Equipment:
         
         return card
     
+    def unequip_card(self, card: 'Card') -> bool:
+        """
+        根据卡牌移除装备
+        
+        Args:
+            card: 要移除的装备卡牌
+            
+        Returns:
+            是否成功移除
+        """
+        if self.weapon == card:
+            self.weapon = None
+            return True
+        elif self.armor == card:
+            self.armor = None
+            return True
+        elif self.horse_minus == card:
+            self.horse_minus = None
+            return True
+        elif self.horse_plus == card:
+            self.horse_plus = None
+            return True
+        return False
+    
     def get_all_cards(self) -> List['Card']:
         """获取所有装备的卡牌列表"""
         cards = []
@@ -229,6 +253,14 @@ class Player:
     is_chained: bool = field(default=False, repr=False)  # 铁索连环状态
     is_drunk: bool = field(default=False, repr=False)    # 酒状态（下一张杀伤害+1）
     alcohol_used: bool = field(default=False, repr=False)  # 本回合是否使用过酒
+    flipped: bool = field(default=False, repr=False)  # 武将牌翻面状态
+    
+    # 判定区（延时锦囊）
+    judge_area: List['Card'] = field(default_factory=list, repr=False)
+    
+    # 跳过阶段标记（延时锦囊用）
+    skip_play_phase: bool = field(default=False, repr=False)
+    skip_draw_phase: bool = field(default=False, repr=False)
     
     def __post_init__(self):
         """初始化后处理"""
@@ -387,6 +419,8 @@ class Player:
         self.skill_used.clear()
         self.is_drunk = False
         self.alcohol_used = False
+        self.skip_play_phase = False
+        self.skip_draw_phase = False
         if self.hero:
             self.hero.reset_skills()
     
@@ -397,6 +431,10 @@ class Player:
     def break_chain(self) -> None:
         """解除铁索连环状态"""
         self.is_chained = False
+    
+    def toggle_flip(self) -> None:
+        """翻转武将牌（据守、微势等技能用）"""
+        self.flipped = not self.flipped
     
     def use_alcohol(self) -> bool:
         """

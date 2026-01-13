@@ -17,8 +17,13 @@
 import sys
 import os
 import copy
+import logging
 from pathlib import Path
 from typing import Optional, List, Dict
+
+from logging_config import setup_logging
+
+logger = logging.getLogger(__name__)
 
 # 确保可以导入项目模块
 sys.path.insert(0, str(Path(__file__).parent))
@@ -30,6 +35,7 @@ from game.hero import Hero, HeroRepository
 from game.skill import SkillSystem
 from ai.bot import AIBot, AIDifficulty
 from ui.terminal import TerminalUI
+from ui.rich_ui import RichTerminalUI
 
 
 class SanguoshaGame:
@@ -40,7 +46,8 @@ class SanguoshaGame:
     
     def __init__(self):
         """初始化游戏"""
-        self.ui = TerminalUI(use_color=True)
+        # self.ui = TerminalUI(use_color=True)
+        self.ui = RichTerminalUI(use_color=True)
         self.engine: Optional[GameEngine] = None
         self.ai_difficulty: AIDifficulty = AIDifficulty.NORMAL
         self.is_running = True
@@ -339,30 +346,8 @@ class SanguoshaGame:
         while True:
             self.ui.show_game_state(self.engine, player)
             
-            # 显示出牌操作菜单
-            print("\n" + "=" * 60)
-            print("【出牌阶段】请选择操作:")
-            print("  [数字] 选择手牌使用")
-            print("  [S] 使用技能")
-            print("  [E] 结束出牌阶段")
-            print("  [H] 查看帮助")
-            print("  [Q] 退出游戏")
-            print("=" * 60)
-            
-            # 显示当前手牌
-            usable_count = 0
-            if player.hand:
-                print("\n你的手牌:")
-                for i, card in enumerate(player.hand, 1):
-                    usable = self._check_card_usable(player, card)
-                    mark = "✓" if usable else "×"
-                    if usable:
-                        usable_count += 1
-                    print(f"  [{i}] {card.display_name} {mark}")
-            else:
-                print("\n【无手牌】")
-            
-            action = input("\n请输入操作: ").strip().upper()
+            # 获取玩家操作
+            action = self.ui.get_player_action()
             
             if action == 'E':  # 结束出牌
                 self.ui.show_log(f"  └─ 结束出牌阶段")
@@ -465,11 +450,6 @@ class SanguoshaGame:
                 print("⚠ 没有可攻击的目标（距离不足）")
                 return
             
-            print("\n选择【杀】的目标:")
-            for i, t in enumerate(targets, 1):
-                dist = self.engine.calculate_distance(player, t)
-                print(f"  [{i}] {t.name}({t.hero.name}) HP:{t.hp}/{t.max_hp} 距离:{dist}")
-            
             target = self.ui.choose_target(player, targets, "选择攻击目标")
             if target:
                 self.ui.show_log(f"  └─ 对 {target.name} 使用【杀】")
@@ -503,9 +483,6 @@ class SanguoshaGame:
             if not others:
                 print("⚠ 没有可选目标")
                 return
-            print("\n选择【决斗】的目标:")
-            for i, t in enumerate(others, 1):
-                print(f"  [{i}] {t.name}({t.hero.name}) HP:{t.hp}/{t.max_hp} 手牌:{t.hand_count}")
             target = self.ui.choose_target(player, others, "选择决斗目标")
             if target:
                 self.ui.show_log(f"  └─ 对 {target.name} 使用【决斗】")
@@ -763,13 +740,17 @@ class SanguoshaGame:
 
 def main():
     """程序入口"""
+    setup_logging(enable_console=False)
+
     try:
         game = SanguoshaGame()
         game.run()
     except KeyboardInterrupt:
+        logger.info("KeyboardInterrupt - exiting")
         print("\n\n游戏被中断，再见！")
         sys.exit(0)
     except Exception as e:
+        logger.exception("Unhandled exception")
         print(f"\n发生错误: {e}")
         import traceback
         traceback.print_exc()

@@ -284,11 +284,18 @@ class AIBot:
     
     def _choose_best_target(self, player: 'Player', targets: List['Player'], 
                            engine: 'GameEngine') -> 'Player':
-        """选择最佳攻击目标"""
+        """选择最佳攻击目标（困难模式使用嘲讽值系统）"""
         if not targets:
-            return targets[0] if targets else None
+            return None
         
-        # 优先攻击体力低的敌人
+        # 困难模式：使用嘲讽值系统选择目标
+        if self.difficulty == AIDifficulty.HARD and self.threat_values:
+            # 按嘲讽值排序，优先攻击威胁最高的
+            targets_with_threat = [(t, self.threat_values.get(t.id, 0)) for t in targets]
+            targets_with_threat.sort(key=lambda x: x[1], reverse=True)
+            return targets_with_threat[0][0]
+        
+        # 普通模式：优先攻击体力低的敌人
         targets.sort(key=lambda t: (t.hp, t.hand_count))
         return targets[0]
     
@@ -505,3 +512,183 @@ class AIBot:
         
         enemies.sort(key=lambda p: self.threat_values.get(p.id, 0), reverse=True)
         return enemies[0]
+    
+    # ==================== M4-T01: 局势评分函数 ====================
+    
+    def evaluate_game_state(self, engine: 'GameEngine') -> Dict[str, Any]:
+        """
+        评估当前局势（M4-T01）
+        
+        返回各阵营的综合评分和关键指标
+        """
+        player = self.player
+        
+        # 分阵营统计
+        lord_score = 0.0
+        rebel_score = 0.0
+        spy_score = 0.0
+        
+        lord_alive = False
+        rebel_count = 0
+        loyalist_count = 0
+        spy_count = 0
+        
+        for p in engine.players:
+            if not p.is_alive:
+                continue
+            
+            # 计算个体战力评分
+            power = self._calculate_player_power(p, engine)
+            
+            if p.identity.value == "lord":
+                lord_score += power * 1.5  # 主公权重
+                lord_alive = True
+            elif p.identity.value == "loyalist":
+                lord_score += power
+                loyalist_count += 1
+            elif p.identity.value == "rebel":
+                rebel_score += power
+                rebel_count += 1
+            elif p.identity.value == "spy":
+                spy_score += power
+                spy_count += 1
+        
+        # 计算局势优势
+        total_score = lord_score + rebel_score + spy_score
+        if total_score == 0:
+            total_score = 1
+        
+        return {
+            'lord_advantage': lord_score / total_score,
+            'rebel_advantage': rebel_score / total_score,
+            'spy_advantage': spy_score / total_score,
+            'lord_alive': lord_alive,
+            'rebel_count': rebel_count,
+            'loyalist_count': loyalist_count,
+            'spy_count': spy_count,
+            'my_power': self._calculate_player_power(player, engine),
+            'danger_level': self._calculate_danger_level(player, engine)
+        }
+    
+    def _calculate_player_power(self, player: 'Player', engine: 'GameEngine') -> float:
+        """计算玩家战力评分"""
+        if not player.is_alive:
+            return 0.0
+        
+        power = 0.0
+        
+        # 生命值评分（满血100分，每少1点减20分）
+        hp_ratio = player.hp / player.max_hp
+        power += hp_ratio * 100
+        
+        # 手牌评分（每张牌10分，上限50分）
+        power += min(player.hand_count * 10, 50)
+        
+        # 装备评分
+        if player.equipment.weapon:
+            power += 20
+        if player.equipment.armor:
+            power += 25
+        if player.equipment.horse_plus:
+            power += 10
+        if player.equipment.horse_minus:
+            power += 10
+        
+        # 特殊卡牌加成
+        tao_count = len(player.get_cards_by_name("桃"))
+        power += tao_count * 15
+        
+        # 武将技能加成
+        if player.hero:
+            skill_bonus = len(player.hero.skills) * 5
+            power += skill_bonus
+        
+        return power
+    
+    def _calculate_danger_level(self, player: 'Player', engine: 'GameEngine') -> float:
+        """计算玩家危险等级（0-100）"""
+        danger = 0.0
+        
+        # 低血量危险
+        if player.hp <= 1:
+            danger += 50
+        elif player.hp <= 2:
+            danger += 30
+        
+        # 无闪危险
+        if not player.get_cards_by_name("闪"):
+            danger += 20
+        
+        # 无桃危险
+        if not player.get_cards_by_name("桃"):
+            danger += 15
+        
+        # 敌人数量和威胁
+        enemies = [p for p in engine.get_other_players(player) if self._is_enemy(player, p)]
+        for enemy in enemies:
+            if enemy.is_alive:
+                # 敌人手牌多增加危险
+                danger += enemy.hand_count * 2
+                # 敌人有武器增加危险
+                if enemy.equipment.weapon:
+                    danger += 10
+        
+        return min(danger, 100)
+    
+    # ==================== M4-T02: 身份推断 ====================
+    
+    def infer_identity(self, target: 'Player', engine: 'GameEngine') -> Dict[str, float]:
+        """
+        基于行为推断目标身份概率（M4-T02）
+        
+        Returns:
+            各身份的概率字典
+        """
+        # 初始概率（基于人数分布）
+        player_count = len([p for p in engine.players if p.is_alive])
+        
+        probs = {
+            'lord': 0.0,  # 主公身份公开
+            'loyalist': 0.25,
+            'rebel': 0.50,
+            'spy': 0.25
+        }
+        
+        # 主公身份公开
+        if target.identity.value == "lord":
+            return {'lord': 1.0, 'loyalist': 0.0, 'rebel': 0.0, 'spy': 0.0}
+        
+        # 基于已知行为调整概率
+        if target.id in self.identity_guess:
+            guessed = self.identity_guess[target.id]
+            if guessed.value == "loyalist":
+                probs['loyalist'] = 0.7
+                probs['rebel'] = 0.15
+                probs['spy'] = 0.15
+            elif guessed.value == "rebel":
+                probs['rebel'] = 0.7
+                probs['loyalist'] = 0.15
+                probs['spy'] = 0.15
+        
+        return probs
+    
+    def record_behavior(self, actor: 'Player', action_type: str, 
+                        target: Optional['Player'] = None) -> None:
+        """
+        记录玩家行为用于身份推断（M4-T02）
+        """
+        if actor.id == self.player.id:
+            return
+        
+        # 找到主公
+        lord = None
+        for p in [self.player]:  # 简化，实际应遍历所有玩家
+            pass
+        
+        # 攻击主公 → 可能是反贼
+        if action_type == "attack" and target and target.identity.value == "lord":
+            self.identity_guess[actor.id] = Identity.REBEL
+        
+        # 救援主公 → 可能是忠臣
+        if action_type == "save" and target and target.identity.value == "lord":
+            self.identity_guess[actor.id] = Identity.LOYALIST

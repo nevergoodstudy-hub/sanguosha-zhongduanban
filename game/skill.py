@@ -532,12 +532,8 @@ class SkillSystem:
             if card in source.hand:
                 source.remove_card(card)
             else:
-                # 从装备区移除
-                from .player import EquipmentSlot
-                for slot in EquipmentSlot:
-                    if source.equipment.get_card_by_slot(slot) == card:
-                        source.equipment.unequip(slot)
-                        break
+                # 从装备区移除（使用 unequip_card 辅助方法）
+                source.equipment.unequip_card(card)
             player.draw_cards([card])
             engine.log_event("skill", f"{player.name} 发动【反馈】，获得了 {source.name} 的一张牌")
             return True
@@ -741,7 +737,7 @@ class SkillSystem:
         """
         cards = engine.deck.draw(3)
         player.draw_cards(cards)
-        player.flipped = not getattr(player, 'flipped', False)
+        player.toggle_flip()
         engine.log_event("skill", f"{player.name} 发动【据守】，摸了 3 张牌并翻面")
         return True
     
@@ -757,7 +753,7 @@ class SkillSystem:
         """
         克己：若出牌阶段未使用杀，跳过弃牌阶段
         """
-        if not getattr(player, 'sha_used_this_turn', False):
+        if player.sha_count == 0:
             engine.log_event("skill", f"{player.name} 发动【克己】，跳过弃牌阶段")
             return True
         return False

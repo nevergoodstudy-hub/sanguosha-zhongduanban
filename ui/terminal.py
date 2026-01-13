@@ -421,7 +421,9 @@ class TerminalUI:
             action = input("\n请输入操作: ").strip().upper()
             if action in ['P', 'S', 'E', 'H', 'Q', 'D']:
                 return action
-            print("无效操作，请重新输入 [P/S/E/H/Q]")
+            if action.isdigit():
+                return action
+            print("无效操作，请重新输入 [P/S/E/H/Q] 或 牌的编号")
     
     def choose_card_to_play(self, player: 'Player') -> Optional['Card']:
         """
@@ -591,6 +593,24 @@ class TerminalUI:
         
         if choice == 'Y':
             return tao_cards[0]
+        return None
+
+    def ask_for_wuxie(self, responder: 'Player', trick_card: 'Card', 
+                      source: 'Player', target: Optional['Player'], 
+                      currently_cancelled: bool) -> Optional['Card']:
+        wuxie_cards = responder.get_cards_by_name("无懈可击")
+        if not wuxie_cards:
+            return None
+
+        action = "抵消" if not currently_cancelled else "使其生效"
+        target_name = target.name if target else "-"
+        print(f"\n{responder.name} 是否使用【无懈可击】{action}【{trick_card.name}】?")
+        print(f"来源: {source.name}  目标: {target_name}")
+        print(f"你有 {len(wuxie_cards)} 张【无懈可击】")
+        choice = input("是否使用无懈可击? [Y/N]: ").strip().upper()
+
+        if choice == 'Y':
+            return wuxie_cards[0]
         return None
     
     def choose_card_from_player(self, chooser: 'Player', 

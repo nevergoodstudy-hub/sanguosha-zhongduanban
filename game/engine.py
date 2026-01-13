@@ -9,7 +9,10 @@ from enum import Enum, auto
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Callable, Tuple, TYPE_CHECKING
 import random
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from .card import Card, CardType, CardSubtype, CardSuit, Deck, CardName, DamageType
 from .hero import Hero, HeroRepository, Kingdom, Skill, SkillType
@@ -41,10 +44,10 @@ class GameState(Enum):
 
 
 @dataclass
-class GameEvent:
+class GameLogEntry:
     """
-    游戏事件类
-    用于记录游戏日志
+    游戏日志条目类
+    用于记录游戏日志（避免与 events.py 中的 GameEvent 冲突）
     """
     event_type: str
     message: str
@@ -97,7 +100,7 @@ class GameEngine:
         self.winner_identity: Optional[Identity] = None
         
         # 事件日志（保留兼容）
-        self.event_log: List[GameEvent] = []
+        self.event_log: List[GameLogEntry] = []
         self.max_log_size: int = 100
         
         # UI和AI回调
@@ -106,6 +109,28 @@ class GameEngine:
         
         # 技能系统引用
         self.skill_system: Optional['SkillSystem'] = None
+        
+        # 卡牌处理器映射（用于 use_card 方法）
+        self._card_handlers: Dict[str, Callable] = {}
+        self._init_card_handlers()
+    
+    def _init_card_handlers(self) -> None:
+        """初始化卡牌处理器映射"""
+        self._card_handlers = {
+            CardName.SHA: self._use_sha,
+            CardName.TAO: self._use_tao,
+            CardName.JUEDOU: self._use_juedou,
+            CardName.NANMAN: self._use_nanman,
+            CardName.WANJIAN: self._use_wanjian,
+            CardName.WUZHONG: self._use_wuzhong,
+            CardName.GUOHE: self._use_guohe,
+            CardName.SHUNSHOU: self._use_shunshou,
+            CardName.TAOYUAN: self._use_taoyuan,
+            # 延时锦囊
+            CardName.LEBUSISHU: self._use_lebusishu,
+            CardName.BINGLIANG: self._use_bingliang,
+            CardName.SHANDIAN: self._use_shandian,
+        }
     
     def set_ui(self, ui: 'TerminalUI') -> None:
         """设置UI组件"""
@@ -114,6 +139,60 @@ class GameEngine:
     def set_skill_system(self, skill_system: 'SkillSystem') -> None:
         """设置技能系统"""
         self.skill_system = skill_system
+    
+    def execute_action(self, action: 'GameAction') -> bool:
+        """
+        统一动作执行入口（M2-T01）
+        
+        所有玩家行为（出牌/技能/弃牌）都应通过此方法执行，
+        以确保统一的校验和日志记录。
+        
+        Args:
+            action: 要执行的动作
+            
+        Returns:
+            动作是否执行成功
+        """
+        from .actions import ActionExecutor
+        
+        # 惰性创建执行器
+        if not hasattr(self, '_action_executor') or self._action_executor is None:
+            self._action_executor = ActionExecutor(self)
+        
+        # 记录动作到日志（用于回放）
+        if not hasattr(self, 'action_log'):
+            self.action_log = []
+        
+        result = self._action_executor.execute(action)
+        
+        if result:
+            # 成功执行的动作记录到日志
+            self.action_log.append({
+                'action_type': action.action_type.name,
+                'player_id': action.player_id,
+                'timestamp': action.timestamp,
+                'data': self._serialize_action(action)
+            })
+        
+        return result
+    
+    def _serialize_action(self, action: 'GameAction') -> dict:
+        """序列化动作数据（用于回放）"""
+        from .actions import PlayCardAction, UseSkillAction, DiscardAction
+        
+        data = {'type': action.action_type.name}
+        
+        if isinstance(action, PlayCardAction):
+            data['card_id'] = action.card_id
+            data['target_ids'] = action.target_ids
+        elif isinstance(action, UseSkillAction):
+            data['skill_id'] = action.skill_id
+            data['target_ids'] = action.target_ids
+            data['card_ids'] = action.card_ids
+        elif isinstance(action, DiscardAction):
+            data['card_ids'] = action.card_ids
+        
+        return data
     
     def log_event(self, event_type: str, message: str, 
                   source: Optional[Player] = None,
@@ -131,6 +210,23 @@ class GameEngine:
             card: 相关卡牌
             **extra_data: 额外数据
         """
+        # 同步写入 Python 日志（便于排查运行问题）
+        try:
+            level = logging.INFO
+            et = (event_type or "").lower()
+            if et in {"error", "exception"}:
+                level = logging.ERROR
+            elif et in {"warn", "warning"}:
+                level = logging.WARNING
+
+            src_name = source.name if source else None
+            tgt_name = target.name if target else None
+            card_name = card.display_name if card else None
+            logger.log(level, "[%s] %s | src=%s tgt=%s card=%s", event_type, message, src_name, tgt_name, card_name)
+        except Exception:
+            # 日志系统不应影响游戏流程
+            pass
+
         # 通过事件总线发布日志消息
         self.event_bus.emit(
             EventType.LOG_MESSAGE,
@@ -404,13 +500,75 @@ class GameEngine:
                     self.skill_system.trigger_skill(skill.id, player, self)
     
     def phase_judge(self, player: Player) -> None:
-        """判定阶段"""
+        """判定阶段：处理判定区的延时锦囊"""
         self.phase = GamePhase.JUDGE
-        # 判定阶段处理延时锦囊等（暂不实现）
+        
+        # 处理判定区的延时锦囊（按放置顺序的逆序处理，即后放的先判定）
+        while player.judge_area:
+            card = player.judge_area.pop()  # 取出最后一张延时锦囊
+            self.log_event("judge", f"{player.name} 开始判定【{card.name}】")
+            
+            # 无懈可击拦截点（延时锦囊判定前）
+            # 对于延时锦囊，source 是当前判定者
+            if self._request_wuxie(card, player, player, is_delay=True):
+                self.log_event("effect", f"【{card.name}】被无懈可击抵消")
+                self.deck.discard([card])
+                continue
+            
+            # 进行判定
+            judge_card = self.deck.draw(1)
+            if not judge_card:
+                self.log_event("error", "牌堆已耗尽，无法判定")
+                self.deck.discard([card])
+                continue
+            
+            judge_card = judge_card[0]
+            self.log_event("judge", f"判定结果：{judge_card.display_name}")
+            
+            # 根据延时锦囊类型处理结果
+            if card.name == "乐不思蜀":
+                # 红桃判定成功，否则跳过出牌阶段
+                if judge_card.suit.value != "heart":
+                    self.log_event("effect", f"{player.name} 判定失败，将跳过出牌阶段")
+                    player.skip_play_phase = True
+                else:
+                    self.log_event("effect", f"{player.name} 判定成功，【乐不思蜀】失效")
+            
+            elif card.name == "兵粮寸断":
+                # 黑桃判定成功，否则跳过摸牌阶段
+                if judge_card.suit.value == "club":
+                    self.log_event("effect", f"{player.name} 判定失败，将跳过摸牌阶段")
+                    player.skip_draw_phase = True
+                else:
+                    self.log_event("effect", f"{player.name} 判定成功，【兵粮寸断】失效")
+            
+            elif card.name == "闪电":
+                # 黑桃 2-9 判定失败，受到 3 点雷电伤害
+                if judge_card.suit.value == "spade" and 2 <= judge_card.number <= 9:
+                    self.log_event("effect", f"{player.name} 被【闪电】击中！")
+                    self.deal_damage(None, player, 3, "thunder")
+                else:
+                    self.log_event("effect", f"{player.name} 躲过了【闪电】")
+                    # 闪电传递给下家
+                    next_player = self.get_next_player(player)
+                    if next_player and next_player != player:
+                        next_player.judge_area.insert(0, card)
+                        self.log_event("effect", f"【闪电】移动到 {next_player.name} 的判定区")
+                        self.deck.discard([judge_card])
+                        continue  # 闪电不进弃牌堆
+            
+            # 将判定牌和延时锦囊放入弃牌堆
+            self.deck.discard([judge_card, card])
     
     def phase_draw(self, player: Player) -> None:
         """摸牌阶段"""
         self.phase = GamePhase.DRAW
+        
+        # 检查是否跳过摸牌阶段（兵粮寸断）
+        if player.skip_draw_phase:
+            self.log_event("phase", f"【摸牌阶段】被跳过")
+            return
+        
         self.log_event("phase", f"【摸牌阶段】")
         
         # 基础摸牌数
@@ -428,6 +586,12 @@ class GameEngine:
     def phase_play(self, player: Player) -> None:
         """出牌阶段"""
         self.phase = GamePhase.PLAY
+        
+        # 检查是否跳过出牌阶段（乐不思蜀）
+        if player.skip_play_phase:
+            self.log_event("phase", f"【出牌阶段】被跳过")
+            return
+        
         self.log_event("phase", f"【出牌阶段】")
         
         if player.is_ai:
@@ -506,27 +670,25 @@ class GameEngine:
         if card in player.hand:
             player.remove_card(card)
         
-        # 根据卡牌类型处理
-        # 杀类卡牌（普通杀/火杀/雷杀）
+        # 杀类卡牌（普通杀/火杀/雷杀）特殊处理
         if card.name == CardName.SHA or card.subtype in [CardSubtype.ATTACK, CardSubtype.FIRE_ATTACK, CardSubtype.THUNDER_ATTACK]:
             return self._use_sha(player, card, targets)
-        elif card.name == CardName.TAO:
-            return self._use_tao(player, card)
-        elif card.name == CardName.JUEDOU:
-            return self._use_juedou(player, card, targets)
-        elif card.name == CardName.NANMAN:
-            return self._use_nanman(player, card)
-        elif card.name == CardName.WANJIAN:
-            return self._use_wanjian(player, card)
-        elif card.name == CardName.WUZHONG:
-            return self._use_wuzhong(player, card)
-        elif card.name == CardName.GUOHE:
-            return self._use_guohe(player, card, targets)
-        elif card.name == CardName.SHUNSHOU:
-            return self._use_shunshou(player, card, targets)
-        elif card.name == CardName.TAOYUAN:
-            return self._use_taoyuan(player, card)
-        elif card.subtype == CardSubtype.ALCOHOL:
+        
+        # 使用处理器映射查找
+        handler = self._card_handlers.get(card.name)
+        if handler:
+            # 根据处理器类型决定参数（需要目标的牌）
+            cards_need_targets = [
+                CardName.JUEDOU, CardName.GUOHE, CardName.SHUNSHOU,
+                CardName.LEBUSISHU, CardName.BINGLIANG, CardName.SHANDIAN
+            ]
+            if card.name in cards_need_targets:
+                return handler(player, card, targets)
+            else:
+                return handler(player, card)
+        
+        # 按子类型处理
+        if card.subtype == CardSubtype.ALCOHOL:
             return self._use_jiu(player, card)
         elif card.subtype == CardSubtype.CHAIN:
             return self._use_tiesuo(player, card, targets)
@@ -657,16 +819,15 @@ class GameEngine:
                     shan_played += 1
                     continue
             
-            # 检查武圣技能（红色牌当闪）
-            if player.has_skill("wusheng"):
-                red_cards = player.get_red_cards()
-                if red_cards:
-                    # AI自动选择，人类需要UI交互
+            # 龙胆技能：可以将杀当闪使用
+            if player.has_skill("longdan"):
+                sha_cards = player.get_cards_by_name(CardName.SHA)
+                if sha_cards:
                     if player.is_ai:
-                        card = red_cards[0]
+                        card = sha_cards[0]
                         player.remove_card(card)
                         self.deck.discard([card])
-                        self.log_event("skill", f"{player.name} 发动【武圣】，将 {card.display_name} 当【闪】打出")
+                        self.log_event("skill", f"{player.name} 发动【龙胆】，将 {card.display_name} 当【闪】打出")
                         shan_played += 1
                         continue
             
@@ -716,6 +877,18 @@ class GameEngine:
                         sha_played += 1
                         continue
             
+            # 龙胆技能：可以将闪当杀使用
+            if player.has_skill("longdan"):
+                shan_cards = player.get_cards_by_name(CardName.SHAN)
+                if shan_cards:
+                    if player.is_ai:
+                        card = shan_cards[0]
+                        player.remove_card(card)
+                        self.deck.discard([card])
+                        self.log_event("skill", f"{player.name} 发动【龙胆】，将 {card.display_name} 当【杀】打出")
+                        sha_played += 1
+                        continue
+            
             sha_cards = player.get_cards_by_name(CardName.SHA)
             if sha_cards:
                 if player.is_ai:
@@ -740,12 +913,147 @@ class GameEngine:
         
         return sha_played
     
+    def _request_wuxie(self, trick_card: Card, source: Player, 
+                        target: Optional[Player] = None,
+                        is_delay: bool = False) -> bool:
+        """
+        请求无懈可击响应（锦囊生效前拦截点）
+        
+        Args:
+            trick_card: 锦囊牌
+            source: 锦囊使用者
+            target: 锦囊目标（AOE锦囊时为None或当前处理的目标）
+            is_delay: 是否为延时锦囊判定
+            
+        Returns:
+            True = 锦囊被无懈抵消, False = 锦囊正常生效
+        """
+        # 无懈可击本身不能被无懈
+        if trick_card.name == CardName.WUXIE:
+            return False
+        
+        # 记录无懈状态：False=生效，True=被抵消
+        is_cancelled = False
+        
+        # 从使用者开始按座位顺序询问
+        start_index = self.players.index(source)
+        
+        # 循环询问直到没有人响应
+        while True:
+            wuxie_played = False
+            
+            for i in range(len(self.players)):
+                current_index = (start_index + i) % len(self.players)
+                responder = self.players[current_index]
+                
+                if not responder.is_alive:
+                    continue
+                
+                # 检查是否有无懈可击
+                wuxie_cards = responder.get_cards_by_name(CardName.WUXIE)
+                if not wuxie_cards:
+                    continue
+                
+                # AI 决策是否使用无懈可击
+                if responder.is_ai:
+                    should_wuxie = self._ai_should_wuxie(
+                        responder, source, target, trick_card, is_cancelled
+                    )
+                    if should_wuxie:
+                        wuxie_card = wuxie_cards[0]
+                        responder.remove_card(wuxie_card)
+                        self.deck.discard([wuxie_card])
+                        
+                        action = "抵消" if not is_cancelled else "使其生效"
+                        self.log_event("wuxie", 
+                            f"🛡 {responder.name} 打出【无懈可击】{action}【{trick_card.name}】！")
+                        
+                        is_cancelled = not is_cancelled
+                        wuxie_played = True
+                        break
+                else:
+                    # 人类玩家通过 UI 选择
+                    if self.ui:
+                        result = self.ui.ask_for_wuxie(responder, trick_card, source, target, is_cancelled)
+                        if result:
+                            responder.remove_card(result)
+                            self.deck.discard([result])
+                            
+                            action = "抵消" if not is_cancelled else "使其生效"
+                            self.log_event("wuxie", 
+                                f"🛡 {responder.name} 打出【无懈可击】{action}【{trick_card.name}】！")
+                            
+                            is_cancelled = not is_cancelled
+                            wuxie_played = True
+                            break
+            
+            # 如果这轮没有人打出无懈可击，结束询问
+            if not wuxie_played:
+                break
+        
+        return is_cancelled
+    
+    def _ai_should_wuxie(self, responder: Player, source: Player, 
+                         target: Optional[Player], trick_card: Card,
+                         currently_cancelled: bool) -> bool:
+        """
+        AI 决定是否使用无懈可击
+        
+        简单策略：
+        - 对敌方使用的有害锦囊（目标是己方）更倾向无懈
+        - 对己方收益锦囊不无懈
+        - 如果当前已被无懈，考虑是否反无懈
+        """
+        from .player import Identity
+        
+        # 获取 AI bot 进行更智能的判断
+        if responder.id in self.ai_bots:
+            bot = self.ai_bots[responder.id]
+            # 判断敌友关系（_is_enemy 需要 player 和 target 两个参数）
+            is_source_enemy = bot._is_enemy(responder, source)
+            is_target_friendly = target and not bot._is_enemy(responder, target)
+            is_target_self = target == responder
+            
+            # 有害锦囊列表
+            harmful_tricks = [CardName.JUEDOU, CardName.NANMAN, CardName.WANJIAN, 
+                            CardName.GUOHE, CardName.SHUNSHOU, 
+                            CardName.LEBUSISHU, CardName.BINGLIANG]
+            
+            # 锦囊当前未被抵消
+            if not currently_cancelled:
+                # 有害锦囊且目标是自己或友方 → 无懈
+                if trick_card.name in harmful_tricks:
+                    if is_target_self or is_target_friendly:
+                        return True
+                # 收益锦囊且来源是敌人 → 可能无懈（如敌方无中生有）
+                if trick_card.name == CardName.WUZHONG and is_source_enemy:
+                    # 随机决定是否无懈敌方的无中生有
+                    return random.random() < 0.3
+            else:
+                # 锦囊当前已被抵消，考虑反无懈
+                # 有害锦囊被抵消了，且来源是敌人 → 不反无懈（让它失效）
+                # 有害锦囊被抵消了，且来源是己方 → 考虑反无懈
+                if trick_card.name in harmful_tricks:
+                    if not is_source_enemy and (is_target_self or is_target_friendly):
+                        # 己方对己方的有害锦囊被抵消？不太可能，跳过
+                        pass
+                    elif is_source_enemy:
+                        # 敌方的有害锦囊被（友方？）抵消了，不需要反无懈
+                        pass
+        
+        return False
+    
     def _trigger_bagua(self, player: Player) -> bool:
         """触发八卦阵判定"""
         self.log_event("equipment", f"{player.name} 尝试发动【八卦阵】")
         
-        # 进行判定
-        judge_card = self.deck.draw(1)[0]
+        # 进行判定（边界防护：牌堆耗尽）
+        judge_cards = self.deck.draw(1)
+        if not judge_cards:
+            self.log_event("error", "牌堆已耗尽，【八卦阵】判定失败")
+            return False
+        
+        judge_card = judge_cards[0]
         self.log_event("judge", f"判定结果: {judge_card.display_name}")
         self.deck.discard([judge_card])
         
@@ -802,6 +1110,12 @@ class GameEngine:
         self.log_event("use_card", f"{player.name} 对 {target.name} 使用了【决斗】",
                       source=player, target=target, card=card)
         
+        # 无懈可击拦截点
+        if self._request_wuxie(card, player, target):
+            self.log_event("effect", f"【决斗】被无懈可击抵消")
+            self.deck.discard([card])
+            return True
+        
         # 无双效果：每次需要两张杀
         attacker_required = 2 if player.has_skill("wushuang") else 1
         defender_required = 2 if player.has_skill("wushuang") else 1
@@ -825,11 +1139,56 @@ class GameEngine:
         self.deck.discard([card])
         return True
     
+    def _use_juedou_forced(self, source: Player, target: Player) -> None:
+        """
+        强制决斗（用于离间等技能，无需卡牌）
+        
+        Args:
+            source: 决斗发起者（视为使用决斗的人）
+            target: 决斗目标
+        """
+        # 检查空城
+        if target.has_skill("kongcheng") and target.hand_count == 0:
+            self.log_event("skill", f"{target.name} 发动【空城】，不是【决斗】的合法目标")
+            return
+        
+        self.log_event("effect", f"{source.name} 视为对 {target.name} 使用【决斗】")
+        
+        # 无双效果：每次需要两张杀
+        attacker_required = 2 if source.has_skill("wushuang") else 1
+        defender_required = 2 if source.has_skill("wushuang") else 1
+        
+        # 目标先出杀
+        current_attacker = target
+        current_defender = source
+        
+        while True:
+            required = defender_required if current_attacker == target else attacker_required
+            sha_count = self._request_sha(current_attacker, required)
+            
+            if sha_count < required:
+                # 当前攻击方受到伤害
+                self.deal_damage(current_defender, current_attacker, 1)
+                break
+            
+            # 交换攻击方和防守方
+            current_attacker, current_defender = current_defender, current_attacker
+    
     def _use_nanman(self, player: Player, card: Card) -> bool:
         """使用南蛮入侵"""
         self.log_event("use_card", f"{player.name} 使用了【南蛮入侵】", source=player, card=card)
         
         for target in self.get_other_players(player):
+            # 无懈可击拦截点（每个目标单独询问）
+            if self._request_wuxie(card, player, target):
+                self.log_event("effect", f"【南蛮入侵】对 {target.name} 被无懈可击抵消")
+                continue
+            
+            # 藤甲免疫南蛮入侵
+            if target.equipment.armor and target.equipment.armor.name == "藤甲":
+                self.log_event("equipment", f"{target.name} 的【藤甲】使【南蛮入侵】无效")
+                continue
+            
             sha_count = self._request_sha(target, 1)
             if sha_count < 1:
                 self.log_event("effect", f"{target.name} 未能打出【杀】")
@@ -845,6 +1204,16 @@ class GameEngine:
         self.log_event("use_card", f"{player.name} 使用了【万箭齐发】", source=player, card=card)
         
         for target in self.get_other_players(player):
+            # 无懈可击拦截点（每个目标单独询问）
+            if self._request_wuxie(card, player, target):
+                self.log_event("effect", f"【万箭齐发】对 {target.name} 被无懈可击抵消")
+                continue
+            
+            # 藤甲免疫万箭齐发
+            if target.equipment.armor and target.equipment.armor.name == "藤甲":
+                self.log_event("equipment", f"{target.name} 的【藤甲】使【万箭齐发】无效")
+                continue
+            
             shan_count = self._request_shan(target, 1)
             if shan_count < 1:
                 self.log_event("effect", f"{target.name} 未能打出【闪】")
@@ -859,9 +1228,18 @@ class GameEngine:
         """使用无中生有"""
         self.log_event("use_card", f"{player.name} 使用了【无中生有】", source=player, card=card)
         
+        # 无懈可击拦截点
+        if self._request_wuxie(card, player, player):
+            self.log_event("effect", f"【无中生有】被无懈可击抵消")
+            self.deck.discard([card])
+            return True
+        
         cards = self.deck.draw(2)
-        player.draw_cards(cards)
-        self.log_event("effect", f"{player.name} 摸了 2 张牌")
+        if cards:
+            player.draw_cards(cards)
+            self.log_event("effect", f"{player.name} 摸了 {len(cards)} 张牌")
+        else:
+            self.log_event("error", "牌堆已耗尽，无法摸牌")
         
         self.deck.discard([card])
         return True
@@ -881,6 +1259,12 @@ class GameEngine:
         
         self.log_event("use_card", f"{player.name} 对 {target.name} 使用了【过河拆桥】",
                       source=player, target=target, card=card)
+        
+        # 无懈可击拦截点
+        if self._request_wuxie(card, player, target):
+            self.log_event("effect", f"【过河拆桥】被无懈可击抵消")
+            self.deck.discard([card])
+            return True
         
         # 选择并弃置一张牌
         discarded_card = self._choose_and_discard_card(player, target)
@@ -912,6 +1296,12 @@ class GameEngine:
         self.log_event("use_card", f"{player.name} 对 {target.name} 使用了【顺手牵羊】",
                       source=player, target=target, card=card)
         
+        # 无懈可击拦截点
+        if self._request_wuxie(card, player, target):
+            self.log_event("effect", f"【顺手牵羊】被无懈可击抵消")
+            self.deck.discard([card])
+            return True
+        
         # 选择并获得一张牌
         stolen_card = self._choose_and_steal_card(player, target)
         if stolen_card:
@@ -929,11 +1319,110 @@ class GameEngine:
         for i in range(len(self.players)):
             current_index = (start_index + i) % len(self.players)
             p = self.players[current_index]
-            if p.is_alive and p.hp < p.max_hp:
+            if not p.is_alive:
+                continue
+            
+            # 无懈可击拦截点（每个目标单独询问）
+            if self._request_wuxie(card, player, p):
+                self.log_event("effect", f"【桃园结义】对 {p.name} 被无懈可击抵消")
+                continue
+            
+            if p.hp < p.max_hp:
                 p.heal(1)
                 self.log_event("effect", f"{p.name} 回复了 1 点体力")
         
         self.deck.discard([card])
+        return True
+    
+    def _use_lebusishu(self, player: Player, card: Card, targets: List[Player]) -> bool:
+        """
+        使用乐不思蜀（延时锦囊）
+        对其他角色使用，置于其判定区。判定阶段判定，非红桃则跳过出牌阶段。
+        """
+        if not targets:
+            player.draw_cards([card])
+            return False
+        
+        target = targets[0]
+        
+        # 不能对自己使用
+        if target == player:
+            self.log_event("error", "【乐不思蜀】不能对自己使用")
+            player.draw_cards([card])
+            return False
+        
+        # 检查目标判定区是否已有同名牌
+        for c in target.judge_area:
+            if c.name == CardName.LEBUSISHU:
+                self.log_event("error", f"{target.name} 判定区已有【乐不思蜀】")
+                player.draw_cards([card])
+                return False
+        
+        self.log_event("use_card", f"😴 {player.name} 对 {target.name} 使用了【乐不思蜀】",
+                      source=player, target=target, card=card)
+        
+        # 放入目标判定区
+        target.judge_area.insert(0, card)
+        self.log_event("effect", f"【乐不思蜀】进入 {target.name} 的判定区")
+        return True
+    
+    def _use_bingliang(self, player: Player, card: Card, targets: List[Player]) -> bool:
+        """
+        使用兵粮寸断（延时锦囊）
+        对距离1以内的其他角色使用，置于其判定区。判定阶段判定，梅花则跳过摸牌阶段。
+        """
+        if not targets:
+            player.draw_cards([card])
+            return False
+        
+        target = targets[0]
+        
+        # 不能对自己使用
+        if target == player:
+            self.log_event("error", "【兵粮寸断】不能对自己使用")
+            player.draw_cards([card])
+            return False
+        
+        # 检查距离（必须距离1以内）
+        distance = self.calculate_distance(player, target)
+        if distance > 1:
+            self.log_event("error", f"{target.name} 距离太远（距离{distance}），无法使用【兵粮寸断】")
+            player.draw_cards([card])
+            return False
+        
+        # 检查目标判定区是否已有同名牌
+        for c in target.judge_area:
+            if c.name == CardName.BINGLIANG:
+                self.log_event("error", f"{target.name} 判定区已有【兵粮寸断】")
+                player.draw_cards([card])
+                return False
+        
+        self.log_event("use_card", f"🌾 {player.name} 对 {target.name} 使用了【兵粮寸断】",
+                      source=player, target=target, card=card)
+        
+        # 放入目标判定区
+        target.judge_area.insert(0, card)
+        self.log_event("effect", f"【兵粮寸断】进入 {target.name} 的判定区")
+        return True
+    
+    def _use_shandian(self, player: Player, card: Card, targets: List[Player] = None) -> bool:
+        """
+        使用闪电（延时锦囊）
+        对自己使用，置于自己判定区。判定阶段判定，黑桃2-9则受到3点雷电伤害，否则传给下家。
+        """
+        # 检查判定区是否已有闪电
+        for c in player.judge_area:
+            if c.name == CardName.SHANDIAN:
+                self.log_event("error", f"{player.name} 判定区已有【闪电】")
+                player.draw_cards([card])
+                return False
+        
+        self.log_event("use_card", f"⚡ {player.name} 使用了【闪电】",
+                      source=player, card=card)
+        
+        # 放入自己判定区
+        player.judge_area.insert(0, card)
+        self.log_event("effect", f"【闪电】进入 {player.name} 的判定区")
         return True
     
     def _use_jiu(self, player: Player, card: Card) -> bool:
@@ -1299,18 +1788,30 @@ class GameEngine:
     # ==================== 无 UI 对战接口（用于压测/AI研究） ====================
     
     def setup_headless_game(self, player_count: int, 
-                            ai_difficulty: str = "normal") -> None:
+                            ai_difficulty: str = "normal",
+                            seed: Optional[int] = None) -> None:
         """
         设置无 UI 对战（用于压力测试与 AI 研究）
         
         Args:
             player_count: 玩家数量（2-8）
             ai_difficulty: AI 难度 ("easy", "normal", "hard")
+            seed: 随机种子（用于复现对局），None 则自动生成
         """
         from ai.bot import AIBot, AIDifficulty
         
         if player_count < 2 or player_count > 8:
             raise ValueError("玩家数量必须在2-8之间")
+        
+        # M3-T01: 统一随机种子注入与记录
+        if seed is None:
+            seed = random.randint(0, 2**31 - 1)
+        self.game_seed = seed
+        random.seed(seed)
+        self.log_event("system", f"🎲 随机种子: {seed}")
+        
+        # 初始化动作日志（用于回放）
+        self.action_log = []
         
         # 创建玩家（全部为 AI）
         self.players.clear()
@@ -1398,20 +1899,31 @@ class GameEngine:
                 if skill.timing and skill.timing.value == "prepare":
                     self.skill_system.trigger_skill(skill.id, player, self)
         
-        # 判定阶段（简化：跳过延时锦囊）
+        # 判定阶段（对齐正式逻辑）
         self.phase = GamePhase.JUDGE
+        self.phase_judge(player)
         
-        # 摸牌阶段
+        # 检查是否因判定阶段死亡（如闪电）
+        if not player.is_alive:
+            self.next_turn()
+            return True
+        
+        # 摸牌阶段（检查是否被兵粮寸断跳过）
         self.phase = GamePhase.DRAW
-        draw_count = 2
-        if player.has_skill("yingzi"):
-            draw_count += 1
-        cards = self.deck.draw(draw_count)
-        player.draw_cards(cards)
+        if not player.skip_draw_phase:
+            draw_count = 2
+            if player.has_skill("yingzi"):
+                draw_count += 1
+            cards = self.deck.draw(draw_count)
+            player.draw_cards(cards)
+        else:
+            player.skip_draw_phase = False  # 重置标记
         
-        # 出牌阶段
+        # 出牌阶段（检查是否被乐不思蜀跳过）
         self.phase = GamePhase.PLAY
-        if player.id in self.ai_bots:
+        if player.skip_play_phase:
+            player.skip_play_phase = False  # 重置标记
+        elif player.id in self.ai_bots:
             bot = self.ai_bots[player.id]
             bot.play_phase(player, self)
         

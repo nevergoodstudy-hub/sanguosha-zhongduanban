@@ -410,6 +410,11 @@ class Deck:
         """获取弃牌堆牌数"""
         return len(self.discard_pile)
     
+    @property
+    def is_empty(self) -> bool:
+        """检查牌堆是否完全耗尽（摸牌堆和弃牌堆都为空）"""
+        return len(self.draw_pile) == 0 and len(self.discard_pile) == 0
+    
     def __len__(self) -> int:
         return self.remaining
     
@@ -434,6 +439,11 @@ class CardName:
     SHUNSHOU = "顺手牵羊"
     TAOYUAN = "桃园结义"
     WUXIE = "无懈可击"
+    
+    # 延时锦囊
+    LEBUSISHU = "乐不思蜀"
+    BINGLIANG = "兵粮寸断"
+    SHANDIAN = "闪电"
     
     # 武器
     QINGLONG = "青龙偃月刀"

@@ -314,9 +314,11 @@ python main.py
 sanguosha/
 ├── main.py                      # 游戏入口
 ├── README.md                    # 说明文档
+├── PROJECT_OVERVIEW.html         # 项目概览（HTML）
 ├── PROJECT_ROADMAP.md           # 项目路线图
 ├── IMPROVEMENT_PLAN.md          # 改进计划
 ├── GAMEPLAY_IMPROVEMENTS.md     # 玩法扩展计划
+├── DEVELOPER_EXECUTION_PLAN.md  # 开发者可执行改进实施文档
 ├── requirements.txt             # 依赖列表
 ├── game/                        # 游戏核心模块
 │   ├── __init__.py
@@ -399,6 +401,10 @@ pyinstaller sanguosha.spec --noconfirm
 
 详细的项目演进规划请查看 **[PROJECT_ROADMAP.md](./PROJECT_ROADMAP.md)**
 
+更细化的开发执行任务清单请查看 **[DEVELOPER_EXECUTION_PLAN.md](./DEVELOPER_EXECUTION_PLAN.md)**
+
+项目整体概览（可视化）请查看 **[PROJECT_OVERVIEW.html](./PROJECT_OVERVIEW.html)**
+
 **已完成**：
 - ✅ 阶段1 T1-1：统一压力测试与正式引擎逻辑
 - ✅ 阶段1 T1-2：打通军争基础机制（酒/火杀/雷杀/铁索连环）
@@ -410,6 +416,30 @@ pyinstaller sanguosha.spec --noconfirm
 - ⏳ 阶段3：技能原子化与数据驱动 SkillSystem
 
 ## 📝 版本历史
+
+### Unreleased
+- **开发文档**：新增 [DEVELOPER_EXECUTION_PLAN.md](./DEVELOPER_EXECUTION_PLAN.md)，用于指导后续改进实施（里程碑/验收/测试/回滚/安全审计）
+- **项目概览**：新增 [PROJECT_OVERVIEW.html](./PROJECT_OVERVIEW.html)，用于快速浏览架构、机制与路线图
+- **富 UI 稳定性**：修复 Rich 标记标签闭合错误导致的 `MarkupError`，并为 Rich UI 补齐 `ask_for_wuxie()` 交互接口，避免交互模式运行时崩溃
+
+### v1.2.0 (2025-01) 🚀 规则闭环与AI增强
+- **M1 规则闭环**：
+  - headless 判定阶段对齐正式逻辑（闪电/乐不思蜀/兵粮寸断完整支持）
+  - 延时锦囊"出牌→入判定区"闭环实现
+  - 无懈可击机制完整实现（锦囊生效前拦截、AI决策、连环无懈）
+  - 牌堆耗尽与判定抽牌边界防护
+- **M2 动作系统**：
+  - 引擎统一动作入口 `execute_action()`
+  - 动作序列记录（用于回放）
+- **M3 可复现性**：
+  - 统一随机种子注入与记录（`setup_headless_game(seed=xxx)`）
+  - 动作日志自动记录
+- **M4 AI增强**：
+  - 局势评分函数 `evaluate_game_state()`
+  - 玩家战力评估 `_calculate_player_power()`
+  - 危险等级计算 `_calculate_danger_level()`
+  - 身份推断系统 `infer_identity()` / `record_behavior()`
+- **压力测试**：100局全部通过，成功率100%
 
 ### v1.1.0 (2025-11) ✨ Latest
 - **军争基础机制**：酒、火杀/雷杀、铁索连环、藤甲
