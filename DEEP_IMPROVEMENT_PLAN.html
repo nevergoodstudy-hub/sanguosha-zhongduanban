@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>三国杀终端版 - 深度改进开发计划（可视化）</title>
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --panel: rgba(20, 26, 44, 0.78);
+      --text: #e9edf5;
+      --muted: #aab3c5;
+      --primary: #c41e3a;
+      --accent: #ffd700;
+      --border: rgba(255, 255, 255, 0.12);
+      --shadow: rgba(0, 0, 0, 0.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 15% 15%, rgba(255, 215, 0, 0.12), transparent 55%),
+        radial-gradient(900px 700px at 75% 30%, rgba(196, 30, 58, 0.18), transparent 55%),
+        linear-gradient(135deg, #070a12 0%, var(--bg) 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+      background: rgba(7, 10, 18, 0.75);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      justify-content: space-between;
+    }
+
+    .brand-title { font-weight: 800; letter-spacing: 0.4px; font-size: 16px; }
+    .brand-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .topbar-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--muted);
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      user-select: none;
+    }
+    .chip b { color: var(--text); font-weight: 700; }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+      font-size: 12px;
+      user-select: none;
+    }
+    .btn:hover { background: rgba(255, 255, 255, 0.10); transform: translateY(-1px); }
+
+    .layout {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static !important; height: auto !important; }
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 68px;
+      height: calc(100vh - 90px);
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .nav-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 30px var(--shadow);
+      padding: 14px;
+    }
+
+    .nav-title {
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+    }
+
+    .nav a {
+      display: block;
+      padding: 9px 10px;
+      border-radius: 10px;
+      color: var(--text);
+      border: 1px solid transparent;
+    }
+    .nav a:hover { background: rgba(255, 255, 255, 0.06); border-color: var(--border); text-decoration: none; }
+    .nav .sub { padding-left: 14px; color: var(--muted); font-size: 13px; }
+
+    .content { display: flex; flex-direction: column; gap: 16px; }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(196, 30, 58, 0.28), rgba(255, 215, 0, 0.10));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 18px 40px var(--shadow);
+      padding: 18px;
+    }
+    .hero h1 { margin: 0; font-size: 26px; letter-spacing: 0.4px; }
+    .hero p { margin: 10px 0 0; color: rgba(233, 237, 245, 0.88); line-height: 1.75; max-width: 980px; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 30px var(--shadow);
+      padding: 16px;
+      overflow: hidden;
+    }
+    .card h2 { margin: 0; font-size: 16px; letter-spacing: 0.2px; }
+
+    .muted { color: var(--muted); line-height: 1.8; }
+
+    .code {
+      font-family: var(--mono);
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      padding: 2px 6px;
+      border-radius: 7px;
+      color: #d6deff;
+      font-size: 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.03);
+      white-space: nowrap;
+    }
+    .tag.p0 { border-color: rgba(255, 77, 77, 0.35); color: #ffe0e0; background: rgba(255, 77, 77, 0.14); }
+    .tag.p1 { border-color: rgba(243, 156, 18, 0.35); color: #fff4de; background: rgba(243, 156, 18, 0.14); }
+    .tag.p2 { border-color: rgba(255, 215, 0, 0.28); color: #fff6c7; background: rgba(255, 215, 0, 0.10); }
+    .tag.p3 { border-color: rgba(170, 179, 197, 0.25); color: #d5dbea; background: rgba(170, 179, 197, 0.09); }
+
+    .tag.done { border-color: rgba(30, 201, 124, 0.35); color: #dff9ed; background: rgba(30, 201, 124, 0.14); }
+    .tag.progress { border-color: rgba(52, 152, 219, 0.35); color: #dbeeff; background: rgba(52, 152, 219, 0.14); }
+    .tag.planned { border-color: rgba(255, 255, 255, 0.12); color: var(--muted); background: rgba(255, 255, 255, 0.03); }
+
+    details {
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 10px 12px;
+      margin-top: 10px;
+    }
+
+    details summary {
+      cursor: pointer;
+      font-weight: 800;
+      color: var(--text);
+      list-style: none;
+    }
+
+    details summary::-webkit-details-marker { display: none; }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .input, .select {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.25);
+      color: var(--text);
+      outline: none;
+      font-size: 12px;
+    }
+
+    .progress {
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress > div {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transition: width 0.25s ease;
+    }
+
+    .task-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: rgba(255, 255, 255, 0.03);
+      margin-top: 10px;
+    }
+
+    .task-item input[type="checkbox"] {
+      margin-top: 2px;
+      transform: scale(1.05);
+    }
+
+    .task-title {
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .task-desc {
+      margin-top: 6px;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 12px;
+    }
+
+    .foot { padding: 18px; text-align: center; color: var(--muted); font-size: 12px; opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div>
+        <div class="brand-title">三国杀终端版 · 深度改进开发计划（可视化）</div>
+        <div class="brand-sub">规则一致性 / 架构可扩展 / AI 压测可复现</div>
+      </div>
+      <div class="topbar-actions">
+        <span class="chip"><b>生成时间</b><span id="genTime">-</span></span>
+        <button class="btn" id="btnExpand" type="button">展开全部</button>
+        <button class="btn" id="btnCollapse" type="button">折叠全部</button>
+        <button class="btn" id="btnReset" type="button">重置勾选</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="nav-card">
+        <div class="nav-title">导航</div>
+        <div class="nav">
+          <a href="#overview">0. 总览</a>
+          <a href="#inventory" class="sub">0.1 盘点与现状</a>
+          <a href="#deps" class="sub">0.2 依赖与构建</a>
+          <a href="#roadmap">1. 路线图（Milestones）</a>
+          <a href="#board">2. 任务看板</a>
+          <a href="#benchmark">3. 对标开源项目</a>
+          <a href="#architecture">4. 架构演进建议</a>
+          <a href="#qa">5. 测试与质量体系</a>
+          <a href="#security">6. 安全审计</a>
+          <a href="#appendix">附录</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="hero" id="overview">
+        <h1>从“能玩”到“可长期演进”的深度改进开发计划</h1>
+        <p>
+          本计划只做“分析与规划”，不直接改动游戏规则实现。核心目标聚焦三条主线：
+          规则闭环（数据与实现一致）、动作入口统一（人类/AI 都走 ActionValidator）、压测可复现（seed + action_log + 回放）。
+        </p>
+        <p class="muted">
+          资料来源：<span class="code">IMPROVEMENT_PLAN.md</span> / <span class="code">PROJECT_ROADMAP.md</span> /
+          <span class="code">DEVELOPER_EXECUTION_PLAN.md</span> / <span class="code">GAMEPLAY_IMPROVEMENTS.md</span>
+        </p>
+      </section>
+
+      <section class="card" id="inventory">
+        <h2>0.1 盘点与现状（P1 输出）</h2>
+        <div class="muted" style="margin-top: 10px;">
+          <div><b>关键模块</b></div>
+          <ul>
+            <li><span class="code">game/engine.py</span>：规则权威引擎（阶段/用牌/伤害/濒死/死亡 + headless）</li>
+            <li><span class="code">game/actions.py</span>：Action/Request 抽象（未来唯一入口）</li>
+            <li><span class="code">game/events.py</span>：EventBus（订阅/发布/取消/修改，已有单测）</li>
+            <li><span class="code">game/skill.py</span>：技能实现集中分发（扩展性风险点）</li>
+            <li><span class="code">ui/terminal.py</span> / <span class="code">ui/rich_ui.py</span>：两套终端 UI</li>
+            <li><span class="code">ai/bot.py</span>：三档 AI 难度（简单/普通/困难）</li>
+          </ul>
+
+          <div><b>关键指标（基于仓库扫描）</b></div>
+          <ul>
+            <li>Python 文件：约 <b>24</b> 个（不含缓存目录）</li>
+            <li><span class="code">game/engine.py</span>：约 <b>1972</b> 行（God Class 风险）</li>
+            <li><span class="code">ui/terminal.py</span>：约 <b>927</b> 行（交互/渲染/输入集中）</li>
+            <li><span class="code">game/skill.py</span>：约 <b>870</b> 行（技能实现集中）</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card" id="deps">
+        <h2>0.2 依赖与构建（P1 输出）</h2>
+        <div class="muted" style="margin-top: 10px;">
+          <ul>
+            <li><span class="code">requirements.txt</span> 当前声明：<span class="code">colorama</span>、<span class="code">pytest</span>、<span class="code">pytest-cov</span></li>
+            <li><span class="tag p0">P0</span> 发现依赖差距：项目使用 <span class="code">rich</span>（RichTerminalUI），但未写入 requirements</li>
+            <li>打包：<span class="code">build.bat</span> + <span class="code">sanguosha.spec</span>（spec 已包含 <span class="code">data/</span>）</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card" id="roadmap">
+        <h2>1. 路线图（Milestones）</h2>
+        <details open>
+          <summary>M0：基线冻结（回滚点） <span class="tag done">Done</span></summary>
+          <div class="muted" style="margin-top: 8px;">
+            以当前主分支为稳定回滚点；所有后续重构坚持“小步提交 + 可回滚 + 测试护栏”。
+          </div>
+        </details>
+
+        <details open>
+          <summary>M1：规则闭环与数据一致性 <span class="tag progress">In Progress</span></summary>
+          <div class="muted" style="margin-top: 8px;">
+            已具备：延时锦囊判定区结构、无懈可击响应入口、军争基础机制等。仍需补齐：<span class="code">data/cards.json</span> 中存在但引擎尚未覆盖的卡牌处理器与单测（例如：火攻/白银狮子/古锭刀/朱雀羽扇）。
+          </div>
+        </details>
+
+        <details open>
+          <summary>M2：动作系统闭环（唯一入口） <span class="tag progress">In Progress</span></summary>
+          <div class="muted" style="margin-top: 8px;">
+            已具备：<span class="code">engine.execute_action(action)</span> + <span class="code">ActionExecutor</span> + <span class="code">ActionValidator</span>。仍需推进：
+            人类交互与 AI 出牌统一走 Action 入口，减少 <span class="code">main.py</span> 的重复校验逻辑。
+          </div>
+        </details>
+
+        <details>
+          <summary>M3：可复现性与回放（seed + action_log） <span class="tag planned">Planned</span></summary>
+          <div class="muted" style="margin-top: 8px;">
+            已具备：headless 支持可选 seed，且引擎存在 action_log 记录能力。建议补齐：
+            action_log 导出 JSON、最小 replay 工具、失败对局一键复现入口。
+          </div>
+        </details>
+
+        <details>
+          <summary>M4：AI 增强（评估函数 + 身份推断 + 策略模块化） <span class="tag planned">Planned</span></summary>
+          <div class="muted" style="margin-top: 8px;">
+            已具备：局势评分函数与身份推断的基础实现。建议补齐：将评分/推断结果更深入地接入决策链路，并逐步模块化策略（替代深层 if-else）。
+          </div>
+        </details>
+      </section>
+
+      <section class="card" id="board">
+        <h2>2. 任务看板</h2>
+        <div class="muted" style="margin-top: 10px;">
+          本看板用于执行期自管理：支持筛选、勾选完成，并将勾选状态保存到浏览器本地（localStorage）。
+        </div>
+        <div class="filters">
+          <input class="input" id="q" placeholder="搜索任务（标题/关键词）" />
+          <select class="select" id="fPhase"></select>
+          <select class="select" id="fPriority"></select>
+          <select class="select" id="fStatus"></select>
+        </div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <div id="taskBoard"></div>
+      </section>
+
+      <section class="card" id="benchmark">
+        <h2>3. 对标开源项目：可借鉴点</h2>
+        <div class="muted" style="margin-top: 10px;">
+          <ul>
+            <li><b>FreeKill</b>：开源桌游框架，强调“断线重连/录像回放/大厅”，服务端 Lua 单线程异步，脚本仓库独立维护</li>
+            <li><b>QSanguosha</b>：Qt 图形引擎 + Lua 作为 AI/扩展脚本，强调 Package 机制与 Mod 生态</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card" id="architecture">
+        <h2>4. 架构演进建议（从当前到目标）</h2>
+        <div class="muted" style="margin-top: 10px;">
+          目标结构：把“所有外部行为”统一收敛到 Action，把“交互窗口”统一抽象成 Request/Response，
+          并用 EventBus 广播关键规则事件供技能与 UI 订阅。
+        </div>
+      </section>
+
+      <section class="card" id="qa">
+        <h2>5. 测试与质量体系</h2>
+        <div class="muted" style="margin-top: 10px;">
+          <ul>
+            <li>基线：<span class="code">pytest tests/ -v</span> 全量通过</li>
+            <li>回归护栏：<span class="code">python tests/test_auto_battle_stress.py</span>（至少 100 局）</li>
+            <li>DoD：新牌/新技能必须带最小单测；引擎改动必须跑全量 + 压测</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card" id="security">
+        <h2>6. 安全审计清单</h2>
+        <div class="muted" style="margin-top: 10px;">
+          <ul>
+            <li><b>输入与动作校验</b>：所有进入引擎的行为必须走 <span class="code">ActionValidator</span></li>
+            <li><b>状态一致性</b>：伤害/回复/濒死/死亡状态变更必须单点收敛</li>
+            <li><b>供应链</b>：依赖更新需说明；仓库不得写入任何 Token/密钥</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card" id="appendix">
+        <h2>附录</h2>
+        <div class="muted" style="margin-top: 10px;">
+          以 <span class="code">data/cards.json</span> 为权威，建议维护“数据条目 → 引擎处理器 → 测试用例”的映射表，
+          防止新增卡牌数据后遗漏实现导致规则漂移。
+        </div>
+      </section>
+
+      <div class="foot">本页面为离线单页文档；不包含外链脚本，交互数据只保存在浏览器本地。</div>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      function $(id) { return document.getElementById(id); }
+
+      var gen = $('genTime');
+      if (gen) gen.textContent = new Date().toLocaleString();
+
+      var tasks = [
+        {
+          id: 'req-rich',
+          title: 'requirements.txt 补齐 rich 依赖声明',
+          phase: 'M1 规则闭环与数据一致性',
+          priority: 'P0',
+          status: '规划中',
+          desc: '项目已使用 RichTerminalUI（rich），但 requirements.txt 未声明；需补齐并在 README 记录。',
+          keywords: ['rich', 'requirements']
+        },
+        {
+          id: 'card-coverage-map',
+          title: '建立 cards.json → 引擎处理器/单测 的覆盖率映射表',
+          phase: 'M1 规则闭环与数据一致性',
+          priority: 'P1',
+          status: '规划中',
+          desc: '以 data/cards.json 为权威，列出“已实现/缺失实现/缺失测试”的闭环清单，避免数据漂移。',
+          keywords: ['cards.json', 'use_card']
+        },
+        {
+          id: 'card-huogong',
+          title: '补齐【火攻】处理器与最小单测',
+          phase: 'M1 规则闭环与数据一致性',
+          priority: 'P1',
+          status: '规划中',
+          desc: 'cards.json 已存在【火攻】条目，但引擎未实现；需闭环到 use_card 处理链并加测试。',
+          keywords: ['火攻', 'trick']
+        },
+        {
+          id: 'equip-baiyinshizi',
+          title: '补齐【白银狮子】装备效果与最小单测',
+          phase: 'M1 规则闭环与数据一致性',
+          priority: 'P2',
+          status: '规划中',
+          desc: 'cards.json 已存在【白银狮子】，引擎暂无处理；需要伤害削减与失去装备回血的闭环。',
+          keywords: ['白银狮子', 'armor']
+        },
+        {
+          id: 'equip-gudingdao',
+          title: '补齐【古锭刀】武器效果与最小单测',
+          phase: 'M1 规则闭环与数据一致性',
+          priority: 'P2',
+          status: '规划中',
+          desc: 'cards.json 已存在【古锭刀】，引擎暂无处理；需在杀伤害结算点判断目标手牌为空时伤害+1。',
+          keywords: ['古锭刀', 'weapon']
+        },
+        {
+          id: 'equip-zhuque',
+          title: '补齐【朱雀羽扇】武器效果与最小单测',
+          phase: 'M1 规则闭环与数据一致性',
+          priority: 'P2',
+          status: '规划中',
+          desc: 'cards.json 已存在【朱雀羽扇】，引擎暂无处理；需要“普通杀视为火杀”的闭环与测试。',
+          keywords: ['朱雀羽扇', 'fire']
+        },
+        {
+          id: 'engine-execute-action',
+          title: '引擎统一动作入口 execute_action(action)',
+          phase: 'M2 动作系统闭环（唯一入口）',
+          priority: 'P1',
+          status: '已完成',
+          desc: 'engine.execute_action 已实现，且成功动作会写入 action_log。',
+          keywords: ['execute_action', 'action_log']
+        },
+        {
+          id: 'main-use-action',
+          title: 'main.py 出牌/技能/弃牌迁移为 Action 派发',
+          phase: 'M2 动作系统闭环（唯一入口）',
+          priority: 'P1',
+          status: '规划中',
+          desc: '当前 main.py 未调用 execute_action，且存在重复的可用性判断；建议逐步迁移并保留兼容。',
+          keywords: ['main.py', 'ActionValidator']
+        },
+        {
+          id: 'ai-use-action',
+          title: 'AI 出牌/技能迁移为 Action（避免绕过校验）',
+          phase: 'M2 动作系统闭环（唯一入口）',
+          priority: 'P1',
+          status: '规划中',
+          desc: '当前 AI 主要直接调用 engine.use_card(...)；建议迁移为 Action，以便联机/回放/反作弊。',
+          keywords: ['ai', 'use_card']
+        },
+        {
+          id: 'repro-seed',
+          title: '统一随机种子注入与记录（setup_headless_game(seed=...)）',
+          phase: 'M3 可复现性与回放',
+          priority: 'P2',
+          status: '已完成',
+          desc: 'headless 已支持 seed，并记录到 game_seed 与日志。',
+          keywords: ['seed', 'headless']
+        },
+        {
+          id: 'replay-export',
+          title: 'action_log 导出 JSON（用于失败对局复现）',
+          phase: 'M3 可复现性与回放',
+          priority: 'P2',
+          status: '规划中',
+          desc: '建议提供导出入口与最小格式，保证压测失败可稳定复现。',
+          keywords: ['action_log', 'json']
+        },
+        {
+          id: 'replay-tool',
+          title: '最小回放工具（开发用）',
+          phase: 'M3 可复现性与回放',
+          priority: 'P3',
+          status: '规划中',
+          desc: '根据 action_log 重建引擎并依次 execute_action，校验关键状态一致。',
+          keywords: ['replay', 'tools']
+        },
+        {
+          id: 'ai-eval',
+          title: '将局势评分 evaluate_game_state 更深入接入决策链路',
+          phase: 'M4 AI 增强',
+          priority: 'P2',
+          status: '规划中',
+          desc: 'AI 内已有评分函数与危险等级计算，建议用于目标选择/用牌收益评估。',
+          keywords: ['evaluate_game_state', 'ai']
+        },
+        {
+          id: 'ai-infer',
+          title: '身份推断 infer_identity / record_behavior 的实际应用',
+          phase: 'M4 AI 增强',
+          priority: 'P3',
+          status: '规划中',
+          desc: 'AI 内已有身份推断接口，建议用行为记录驱动目标选择与救援决策。',
+          keywords: ['infer_identity', 'record_behavior']
+        }
+      ];
+
+      var LS_KEY = 'deep_improvement_plan_task_state_v1';
+      var saved = {};
+      var canStore = true;
+      try {
+        saved = JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {};
+      } catch (e) {
+        saved = {};
+        canStore = false;
+      }
+
+      function persist() {
+        if (!canStore) return;
+        try {
+          localStorage.setItem(LS_KEY, JSON.stringify(saved));
+        } catch (e) {
+          canStore = false;
+        }
+      }
+
+      function statusClass(status) {
+        if (status === '已完成') return 'done';
+        if (status === '进行中') return 'progress';
+        return 'planned';
+      }
+
+      function isChecked(t) {
+        if (Object.prototype.hasOwnProperty.call(saved, t.id)) return !!saved[t.id];
+        return t.status === '已完成';
+      }
+
+      function setChecked(id, value) {
+        saved[id] = !!value;
+        persist();
+      }
+
+      function uniq(values) {
+        var seen = {};
+        var out = [];
+        for (var i = 0; i < values.length; i++) {
+          var v = values[i];
+          if (!seen[v]) {
+            seen[v] = true;
+            out.push(v);
+          }
+        }
+        return out;
+      }
+
+      function fillSelect(sel, allLabel, values) {
+        if (!sel) return;
+        sel.innerHTML = '';
+        var all = document.createElement('option');
+        all.value = '';
+        all.textContent = allLabel;
+        sel.appendChild(all);
+        for (var i = 0; i < values.length; i++) {
+          var o = document.createElement('option');
+          o.value = values[i];
+          o.textContent = values[i];
+          sel.appendChild(o);
+        }
+      }
+
+      var qEl = $('q');
+      var fPhase = $('fPhase');
+      var fPriority = $('fPriority');
+      var fStatus = $('fStatus');
+      var board = $('taskBoard');
+      var pb = $('progressBar');
+
+      (function initSelects() {
+        var phases = [];
+        var priorities = [];
+        var statuses = [];
+        for (var i = 0; i < tasks.length; i++) {
+          phases.push(tasks[i].phase);
+          priorities.push(tasks[i].priority);
+          statuses.push(tasks[i].status);
+        }
+        fillSelect(fPhase, '全部阶段', uniq(phases));
+        fillSelect(fPriority, '全部优先级', uniq(priorities));
+        fillSelect(fStatus, '全部状态', uniq(statuses));
+      })();
+
+      function matches(t, q) {
+        if (!q) return true;
+        var s = (t.title + ' ' + (t.desc || '') + ' ' + (t.keywords || []).join(' ')).toLowerCase();
+        return s.indexOf(q.toLowerCase()) >= 0;
+      }
+
+      function getFiltered() {
+        var q = qEl ? qEl.value.trim() : '';
+        var phase = fPhase ? fPhase.value : '';
+        var prio = fPriority ? fPriority.value : '';
+        var st = fStatus ? fStatus.value : '';
+
+        var out = [];
+        for (var i = 0; i < tasks.length; i++) {
+          var t = tasks[i];
+          if (phase && t.phase !== phase) continue;
+          if (prio && t.priority !== prio) continue;
+          if (st && t.status !== st) continue;
+          if (!matches(t, q)) continue;
+          out.push(t);
+        }
+        return out;
+      }
+
+      function updateProgress() {
+        if (!pb) return;
+        var total = tasks.length;
+        var done = 0;
+        for (var i = 0; i < tasks.length; i++) {
+          if (isChecked(tasks[i])) done++;
+        }
+        var pct = total ? Math.round(done * 100 / total) : 0;
+        pb.style.width = pct + '%';
+      }
+
+      function render() {
+        updateProgress();
+        if (!board) return;
+
+        var list = getFiltered();
+        board.innerHTML = '';
+
+        if (!list.length) {
+          board.textContent = '无匹配任务';
+          return;
+        }
+
+        for (var i = 0; i < list.length; i++) {
+          var t = list[i];
+          var row = document.createElement('div');
+          row.className = 'task-item';
+
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = isChecked(t);
+
+          (function (task, checkbox) {
+            checkbox.addEventListener('change', function () {
+              setChecked(task.id, checkbox.checked);
+              render();
+            });
+          })(t, cb);
+
+          row.appendChild(cb);
+
+          var body = document.createElement('div');
+
+          var title = document.createElement('div');
+          title.className = 'task-title';
+          title.textContent = t.title;
+          body.appendChild(title);
+
+          var meta = document.createElement('div');
+          meta.className = 'task-meta';
+
+          var pTag = document.createElement('span');
+          pTag.className = 'tag ' + t.priority.toLowerCase();
+          pTag.textContent = t.priority;
+          meta.appendChild(pTag);
+
+          var sTag = document.createElement('span');
+          sTag.className = 'tag ' + statusClass(t.status);
+          sTag.textContent = t.status;
+          meta.appendChild(sTag);
+
+          var phTag = document.createElement('span');
+          phTag.className = 'tag';
+          phTag.textContent = t.phase;
+          meta.appendChild(phTag);
+
+          body.appendChild(meta);
+
+          if (t.desc) {
+            var desc = document.createElement('div');
+            desc.className = 'task-desc';
+            desc.textContent = t.desc;
+            body.appendChild(desc);
+          }
+
+          row.appendChild(body);
+          board.appendChild(row);
+        }
+      }
+
+      function setAllDetails(open) {
+        var ds = document.querySelectorAll('details');
+        for (var i = 0; i < ds.length; i++) ds[i].open = !!open;
+      }
+
+      var btnExpand = $('btnExpand');
+      if (btnExpand) btnExpand.addEventListener('click', function () { setAllDetails(true); });
+
+      var btnCollapse = $('btnCollapse');
+      if (btnCollapse) btnCollapse.addEventListener('click', function () { setAllDetails(false); });
+
+      var btnReset = $('btnReset');
+      if (btnReset) {
+        btnReset.addEventListener('click', function () {
+          saved = {};
+          persist();
+          render();
+        });
+      }
+
+      if (qEl) qEl.addEventListener('input', render);
+      if (fPhase) fPhase.addEventListener('change', render);
+      if (fPriority) fPriority.addEventListener('change', render);
+      if (fStatus) fStatus.addEventListener('change', render);
+
+      render();
+    })();
+  </script>
+</body>
+</html>

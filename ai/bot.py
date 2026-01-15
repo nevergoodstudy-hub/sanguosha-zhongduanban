@@ -284,16 +284,52 @@ class AIBot:
     
     def _choose_best_target(self, player: 'Player', targets: List['Player'], 
                            engine: 'GameEngine') -> 'Player':
-        """选择最佳攻击目标（困难模式使用嘲讽值系统）"""
+        """
+        选择最佳攻击目标（使用局势评分深度决策 M4-T01）
+        
+        综合考虑：嘲讽值、危险等级、战力评分
+        """
         if not targets:
             return None
         
-        # 困难模式：使用嘲讽值系统选择目标
-        if self.difficulty == AIDifficulty.HARD and self.threat_values:
-            # 按嘲讽值排序，优先攻击威胁最高的
-            targets_with_threat = [(t, self.threat_values.get(t.id, 0)) for t in targets]
-            targets_with_threat.sort(key=lambda x: x[1], reverse=True)
-            return targets_with_threat[0][0]
+        # 困难模式：使用综合评分系统
+        if self.difficulty == AIDifficulty.HARD:
+            # 更新嘲讽值
+            self._update_threat_values(engine)
+            
+            # 计算每个目标的综合攻击价值
+            def calc_attack_value(target: 'Player') -> float:
+                value = 0.0
+                
+                # 嘲讽值权重
+                threat = self.threat_values.get(target.id, 0)
+                value += threat * 0.4
+                
+                # 低血量高价值（更容易击杀）
+                if target.hp <= 1:
+                    value += 50
+                elif target.hp <= 2:
+                    value += 30
+                
+                # 无闪更容易命中
+                shan_count = len(target.get_cards_by_name("闪"))
+                if shan_count == 0:
+                    value += 25
+                
+                # 无桃更容易击杀
+                tao_count = len(target.get_cards_by_name("桃"))
+                if tao_count == 0:
+                    value += 15
+                
+                # 敌方战力高的优先攻击
+                power = self._calculate_player_power(target, engine)
+                value += power * 0.2
+                
+                return value
+            
+            targets_with_value = [(t, calc_attack_value(t)) for t in targets]
+            targets_with_value.sort(key=lambda x: x[1], reverse=True)
+            return targets_with_value[0][0]
         
         # 普通模式：优先攻击体力低的敌人
         targets.sort(key=lambda t: (t.hp, t.hand_count))

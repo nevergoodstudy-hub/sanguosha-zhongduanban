@@ -90,35 +90,35 @@ class RichTerminalUI:
         menu.add_column("Option", justify="right")
         menu.add_column("Description", justify="left")
         
-        menu.add_row("[1]", "Start New Game")
-        menu.add_row("[2]", "Game Rules")
-        menu.add_row("[3]", "Quit")
+        menu.add_row("[1]", "开始新游戏")
+        menu.add_row("[2]", "游戏规则")
+        menu.add_row("[3]", "退出")
         
         self.console.print(Align.center(menu))
         self.console.print()
         
         while True:
-            choice = input("Please select [1-3]: ").strip()
+            choice = input("请选择 [1-3]: ").strip()
             if choice in ['1', '2', '3']:
                 return int(choice)
-            self.console.print("[red]Invalid selection, please try again[/red]")
+            self.console.print("[red]无效选择，请重试[/red]")
 
     def show_player_count_menu(self) -> int:
         self.clear_screen()
-        self.console.print(Panel("Select Number of Players", style="bold blue", box=ROUNDED))
+        self.console.print(Panel("选择玩家人数", style="bold blue", box=ROUNDED))
         
         table = Table(box=ROUNDED)
-        table.add_column("Players", style="cyan")
-        table.add_column("Configuration", style="green")
+        table.add_column("人数", style="cyan")
+        table.add_column("身份配置", style="green")
         
         configs = [
-            (2, "Lord vs Rebel"),
-            (3, "Lord vs Rebel + Spy"),
-            (4, "Lord + Loyalist vs Rebel + Spy"),
-            (5, "Lord + Loyalist vs 2 Rebels + Spy"),
-            (6, "Lord + Loyalist vs 3 Rebels + Spy"),
-            (7, "Lord + 2 Loyalists vs 3 Rebels + Spy"),
-            (8, "Lord + 2 Loyalists vs 4 Rebels + Spy"),
+            (2, "主公 vs 反贼"),
+            (3, "主公 vs 反贼 + 内奸"),
+            (4, "主公 + 忠臣 vs 反贼 + 内奸"),
+            (5, "主公 + 忠臣 vs 2反贼 + 内奸"),
+            (6, "主公 + 忠臣 vs 3反贼 + 内奸"),
+            (7, "主公 + 2忠臣 vs 3反贼 + 内奸"),
+            (8, "主公 + 2忠臣 vs 4反贼 + 内奸"),
         ]
         
         for count, config in configs:
@@ -128,32 +128,32 @@ class RichTerminalUI:
         self.console.print()
         
         while True:
-            choice = input("Select players [2-8]: ").strip()
+            choice = input("选择人数 [2-8]: ").strip()
             if choice in [str(c) for c, _ in configs]:
                 return int(choice)
-            self.console.print("[red]Invalid selection[/red]")
+            self.console.print("[red]无效选择[/red]")
 
     def show_difficulty_menu(self) -> str:
         self.clear_screen()
-        self.console.print(Panel("Select AI Difficulty", style="bold yellow", box=ROUNDED))
+        self.console.print(Panel("选择AI难度", style="bold yellow", box=ROUNDED))
         
         table = Table(box=ROUNDED, show_header=False)
-        table.add_row("[1] Easy", "Random actions")
-        table.add_row("[2] Normal", "Basic strategy")
-        table.add_row("[3] Hard", "Deep strategy (Simulated)")
+        table.add_row("[1] 简单", "随机出牌")
+        table.add_row("[2] 普通", "基础策略")
+        table.add_row("[3] 困难", "深度策略 + 嘲讽值系统")
         
         self.console.print(Align.center(table))
         
         while True:
-            choice = input("Select difficulty [1-3]: ").strip()
+            choice = input("选择难度 [1-3]: ").strip()
             if choice == '1': return "easy"
             if choice == '2': return "normal"
             if choice == '3': return "hard"
-            self.console.print("[red]Invalid selection[/red]")
+            self.console.print("[red]无效选择[/red]")
 
     def show_hero_selection(self, heroes: List['Hero'], selected_count: int = 1, is_lord: bool = False) -> List['Hero']:
         self.clear_screen()
-        title = "Lord Hero Selection (5 Choose 1)" if is_lord else "Hero Selection (3 Choose 1)"
+        title = "主公武将选择 (5选1)" if is_lord else "武将选择 (3选1)"
         self.console.print(Panel(title, style="bold magenta", box=DOUBLE))
         
         hero_panels = []
@@ -164,7 +164,7 @@ class RichTerminalUI:
             
             content = Text()
             content.append(f"{hero.name} [{hero.kingdom.chinese_name}]\n", style=f"bold {kingdom_color}")
-            content.append(f"HP: {hero.max_hp}\n", style="bold white")
+            content.append(f"体力: {hero.max_hp}\n", style="bold white")
             content.append(f"{hero.title}\n\n", style="italic")
             
             for skill in hero.skills:
@@ -179,9 +179,9 @@ class RichTerminalUI:
         selected = []
         while len(selected) < selected_count:
             remaining = selected_count - len(selected)
-            prompt = f"Select hero [1-{len(heroes)}]"
+            prompt = f"选择武将 [1-{len(heroes)}]"
             if selected_count > 1:
-                prompt += f" (Need {remaining} more)"
+                prompt += f" (还需选择{remaining}个)"
             
             choice = input(prompt + ": ").strip()
             try:
@@ -190,13 +190,13 @@ class RichTerminalUI:
                     hero = heroes[idx]
                     if hero not in selected:
                         selected.append(hero)
-                        self.console.print(f"[green]Selected: {hero.name}[/green]")
+                        self.console.print(f"[green]已选择: {hero.name}[/green]")
                     else:
-                        self.console.print("[yellow]Already selected[/yellow]")
+                        self.console.print("[yellow]已经选择过了[/yellow]")
                 else:
-                    self.console.print("[red]Invalid number[/red]")
+                    self.console.print("[red]无效编号[/red]")
             except ValueError:
-                self.console.print("[red]Please enter a number[/red]")
+                self.console.print("[red]请输入数字[/red]")
                 
         return selected
 

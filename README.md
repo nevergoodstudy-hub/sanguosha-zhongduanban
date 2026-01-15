@@ -405,6 +405,8 @@ pyinstaller sanguosha.spec --noconfirm
 
 项目整体概览（可视化）请查看 **[PROJECT_OVERVIEW.html](./PROJECT_OVERVIEW.html)**
 
+深度改进开发计划（可视化）请查看 **[DEEP_IMPROVEMENT_PLAN.html](./DEEP_IMPROVEMENT_PLAN.html)**
+
 **已完成**：
 - ✅ 阶段1 T1-1：统一压力测试与正式引擎逻辑
 - ✅ 阶段1 T1-2：打通军争基础机制（酒/火杀/雷杀/铁索连环）
@@ -417,9 +419,27 @@ pyinstaller sanguosha.spec --noconfirm
 
 ## 📝 版本历史
 
+### v1.3.0 (2026-01) 🎯 深度改进计划完成
+- **卡牌系统增强**：
+  - 古锭刀武器效果：目标无手牌时杀伤害+1
+  - 火攻处理器修复：正确传递目标参数
+  - 卡牌覆盖率映射表：`docs/CARD_COVERAGE.md`
+- **可复现性增强**：
+  - action_log 导出 JSON 功能 `export_action_log()`
+  - 最小回放工具 `tools/replay.py`
+- **AI 决策增强**：
+  - 局势评分深度接入目标选择
+  - 综合攻击价值计算（嘲讽值+战力+状态）
+- **测试与审计**：
+  - 新功能单元测试 8/8 通过
+  - 自动化对战测试 20/20 通过
+  - 压力测试 100/100 通过（100%成功率）
+  - 安全审计报告：`docs/SECURITY_AUDIT.md`
+
 ### Unreleased
 - **开发文档**：新增 [DEVELOPER_EXECUTION_PLAN.md](./DEVELOPER_EXECUTION_PLAN.md)，用于指导后续改进实施（里程碑/验收/测试/回滚/安全审计）
 - **项目概览**：新增 [PROJECT_OVERVIEW.html](./PROJECT_OVERVIEW.html)，用于快速浏览架构、机制与路线图
+- **深度改进计划**：新增 [DEEP_IMPROVEMENT_PLAN.html](./DEEP_IMPROVEMENT_PLAN.html)，提供可视化改进路线图与任务看板（支持筛选/勾选/本地保存）
 - **富 UI 稳定性**：修复 Rich 标记标签闭合错误导致的 `MarkupError`，并为 Rich UI 补齐 `ask_for_wuxie()` 交互接口，避免交互模式运行时崩溃
 
 ### v1.2.0 (2025-01) 🚀 规则闭环与AI增强

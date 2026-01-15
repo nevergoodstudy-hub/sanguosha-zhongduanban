@@ -445,6 +445,11 @@ class CardName:
     BINGLIANG = "兵粮寸断"
     SHANDIAN = "闪电"
     
+    # 军争锦囊
+    HUOGONG = "火攻"
+    TIESUO = "铁索连环"
+    JIU = "酒"
+    
     # 武器
     QINGLONG = "青龙偃月刀"
     ZHANGBA = "丈八蛇矛"
@@ -457,6 +462,12 @@ class CardName:
     # 防具
     BAGUA = "八卦阵"
     RENWANG = "仁王盾"
+    TENGJIA = "藤甲"
+    BAIYINSHIZI = "白银狮子"
+    
+    # 军争武器
+    GUDINGDAO = "古锭刀"
+    ZHUQUEYUSHAN = "朱雀羽扇"
     
     # 坐骑
     CHITU = "赤兔"

@@ -130,6 +130,8 @@ class GameEngine:
             CardName.LEBUSISHU: self._use_lebusishu,
             CardName.BINGLIANG: self._use_bingliang,
             CardName.SHANDIAN: self._use_shandian,
+            # 军争锦囊
+            CardName.HUOGONG: self._use_huogong,
         }
     
     def set_ui(self, ui: 'TerminalUI') -> None:
@@ -680,7 +682,8 @@ class GameEngine:
             # 根据处理器类型决定参数（需要目标的牌）
             cards_need_targets = [
                 CardName.JUEDOU, CardName.GUOHE, CardName.SHUNSHOU,
-                CardName.LEBUSISHU, CardName.BINGLIANG, CardName.SHANDIAN
+                CardName.LEBUSISHU, CardName.BINGLIANG, CardName.SHANDIAN,
+                CardName.HUOGONG
             ]
             if card.name in cards_need_targets:
                 return handler(player, card, targets)
@@ -745,6 +748,16 @@ class GameEngine:
             damage_type = "thunder"
         else:
             damage_type = "normal"
+            # 朱雀羽扇效果：可将普通杀当火杀使用
+            if player.equipment.weapon and player.equipment.weapon.name == "朱雀羽扇":
+                # AI 总是选择转换为火杀（可对藤甲造成额外伤害）
+                use_fire = player.is_ai
+                if not player.is_ai and self.ui and hasattr(self.ui, 'ask_zhuque_convert'):
+                    use_fire = self.ui.ask_zhuque_convert(player)
+                if use_fire:
+                    damage_type = "fire"
+                    card_name = "火杀"
+                    self.log_event("equipment", f"  🔥 {player.name} 的【朱雀羽扇】将【杀】转为【火杀】！")
         
         # 检查仁王盾（只对黑色普通杀有效）
         if card.is_black and damage_type == "normal" and target.equipment.armor:
@@ -793,6 +806,12 @@ class GameEngine:
             if player.equipment.weapon and player.equipment.weapon.name == CardName.QINGLONG:
                 self._trigger_qinglong(player, target)
         else:
+            # 古锭刀效果：目标无手牌时伤害+1
+            if player.equipment.weapon and player.equipment.weapon.name == "古锭刀":
+                if target.hand_count == 0:
+                    base_damage += 1
+                    self.log_event("equipment", f"  🗡 {player.name} 的【古锭刀】发动，{target.name} 无手牌，伤害+1！")
+            
             # 造成伤害（传递属性伤害类型）
             self.deal_damage(player, target, base_damage, damage_type)
         
@@ -1492,6 +1511,81 @@ class GameEngine:
         self.deck.discard([card])
         return True
     
+    def _use_huogong(self, player: Player, card: Card, targets: List[Player]) -> bool:
+        """
+        使用火攻（军争篇）
+        
+        规则：
+        1. 对一名有手牌的角色使用
+        2. 目标角色展示一张手牌
+        3. 使用者可以弃置一张与展示牌花色相同的手牌
+        4. 若弃置，则对目标造成1点火焰伤害
+        """
+        if not targets:
+            self.deck.discard([card])
+            return False
+        
+        target = targets[0]
+        
+        # 目标必须有手牌
+        if not target.hand:
+            self.log_event("error", f"{target.name} 没有手牌，火攻无效")
+            self.deck.discard([card])
+            return False
+        
+        self.log_event("use_card", f"{player.name} 对 {target.name} 使用了【火攻】", 
+                       source=player, target=target, card=card)
+        
+        # 无懈可击响应
+        if self._request_wuxie(card, player, target):
+            self.log_event("effect", "【火攻】被无懈可击抵消")
+            self.deck.discard([card])
+            return True
+        
+        # 目标展示一张手牌
+        if target.is_ai:
+            shown_card = random.choice(target.hand)
+        else:
+            if self.ui and hasattr(self.ui, 'choose_card_to_show'):
+                shown_card = self.ui.choose_card_to_show(target)
+            else:
+                shown_card = target.hand[0] if target.hand else None
+        
+        if not shown_card:
+            self.deck.discard([card])
+            return True
+        
+        self.log_event("effect", f"{target.name} 展示了【{shown_card.display_name}】")
+        
+        # 使用者选择是否弃置同花色手牌
+        shown_suit = shown_card.suit
+        matching_cards = [c for c in player.hand if c.suit == shown_suit]
+        
+        discard_card = None
+        if matching_cards:
+            if player.is_ai:
+                # AI 总是选择弃置以造成伤害
+                discard_card = matching_cards[0]
+            else:
+                if self.ui and hasattr(self.ui, 'choose_card_to_discard_for_huogong'):
+                    discard_card = self.ui.choose_card_to_discard_for_huogong(player, shown_suit)
+                elif self.ui:
+                    # 简化处理：自动选择第一张
+                    discard_card = matching_cards[0]
+        
+        if discard_card:
+            player.remove_card(discard_card)
+            self.deck.discard([discard_card])
+            self.log_event("effect", f"{player.name} 弃置了【{discard_card.display_name}】")
+            
+            # 造成1点火焰伤害
+            self.deal_damage(player, target, 1, damage_type="fire")
+        else:
+            self.log_event("effect", f"{player.name} 没有弃置手牌，火攻未造成伤害")
+        
+        self.deck.discard([card])
+        return True
+    
     def _use_equipment(self, player: Player, card: Card) -> bool:
         """使用装备牌"""
         old_equipment = player.equip_card(card)
@@ -1502,6 +1596,26 @@ class GameEngine:
             self.deck.discard([old_equipment])
         
         return True
+    
+    def _remove_equipment(self, player: Player, card: Card) -> None:
+        """
+        移除玩家的装备牌并触发相关效果
+        
+        包含白银狮子的失去装备回复效果
+        """
+        card_name = card.name
+        
+        # 从装备区移除
+        for slot in EquipmentSlot:
+            if player.equipment.get_card_by_slot(slot) == card:
+                player.equipment.unequip(slot)
+                break
+        
+        # 白银狮子效果：失去此装备时回复1点体力
+        if card_name == "白银狮子" and player.is_alive and player.hp < player.max_hp:
+            player.heal(1)
+            self.log_event("equipment", 
+                f"  🦁 {player.name} 失去【白银狮子】，回复1点体力！[{player.hp}/{player.max_hp}]")
     
     def _choose_and_discard_card(self, player: Player, target: Player) -> Optional[Card]:
         """选择并弃置目标的一张牌"""
@@ -1523,11 +1637,8 @@ class GameEngine:
             if card in target.hand:
                 target.remove_card(card)
             else:
-                # 从装备区移除
-                for slot in EquipmentSlot:
-                    if target.equipment.get_card_by_slot(slot) == card:
-                        target.equipment.unequip(slot)
-                        break
+                # 从装备区移除（触发白银狮子等效果）
+                self._remove_equipment(target, card)
             self.deck.discard([card])
         
         return card
@@ -1550,10 +1661,8 @@ class GameEngine:
             if card in target.hand:
                 target.remove_card(card)
             else:
-                for slot in EquipmentSlot:
-                    if target.equipment.get_card_by_slot(slot) == card:
-                        target.equipment.unequip(slot)
-                        break
+                # 从装备区移除（触发白银狮子等效果）
+                self._remove_equipment(target, card)
             player.draw_cards([card])
         
         return card
@@ -1598,6 +1707,14 @@ class GameEngine:
             if target.equipment.armor.name == "藤甲":
                 damage += 1
                 self.log_event("equipment", f"  🔥 {target.name} 的【藤甲】被火焰点燃，伤害+1！")
+        
+        # 白银狮子效果：受到大于1点伤害时，防止多余的伤害
+        if target.equipment.armor and target.equipment.armor.name == "白银狮子":
+            if damage > 1:
+                original_damage = damage
+                damage = 1
+                self.log_event("equipment", 
+                    f"  🦁 {target.name} 的【白银狮子】防止了 {original_damage - 1} 点伤害！")
         
         target.take_damage(damage, source)
         
@@ -1939,6 +2056,58 @@ class GameEngine:
         self.phase = GamePhase.END
         
         return True
+    
+    def export_action_log(self, filepath: Optional[str] = None) -> str:
+        """
+        导出 action_log 为 JSON 文件（M3-T02）
+        
+        Args:
+            filepath: 导出路径，None 则自动生成
+            
+        Returns:
+            导出的文件路径
+        """
+        import json
+        from datetime import datetime
+        
+        if not hasattr(self, 'action_log'):
+            self.action_log = []
+        
+        # 构建导出数据
+        export_data = {
+            'version': '1.0',
+            'exported_at': datetime.now().isoformat(),
+            'game_seed': getattr(self, 'game_seed', None),
+            'player_count': len(self.players),
+            'players': [
+                {
+                    'id': p.id,
+                    'name': p.name,
+                    'hero': p.hero.name if p.hero else None,
+                    'identity': p.identity.value if p.identity else None
+                }
+                for p in self.players
+            ],
+            'winner': self.winner_identity.value if self.winner_identity else None,
+            'rounds': self.round_count,
+            'actions': self.action_log
+        }
+        
+        # 生成文件路径
+        if filepath is None:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            seed_str = f"_seed{self.game_seed}" if hasattr(self, 'game_seed') else ""
+            filepath = f"logs/action_log_{timestamp}{seed_str}.json"
+        
+        # 确保目录存在
+        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+        
+        # 写入文件
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(export_data, f, ensure_ascii=False, indent=2)
+        
+        self.log_event("system", f"📄 动作日志已导出: {filepath}")
+        return filepath
     
     def run_headless_battle(self, max_rounds: int = 100) -> Dict[str, Any]:
         """

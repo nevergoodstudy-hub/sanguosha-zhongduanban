@@ -4,6 +4,9 @@
 # 可选依赖 - 彩色输出支持
 colorama>=0.4.4
 
+# Rich 终端 UI 支持
+rich>=13.0.0
+
 # 测试依赖
 pytest>=7.0.0
 pytest-cov>=4.0.0
