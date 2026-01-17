@@ -43,3 +43,20 @@ htmlcov/
 # 临时文件
 *.tmp
 *.temp
+
+# 日志目录
+logs/
+
+# 空目录占位
+game/ui/
+
+# 演示脚本
+rich_demo.py
+
+# 旧版计划文档（已归档到README）
+DEEP_IMPROVEMENT_PLAN.html
+DEVELOPER_EXECUTION_PLAN.md
+GAMEPLAY_IMPROVEMENTS.md
+IMPROVEMENT_PLAN.md
+PROJECT_OVERVIEW.html
+PROJECT_ROADMAP.md
