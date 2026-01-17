@@ -21,6 +21,8 @@ class TestHuogong:
         """创建测试用的游戏引擎"""
         engine = GameEngine()
         engine.setup_game(player_count=4, human_player_index=-1)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
         engine.start_game()
         return engine
     

@@ -23,6 +23,9 @@ class TestBaiyinshizi:
         """创建测试用的游戏引擎"""
         engine = GameEngine()
         engine.setup_game(player_count=4, human_player_index=-1)
+        # 自动选择武将
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
         engine.start_game()
         return engine
     
@@ -111,6 +114,8 @@ class TestGudingdao:
     def engine(self):
         engine = GameEngine()
         engine.setup_game(player_count=4, human_player_index=-1)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
         engine.start_game()
         return engine
     
@@ -123,7 +128,7 @@ class TestGudingdao:
             subtype=CardSubtype.WEAPON,
             suit=CardSuit.SPADE,
             number=1,
-            extra_data={"range": 2}
+            range=2
         )
     
     def test_gudingdao_extra_damage(self, engine, gudingdao_card):
@@ -152,6 +157,8 @@ class TestZhuqueyushan:
     def engine(self):
         engine = GameEngine()
         engine.setup_game(player_count=4, human_player_index=-1)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
         engine.start_game()
         return engine
     
@@ -164,7 +171,7 @@ class TestZhuqueyushan:
             subtype=CardSubtype.WEAPON,
             suit=CardSuit.DIAMOND,
             number=1,
-            extra_data={"range": 4}
+            range=4
         )
     
     def test_zhuqueyushan_equipped(self, engine, zhuqueyushan_card):
