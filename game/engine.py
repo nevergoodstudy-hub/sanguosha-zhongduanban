@@ -64,7 +64,7 @@ class GameEngine:
     """
     游戏引擎类
     负责管理整个游戏流程
-    
+
     重构说明：
     - 集成事件总线系统，实现模块解耦
     - UI 通过订阅事件来获取游戏状态变化
@@ -74,7 +74,7 @@ class GameEngine:
     def __init__(self, data_dir: str = "data"):
         """
         初始化游戏引擎
-        
+
         Args:
             data_dir: 数据文件目录路径
         """
@@ -145,13 +145,13 @@ class GameEngine:
     def execute_action(self, action: 'GameAction') -> bool:
         """
         统一动作执行入口（M2-T01）
-        
+
         所有玩家行为（出牌/技能/弃牌）都应通过此方法执行，
         以确保统一的校验和日志记录。
-        
+
         Args:
             action: 要执行的动作
-            
+
         Returns:
             动作是否执行成功
         """
@@ -203,7 +203,7 @@ class GameEngine:
                   **extra_data) -> None:
         """
         记录游戏事件并通过事件总线发布
-        
+
         Args:
             event_type: 事件类型（字符串，兼容旧代码）
             message: 事件消息
@@ -247,7 +247,7 @@ class GameEngine:
     def setup_game(self, player_count: int, human_player_index: int = 0) -> None:
         """
         设置游戏
-        
+
         Args:
             player_count: 玩家数量（2-8）
             human_player_index: 人类玩家索引
@@ -310,7 +310,7 @@ class GameEngine:
     def choose_heroes(self, choices: Dict[int, str]) -> None:
         """
         为所有玩家选择武将
-        
+
         Args:
             choices: 玩家ID到武将ID的映射
         """
@@ -327,7 +327,7 @@ class GameEngine:
     def auto_choose_heroes_for_ai(self) -> Dict[int, str]:
         """
         为AI玩家自动选择武将
-        
+
         Returns:
             AI玩家的武将选择
         """
@@ -405,11 +405,11 @@ class GameEngine:
     def calculate_distance(self, from_player: Player, to_player: Player) -> int:
         """
         计算两个玩家之间的距离
-        
+
         Args:
             from_player: 起始玩家
             to_player: 目标玩家
-            
+
         Returns:
             距离值
         """
@@ -447,11 +447,11 @@ class GameEngine:
     def is_in_attack_range(self, attacker: Player, target: Player) -> bool:
         """
         检查目标是否在攻击范围内
-        
+
         Args:
             attacker: 攻击者
             target: 目标
-            
+
         Returns:
             是否在攻击范围内
         """
@@ -656,12 +656,12 @@ class GameEngine:
                  targets: Optional[List[Player]] = None) -> bool:
         """
         使用卡牌
-        
+
         Args:
             player: 使用者
             card: 卡牌
             targets: 目标列表
-            
+
         Returns:
             是否成功使用
         """
@@ -705,12 +705,12 @@ class GameEngine:
     def _use_sha(self, player: Player, card: Card, targets: List[Player]) -> bool:
         """
         使用杀（支持酒加成、火杀/雷杀属性伤害）
-        
+
         Args:
             player: 使用者
             card: 杀牌
             targets: 目标列表
-            
+
         Returns:
             是否成功使用
         """
@@ -788,8 +788,8 @@ class GameEngine:
         # 显示杀的类型
         type_icon = {"fire": "🔥", "thunder": "⚡"}.get(damage_type, "⚔")
         self.log_event("use_card",
-            f"{type_icon} {player.name} → {target.name} 使用【{card_name}】{card.suit.symbol}{card.number_str} (距离:{dist})",
-            source=player, target=target, card=card)
+                       f"{type_icon} {player.name} → {target.name} 使用【{card_name}】{card.suit.symbol}{card.number_str} (距离:{dist})",
+                       source=player, target=target, card=card)
 
         # 无双技能：需要两张闪
         required_shan = 2 if player.has_skill("wushuang") else 1
@@ -821,11 +821,11 @@ class GameEngine:
     def _request_shan(self, player: Player, count: int = 1) -> int:
         """
         请求玩家出闪
-        
+
         Args:
             player: 需要出闪的玩家
             count: 需要的闪数量
-            
+
         Returns:
             实际打出的闪数量
         """
@@ -933,17 +933,17 @@ class GameEngine:
         return sha_played
 
     def _request_wuxie(self, trick_card: Card, source: Player,
-                        target: Optional[Player] = None,
-                        is_delay: bool = False) -> bool:
+                       target: Optional[Player] = None,
+                       is_delay: bool = False) -> bool:
         """
         请求无懈可击响应（锦囊生效前拦截点）
-        
+
         Args:
             trick_card: 锦囊牌
             source: 锦囊使用者
             target: 锦囊目标（AOE锦囊时为None或当前处理的目标）
             is_delay: 是否为延时锦囊判定
-            
+
         Returns:
             True = 锦囊被无懈抵消, False = 锦囊正常生效
         """
@@ -985,7 +985,7 @@ class GameEngine:
 
                         action = "抵消" if not is_cancelled else "使其生效"
                         self.log_event("wuxie",
-                            f"🛡 {responder.name} 打出【无懈可击】{action}【{trick_card.name}】！")
+                                       f"🛡 {responder.name} 打出【无懈可击】{action}【{trick_card.name}】！")
 
                         is_cancelled = not is_cancelled
                         wuxie_played = True
@@ -1000,7 +1000,7 @@ class GameEngine:
 
                             action = "抵消" if not is_cancelled else "使其生效"
                             self.log_event("wuxie",
-                                f"🛡 {responder.name} 打出【无懈可击】{action}【{trick_card.name}】！")
+                                           f"🛡 {responder.name} 打出【无懈可击】{action}【{trick_card.name}】！")
 
                             is_cancelled = not is_cancelled
                             wuxie_played = True
@@ -1017,7 +1017,7 @@ class GameEngine:
                          currently_cancelled: bool) -> bool:
         """
         AI 决定是否使用无懈可击
-        
+
         简单策略：
         - 对敌方使用的有害锦囊（目标是己方）更倾向无懈
         - 对己方收益锦囊不无懈
@@ -1035,8 +1035,8 @@ class GameEngine:
 
             # 有害锦囊列表
             harmful_tricks = [CardName.JUEDOU, CardName.NANMAN, CardName.WANJIAN,
-                            CardName.GUOHE, CardName.SHUNSHOU,
-                            CardName.LEBUSISHU, CardName.BINGLIANG]
+                              CardName.GUOHE, CardName.SHUNSHOU,
+                              CardName.LEBUSISHU, CardName.BINGLIANG]
 
             # 锦囊当前未被抵消
             if not currently_cancelled:
@@ -1107,7 +1107,7 @@ class GameEngine:
 
         healed = player.heal(1)
         self.log_event("use_card", f"{player.name} 使用了【桃】，回复了 {healed} 点体力",
-                      source=player, card=card)
+                       source=player, card=card)
 
         self.deck.discard([card])
         return True
@@ -1127,7 +1127,7 @@ class GameEngine:
             return False
 
         self.log_event("use_card", f"{player.name} 对 {target.name} 使用了【决斗】",
-                      source=player, target=target, card=card)
+                       source=player, target=target, card=card)
 
         # 无懈可击拦截点
         if self._request_wuxie(card, player, target):
@@ -1161,7 +1161,7 @@ class GameEngine:
     def _use_juedou_forced(self, source: Player, target: Player) -> None:
         """
         强制决斗（用于离间等技能，无需卡牌）
-        
+
         Args:
             source: 决斗发起者（视为使用决斗的人）
             target: 决斗目标
@@ -1277,7 +1277,7 @@ class GameEngine:
             return False
 
         self.log_event("use_card", f"{player.name} 对 {target.name} 使用了【过河拆桥】",
-                      source=player, target=target, card=card)
+                       source=player, target=target, card=card)
 
         # 无懈可击拦截点
         if self._request_wuxie(card, player, target):
@@ -1313,7 +1313,7 @@ class GameEngine:
             return False
 
         self.log_event("use_card", f"{player.name} 对 {target.name} 使用了【顺手牵羊】",
-                      source=player, target=target, card=card)
+                       source=player, target=target, card=card)
 
         # 无懈可击拦截点
         if self._request_wuxie(card, player, target):
@@ -1378,7 +1378,7 @@ class GameEngine:
                 return False
 
         self.log_event("use_card", f"😴 {player.name} 对 {target.name} 使用了【乐不思蜀】",
-                      source=player, target=target, card=card)
+                       source=player, target=target, card=card)
 
         # 放入目标判定区
         target.judge_area.insert(0, card)
@@ -1417,7 +1417,7 @@ class GameEngine:
                 return False
 
         self.log_event("use_card", f"🌾 {player.name} 对 {target.name} 使用了【兵粮寸断】",
-                      source=player, target=target, card=card)
+                       source=player, target=target, card=card)
 
         # 放入目标判定区
         target.judge_area.insert(0, card)
@@ -1437,7 +1437,7 @@ class GameEngine:
                 return False
 
         self.log_event("use_card", f"⚡ {player.name} 使用了【闪电】",
-                      source=player, card=card)
+                       source=player, card=card)
 
         # 放入自己判定区
         player.judge_area.insert(0, card)
@@ -1447,7 +1447,7 @@ class GameEngine:
     def _use_jiu(self, player: Player, card: Card) -> bool:
         """
         使用酒（军争篇）
-        
+
         效果：
         - 出牌阶段对自己使用，下一张杀伤害+1（本回合限一次）
         - 濒死时对自己使用，回复1点体力
@@ -1456,7 +1456,7 @@ class GameEngine:
         if player.is_dying:
             player.heal(1)
             self.log_event("use_card", f"🍺 {player.name} 使用了【酒】回复1点体力！",
-                          source=player, card=card)
+                           source=player, card=card)
             self.deck.discard([card])
             return True
 
@@ -1468,7 +1468,7 @@ class GameEngine:
 
         if player.use_alcohol():
             self.log_event("use_card", f"🍺 {player.name} 使用了【酒】，下一张杀伤害+1！",
-                          source=player, card=card)
+                           source=player, card=card)
             self.deck.discard([card])
             return True
 
@@ -1479,7 +1479,7 @@ class GameEngine:
                     targets: Optional[List[Player]] = None) -> bool:
         """
         使用铁索连环（军争篇）
-        
+
         效果：
         - 选择1-2名角色，横置/重置其武将牌
         - 或重铸此牌
@@ -1490,7 +1490,7 @@ class GameEngine:
         # 如果没有目标，视为重铸
         if not targets:
             self.log_event("use_card", f"🔗 {player.name} 重铸了【铁索连环】",
-                          source=player, card=card)
+                           source=player, card=card)
             self.deck.discard([card])
             new_cards = self.deck.draw(1)
             player.draw_cards(new_cards)
@@ -1501,7 +1501,7 @@ class GameEngine:
         # 对目标使用
         target_names = "、".join(t.name for t in targets[:2])  # 最多2个目标
         self.log_event("use_card", f"🔗 {player.name} 对 {target_names} 使用了【铁索连环】",
-                      source=player, card=card)
+                       source=player, card=card)
 
         for target in targets[:2]:
             target.toggle_chain()
@@ -1514,7 +1514,7 @@ class GameEngine:
     def _use_huogong(self, player: Player, card: Card, targets: List[Player]) -> bool:
         """
         使用火攻（军争篇）
-        
+
         规则：
         1. 对一名有手牌的角色使用
         2. 目标角色展示一张手牌
@@ -1600,7 +1600,7 @@ class GameEngine:
     def _remove_equipment(self, player: Player, card: Card) -> None:
         """
         移除玩家的装备牌并触发相关效果
-        
+
         包含白银狮子的失去装备回复效果
         """
         card_name = card.name
@@ -1615,7 +1615,7 @@ class GameEngine:
         if card_name == "白银狮子" and player.is_alive and player.hp < player.max_hp:
             player.heal(1)
             self.log_event("equipment",
-                f"  🦁 {player.name} 失去【白银狮子】，回复1点体力！[{player.hp}/{player.max_hp}]")
+                           f"  🦁 {player.name} 失去【白银狮子】，回复1点体力！[{player.hp}/{player.max_hp}]")
 
     def _choose_and_discard_card(self, player: Player, target: Player) -> Optional[Card]:
         """选择并弃置目标的一张牌"""
@@ -1684,7 +1684,7 @@ class GameEngine:
                     _chain_propagating: bool = False) -> None:
         """
         造成伤害（支持属性伤害与铁索连环传导）
-        
+
         Args:
             source: 伤害来源
             target: 目标
@@ -1714,14 +1714,14 @@ class GameEngine:
                 original_damage = damage
                 damage = 1
                 self.log_event("equipment",
-                    f"  🦁 {target.name} 的【白银狮子】防止了 {original_damage - 1} 点伤害！")
+                               f"  🦁 {target.name} 的【白银狮子】防止了 {original_damage - 1} 点伤害！")
 
         target.take_damage(damage, source)
 
         # 详细的伤害日志
         self.log_event("damage",
-            f"💔 {target.name} 受到 {source_name} 的 {damage} 点{damage_type_display}伤害 "
-            f"[{old_hp}→{target.hp}/{target.max_hp}]")
+                       f"💔 {target.name} 受到 {source_name} 的 {damage} 点{damage_type_display}伤害 "
+                       f"[{old_hp}→{target.hp}/{target.max_hp}]")
 
         # 奸雄技能：获得造成伤害的牌
         if target.has_skill("jianxiong") and source:
@@ -1909,7 +1909,7 @@ class GameEngine:
                             seed: Optional[int] = None) -> None:
         """
         设置无 UI 对战（用于压力测试与 AI 研究）
-        
+
         Args:
             player_count: 玩家数量（2-8）
             ai_difficulty: AI 难度 ("easy", "normal", "hard")
@@ -1994,10 +1994,10 @@ class GameEngine:
     def run_headless_turn(self, max_actions: int = 50) -> bool:
         """
         执行当前玩家的无 UI 回合
-        
+
         Args:
             max_actions: 单回合最大操作数（防止死循环）
-            
+
         Returns:
             回合是否正常完成
         """
@@ -2060,10 +2060,10 @@ class GameEngine:
     def export_action_log(self, filepath: Optional[str] = None) -> str:
         """
         导出 action_log 为 JSON 文件（M3-T02）
-        
+
         Args:
             filepath: 导出路径，None 则自动生成
-            
+
         Returns:
             导出的文件路径
         """
@@ -2112,10 +2112,10 @@ class GameEngine:
     def run_headless_battle(self, max_rounds: int = 100) -> Dict[str, Any]:
         """
         运行完整的无 UI 对局
-        
+
         Args:
             max_rounds: 最大回合数
-            
+
         Returns:
             对局结果字典
         """

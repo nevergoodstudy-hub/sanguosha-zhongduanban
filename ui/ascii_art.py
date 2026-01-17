@@ -169,11 +169,11 @@ class ASCIIArt:
     def get_hp_bar(cls, current_hp: int, max_hp: int) -> str:
         """
         生成体力条
-        
+
         Args:
             current_hp: 当前体力
             max_hp: 最大体力
-            
+
         Returns:
             体力条字符串
         """
@@ -185,12 +185,12 @@ class ASCIIArt:
     def get_card_display(cls, name: str, suit: str, number: str) -> List[str]:
         """
         生成卡牌显示
-        
+
         Args:
             name: 卡牌名称
             suit: 花色
             number: 点数
-            
+
         Returns:
             卡牌显示的字符串列表
         """
@@ -211,10 +211,10 @@ class ASCIIArt:
     def get_hero_portrait(cls, hero_id: str) -> List[str]:
         """
         获取武将头像
-        
+
         Args:
             hero_id: 武将ID
-            
+
         Returns:
             武将头像的字符串列表
         """
@@ -230,12 +230,12 @@ class ASCIIArt:
                    title: str = "") -> List[str]:
         """
         创建带边框的文本框
-        
+
         Args:
             content: 内容行列表
             width: 宽度
             title: 标题
-            
+
         Returns:
             带边框的文本行列表
         """
@@ -247,14 +247,14 @@ class ASCIIArt:
             padding_left = (width - 2 - len(title_part)) // 2
             padding_right = width - 2 - len(title_part) - padding_left
             top_line = (cls.BORDER_TOP_LEFT +
-                       cls.BORDER_HORIZONTAL * padding_left +
-                       title_part +
-                       cls.BORDER_HORIZONTAL * padding_right +
-                       cls.BORDER_TOP_RIGHT)
+                        cls.BORDER_HORIZONTAL * padding_left +
+                        title_part +
+                        cls.BORDER_HORIZONTAL * padding_right +
+                        cls.BORDER_TOP_RIGHT)
         else:
             top_line = (cls.BORDER_TOP_LEFT +
-                       cls.BORDER_HORIZONTAL * (width - 2) +
-                       cls.BORDER_TOP_RIGHT)
+                        cls.BORDER_HORIZONTAL * (width - 2) +
+                        cls.BORDER_TOP_RIGHT)
         result.append(top_line)
 
         # 内容
@@ -269,8 +269,8 @@ class ASCIIArt:
 
         # 底部边框
         bottom_line = (cls.BORDER_BOTTOM_LEFT +
-                      cls.BORDER_HORIZONTAL * (width - 2) +
-                      cls.BORDER_BOTTOM_RIGHT)
+                       cls.BORDER_HORIZONTAL * (width - 2) +
+                       cls.BORDER_BOTTOM_RIGHT)
         result.append(bottom_line)
 
         return result
@@ -279,10 +279,10 @@ class ASCIIArt:
     def _get_display_width(cls, text: str) -> int:
         """
         计算字符串的显示宽度（中文字符算2个宽度）
-        
+
         Args:
             text: 文本
-            
+
         Returns:
             显示宽度
         """
@@ -298,11 +298,11 @@ class ASCIIArt:
     def center_text(cls, text: str, width: int) -> str:
         """
         居中文本
-        
+
         Args:
             text: 文本
             width: 目标宽度
-            
+
         Returns:
             居中后的文本
         """
@@ -314,12 +314,12 @@ class ASCIIArt:
     def get_menu(cls, title: str, options: List[str], width: int = 50) -> List[str]:
         """
         创建菜单
-        
+
         Args:
             title: 菜单标题
             options: 选项列表
             width: 宽度
-            
+
         Returns:
             菜单文本行列表
         """

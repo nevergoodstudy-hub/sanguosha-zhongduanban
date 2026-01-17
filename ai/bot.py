@@ -35,7 +35,7 @@ class AIBot:
     def __init__(self, player: 'Player', difficulty: AIDifficulty = AIDifficulty.NORMAL):
         """
         初始化AI机器人
-        
+
         Args:
             player: 关联的玩家
             difficulty: AI难度
@@ -52,7 +52,7 @@ class AIBot:
     def play_phase(self, player: 'Player', engine: 'GameEngine') -> None:
         """
         出牌阶段决策
-        
+
         Args:
             player: 当前玩家
             engine: 游戏引擎
@@ -68,12 +68,12 @@ class AIBot:
                        engine: 'GameEngine') -> List['Card']:
         """
         选择弃牌
-        
+
         Args:
             player: 玩家
             count: 需要弃置的数量
             engine: 游戏引擎
-            
+
         Returns:
             要弃置的卡牌列表
         """
@@ -86,15 +86,15 @@ class AIBot:
             return self._smart_discard(player, count)
 
     def should_use_qinglong(self, player: 'Player', target: 'Player',
-                           engine: 'GameEngine') -> bool:
+                            engine: 'GameEngine') -> bool:
         """
         决定是否使用青龙偃月刀继续攻击
-        
+
         Args:
             player: 攻击者
             target: 目标
             engine: 游戏引擎
-            
+
         Returns:
             是否继续攻击
         """
@@ -163,7 +163,7 @@ class AIBot:
         elif card.name == "顺手牵羊":
             others = engine.get_other_players(player)
             valid_targets = [t for t in others
-                           if engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
+                             if engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
             if valid_targets:
                 target = random.choice(valid_targets)
                 return engine.use_card(player, card, [target])
@@ -283,10 +283,10 @@ class AIBot:
         return [t for t in targets if self._is_enemy(player, t)]
 
     def _choose_best_target(self, player: 'Player', targets: List['Player'],
-                           engine: 'GameEngine') -> 'Player':
+                            engine: 'GameEngine') -> 'Player':
         """
         选择最佳攻击目标（使用局势评分深度决策 M4-T01）
-        
+
         综合考虑：嘲讽值、危险等级、战力评分
         """
         if not targets:
@@ -354,7 +354,7 @@ class AIBot:
         """选择顺手牵羊的目标"""
         others = engine.get_other_players(player)
         valid = [t for t in others
-                if engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
+                 if engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
         enemies = [t for t in valid if self._is_enemy(player, t)]
 
         if enemies:
@@ -362,7 +362,7 @@ class AIBot:
         return None
 
     def _choose_duel_target(self, player: 'Player',
-                           engine: 'GameEngine') -> Optional['Player']:
+                            engine: 'GameEngine') -> Optional['Player']:
         """选择决斗的目标"""
         others = engine.get_other_players(player)
         enemies = [t for t in others if self._is_enemy(player, t)]
@@ -539,7 +539,7 @@ class AIBot:
             self.threat_values[p.id] = threat
 
     def get_highest_threat_enemy(self, player: 'Player',
-                                  engine: 'GameEngine') -> Optional['Player']:
+                                 engine: 'GameEngine') -> Optional['Player']:
         """获取威胁值最高的敌人"""
         enemies = [p for p in engine.get_other_players(player) if self._is_enemy(player, p)]
 
@@ -554,7 +554,7 @@ class AIBot:
     def evaluate_game_state(self, engine: 'GameEngine') -> Dict[str, Any]:
         """
         评估当前局势（M4-T01）
-        
+
         返回各阵营的综合评分和关键指标
         """
         player = self.player
@@ -676,7 +676,7 @@ class AIBot:
     def infer_identity(self, target: 'Player', engine: 'GameEngine') -> Dict[str, float]:
         """
         基于行为推断目标身份概率（M4-T02）
-        
+
         Returns:
             各身份的概率字典
         """

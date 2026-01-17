@@ -396,7 +396,7 @@ class SanguoshaGame:
         if card.name == "顺手牵羊":
             others = self.engine.get_other_players(player)
             valid = [t for t in others
-                    if self.engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
+                     if self.engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
             return len(valid) > 0
         if card.name == "过河拆桥":
             others = self.engine.get_other_players(player)
@@ -502,7 +502,7 @@ class SanguoshaGame:
         elif card.name == "顺手牵羊":
             others = self.engine.get_other_players(player)
             valid = [t for t in others
-                    if self.engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
+                     if self.engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
             if not valid:
                 print("⚠ 没有距离为1且有牌的目标")
                 return
@@ -546,7 +546,7 @@ class SanguoshaGame:
                     target = self.ui.choose_target(player, others, "选择交给谁")
                     if target:
                         self.engine.skill_system.use_skill(skill_id, player,
-                                                          targets=[target], cards=cards)
+                                                           targets=[target], cards=cards)
         elif skill_id == "fanjian":
             # 反间：选择牌和目标
             if player.hand:
@@ -558,10 +558,10 @@ class SanguoshaGame:
                     if target:
                         # 临时将牌加回手牌（因为choose_card会移除）
                         self.engine.skill_system.use_skill(skill_id, player,
-                                                          targets=[target], cards=[card])
+                                                           targets=[target], cards=[card])
 
     def _select_cards_for_skill(self, player: Player,
-                               min_count: int, max_count: int) -> List[Card]:
+                                min_count: int, max_count: int) -> List[Card]:
         """为技能选择卡牌"""
         print(f"\n选择 {min_count}-{max_count} 张牌 (输入编号，用空格分隔):")
         for i, card in enumerate(player.hand, 1):

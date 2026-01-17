@@ -25,7 +25,7 @@ class SkillSystem:
     def __init__(self, game_engine: 'GameEngine'):
         """
         初始化技能系统
-        
+
         Args:
             game_engine: 游戏引擎引用
         """
@@ -38,7 +38,7 @@ class SkillSystem:
             "jijiang": self._handle_jijiang,   # 刘备-激将
             "wusheng": self._handle_wusheng,   # 关羽-武圣
             "paoxiao": self._handle_paoxiao,   # 张飞-咆哮
-            "guanxing": self._handle_guanxing, # 诸葛亮-观星
+            "guanxing": self._handle_guanxing,  # 诸葛亮-观星
             "kongcheng": self._handle_kongcheng,  # 诸葛亮-空城
             "longdan": self._handle_longdan,   # 赵云-龙胆
             "mashu": self._handle_mashu,       # 马超-马术
@@ -60,15 +60,15 @@ class SkillSystem:
             "guose": self._handle_guose,       # 大乔-国色
             "liuli": self._handle_liuli,       # 大乔-流离
             # 群雄武将
-            "wushuang": self._handle_wushuang, # 吕布-无双
-            "qingnang": self._handle_qingnang, # 华佗-青囊
+            "wushuang": self._handle_wushuang,  # 吕布-无双
+            "qingnang": self._handle_qingnang,  # 华佗-青囊
             "jijiu": self._handle_jijiu,       # 华佗-急救
             "lijian": self._handle_lijian,     # 貂蝉-离间
             "biyue": self._handle_biyue,       # 貂蝉-闭月
             # 新武将
             "liegong": self._handle_liegong,   # 黄忠-烈弓
             "kuanggu": self._handle_kuanggu,   # 魏延-狂骨
-            "duanliang": self._handle_duanliang, # 徐晃-断粮
+            "duanliang": self._handle_duanliang,  # 徐晃-断粮
             "jushou": self._handle_jushou,     # 曹仁-据守
             "qixi": self._handle_qixi,         # 甘宁-奇袭
             "keji": self._handle_keji,         # 吕蒙-克己
@@ -81,11 +81,11 @@ class SkillSystem:
     def can_use_skill(self, skill_id: str, player: 'Player') -> bool:
         """
         检查玩家是否可以使用指定技能
-        
+
         Args:
             skill_id: 技能ID
             player: 玩家
-            
+
         Returns:
             是否可以使用
         """
@@ -110,16 +110,16 @@ class SkillSystem:
         return True
 
     def trigger_skill(self, skill_id: str, player: 'Player',
-                     game_engine: 'GameEngine', **kwargs) -> bool:
+                      game_engine: 'GameEngine', **kwargs) -> bool:
         """
         触发技能
-        
+
         Args:
             skill_id: 技能ID
             player: 使用技能的玩家
             game_engine: 游戏引擎
             **kwargs: 额外参数
-            
+
         Returns:
             是否成功触发
         """
@@ -134,13 +134,13 @@ class SkillSystem:
                   cards: Optional[List['Card']] = None) -> bool:
         """
         使用主动技能
-        
+
         Args:
             skill_id: 技能ID
             player: 使用技能的玩家
             targets: 目标列表
             cards: 选择的卡牌列表
-            
+
         Returns:
             是否成功使用
         """
@@ -148,7 +148,7 @@ class SkillSystem:
             return False
 
         result = self.trigger_skill(skill_id, player, self.engine,
-                                   targets=targets, cards=cards)
+                                    targets=targets, cards=cards)
 
         if result:
             # 记录使用次数
@@ -163,10 +163,10 @@ class SkillSystem:
     def get_usable_skills(self, player: 'Player') -> List[str]:
         """
         获取玩家当前可以使用的技能列表
-        
+
         Args:
             player: 玩家
-            
+
         Returns:
             可用技能ID列表
         """

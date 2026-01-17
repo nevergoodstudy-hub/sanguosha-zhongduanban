@@ -51,7 +51,7 @@ class SkillType(Enum):
     PASSIVE = "passive"     # 被动技能（锁定技）
     ACTIVE = "active"       # 主动技能
     TRIGGER = "trigger"     # 触发技能
-    TRANSFORM = "transform" # 转化技能
+    TRANSFORM = "transform"  # 转化技能
 
 
 class SkillTiming(Enum):
@@ -76,7 +76,7 @@ class SkillTiming(Enum):
 class Skill:
     """
     技能类
-    
+
     Attributes:
         id: 技能唯一标识符
         name: 技能名称
@@ -111,11 +111,11 @@ class Skill:
     def can_use(self, player: 'Player', game_engine: 'GameEngine') -> bool:
         """
         检查技能是否可以使用
-        
+
         Args:
             player: 使用技能的玩家
             game_engine: 游戏引擎
-            
+
         Returns:
             是否可以使用
         """
@@ -186,7 +186,7 @@ class Skill:
 class Hero:
     """
     武将类
-    
+
     Attributes:
         id: 武将唯一标识符
         name: 武将名称
@@ -212,10 +212,10 @@ class Hero:
     def get_skill(self, skill_id: str) -> Optional[Skill]:
         """
         根据ID获取技能
-        
+
         Args:
             skill_id: 技能ID
-            
+
         Returns:
             技能对象，如果不存在返回None
         """
@@ -227,10 +227,10 @@ class Hero:
     def get_skill_by_name(self, skill_name: str) -> Optional[Skill]:
         """
         根据名称获取技能
-        
+
         Args:
             skill_name: 技能名称
-            
+
         Returns:
             技能对象，如果不存在返回None
         """
@@ -301,7 +301,7 @@ class HeroRepository:
     def __init__(self, data_path: Optional[str] = None):
         """
         初始化武将仓库
-        
+
         Args:
             data_path: 武将数据文件路径
         """
@@ -313,7 +313,7 @@ class HeroRepository:
     def load_heroes(self, data_path: str) -> None:
         """
         从JSON文件加载武将数据
-        
+
         Args:
             data_path: JSON文件路径
         """
@@ -333,10 +333,10 @@ class HeroRepository:
     def get_hero(self, hero_id: str) -> Optional[Hero]:
         """
         获取武将
-        
+
         Args:
             hero_id: 武将ID
-            
+
         Returns:
             武将对象，如果不存在返回None
         """
@@ -345,10 +345,10 @@ class HeroRepository:
     def get_hero_by_name(self, name: str) -> Optional[Hero]:
         """
         根据名称获取武将
-        
+
         Args:
             name: 武将名称
-            
+
         Returns:
             武将对象，如果不存在返回None
         """
@@ -364,10 +364,10 @@ class HeroRepository:
     def get_heroes_by_kingdom(self, kingdom: Kingdom) -> List[Hero]:
         """
         获取指定势力的所有武将
-        
+
         Args:
             kingdom: 势力
-            
+
         Returns:
             武将列表
         """
@@ -376,10 +376,10 @@ class HeroRepository:
     def get_random_heroes(self, count: int) -> List[Hero]:
         """
         随机获取指定数量的武将
-        
+
         Args:
             count: 数量
-            
+
         Returns:
             武将列表
         """

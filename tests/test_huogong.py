@@ -83,42 +83,41 @@ class TestHuogong:
         """测试火攻：使用者没有同花色牌时不造成伤害"""
         player = engine.players[0]
         target = engine.players[1]
-        
-        # 确保目标有手牌
-        if not target.hand:
-            test_card = Card(
-                id="target_card",
-                name="桃",
-                card_type=CardType.BASIC,
-                subtype=CardSubtype.HEAL,
-                suit=CardSuit.HEART,
-                number=3
-            )
-            target.draw_cards([test_card])
-        
-        # 清空使用者手牌
+
+        # 清空目标手牌，只给一张梅花牌
+        target.hand.clear()
+        target_card = Card(
+            id="target_card",
+            name="闪",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.DODGE,
+            suit=CardSuit.CLUB,  # 梅花
+            number=3
+        )
+        target.hand.append(target_card)
+
+        # 清空使用者手牌，只给火攻(红桃)和黑桃牌
         player.hand.clear()
-        player.draw_cards([huogong_card])
-        
-        # 给使用者一张不同花色的牌
+        player.hand.append(huogong_card)  # 红桃火攻
+
+        # 给使用者一张黑桃牌（与目标梅花不同花色）
         diff_card = Card(
             id="diff_test",
             name="杀",
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
-            suit=CardSuit.SPADE,  # 不同花色
+            suit=CardSuit.SPADE,
             number=5
         )
-        player.draw_cards([diff_card])
-        
+        player.hand.append(diff_card)
+
         target_hp_before = target.hp
-        
-        # 如果目标手牌是红心，使用者只有黑桃，不造成伤害
-        if target.hand[0].suit != CardSuit.SPADE:
-            result = engine._use_huogong(player, huogong_card, [target])
-            assert result is True
-            # 没有同花色牌，不造成伤害
-            assert target.hp == target_hp_before
+
+        # 目标展示梅花，使用者只有红桃和黑桃，无梅花牌
+        result = engine._use_huogong(player, huogong_card, [target])
+        assert result is True
+        # 没有梅花牌，不造成伤害
+        assert target.hp == target_hp_before
     
     def test_huogong_target_no_hand(self, engine, huogong_card):
         """测试火攻：目标没有手牌时无效"""

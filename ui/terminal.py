@@ -41,7 +41,7 @@ class TerminalUI:
     def __init__(self, use_color: bool = True):
         """
         初始化终端UI
-        
+
         Args:
             use_color: 是否使用彩色输出
         """
@@ -66,7 +66,7 @@ class TerminalUI:
     def show_main_menu(self) -> int:
         """
         显示主菜单
-        
+
         Returns:
             用户选择的选项
         """
@@ -94,7 +94,7 @@ class TerminalUI:
     def show_player_count_menu(self) -> int:
         """
         显示玩家数量选择菜单
-        
+
         Returns:
             玩家数量
         """
@@ -121,7 +121,7 @@ class TerminalUI:
     def show_difficulty_menu(self) -> str:
         """
         显示AI难度选择菜单
-        
+
         Returns:
             难度级别
         """
@@ -146,16 +146,16 @@ class TerminalUI:
             print("无效选择，请重新输入")
 
     def show_hero_selection(self, heroes: List['Hero'],
-                           selected_count: int = 1,
-                           is_lord: bool = False) -> List['Hero']:
+                            selected_count: int = 1,
+                            is_lord: bool = False) -> List['Hero']:
         """
         显示武将选择界面
-        
+
         Args:
             heroes: 可选武将列表
             selected_count: 需要选择的数量
             is_lord: 是否为主公选将
-            
+
         Returns:
             选择的武将列表
         """
@@ -224,7 +224,7 @@ class TerminalUI:
     def show_game_state(self, engine: 'GameEngine', current_player: 'Player') -> None:
         """
         显示游戏状态
-        
+
         Args:
             engine: 游戏引擎
             current_player: 当前回合玩家
@@ -241,14 +241,14 @@ class TerminalUI:
         for player in engine.players:
             if player != engine.human_player:
                 self._print_player_info(player, player == current_player,
-                                       engine.human_player, engine)
+                                        engine.human_player, engine)
 
         print("╠" + "═" * (self.WIDTH - 2) + "╣")
 
         # 当前玩家信息（人类玩家）
         if engine.human_player:
             self._print_current_player_info(engine.human_player,
-                                           engine.human_player == current_player)
+                                            engine.human_player == current_player)
 
         print("╠" + "═" * (self.WIDTH - 2) + "╣")
 
@@ -269,7 +269,7 @@ class TerminalUI:
         print("╚" + "═" * (self.WIDTH - 2) + "╝")
 
     def _print_player_info(self, player: 'Player', is_current: bool,
-                            human_player: 'Player' = None, engine: 'GameEngine' = None) -> None:
+                           human_player: 'Player' = None, engine: 'GameEngine' = None) -> None:
         """打印玩家信息行(含技能和装备详情)"""
         content_width = self.WIDTH - 4  # 留出边框空间
 
@@ -413,7 +413,7 @@ class TerminalUI:
     def get_player_action(self) -> str:
         """
         获取玩家操作
-        
+
         Returns:
             操作命令
         """
@@ -428,10 +428,10 @@ class TerminalUI:
     def choose_card_to_play(self, player: 'Player') -> Optional['Card']:
         """
         选择要使用的手牌
-        
+
         Args:
             player: 玩家
-            
+
         Returns:
             选择的卡牌，取消返回None
         """
@@ -456,15 +456,15 @@ class TerminalUI:
             print("无效选择")
 
     def choose_target(self, player: 'Player', targets: List['Player'],
-                     prompt: str = "选择目标") -> Optional['Player']:
+                      prompt: str = "选择目标") -> Optional['Player']:
         """
         选择目标玩家
-        
+
         Args:
             player: 当前玩家
             targets: 可选目标列表
             prompt: 提示文字
-            
+
         Returns:
             选择的目标，取消返回None
         """
@@ -494,11 +494,11 @@ class TerminalUI:
                                 count: int) -> List['Card']:
         """
         选择要弃置的手牌
-        
+
         Args:
             player: 玩家
             count: 需要弃置的数量
-            
+
         Returns:
             选择弃置的卡牌列表
         """
@@ -531,10 +531,10 @@ class TerminalUI:
     def ask_for_shan(self, player: 'Player') -> Optional['Card']:
         """
         询问玩家是否出闪
-        
+
         Args:
             player: 玩家
-            
+
         Returns:
             选择的闪牌，不出返回None
         """
@@ -553,10 +553,10 @@ class TerminalUI:
     def ask_for_sha(self, player: 'Player') -> Optional['Card']:
         """
         询问玩家是否出杀
-        
+
         Args:
             player: 玩家
-            
+
         Returns:
             选择的杀牌，不出返回None
         """
@@ -575,11 +575,11 @@ class TerminalUI:
     def ask_for_tao(self, savior: 'Player', dying: 'Player') -> Optional['Card']:
         """
         询问玩家是否使用桃救援
-        
+
         Args:
             savior: 救援者
             dying: 濒死玩家
-            
+
         Returns:
             选择的桃牌，不救返回None
         """
@@ -614,14 +614,14 @@ class TerminalUI:
         return None
 
     def choose_card_from_player(self, chooser: 'Player',
-                               target: 'Player') -> Optional['Card']:
+                                target: 'Player') -> Optional['Card']:
         """
         从目标玩家区域选择一张牌
-        
+
         Args:
             chooser: 选择者
             target: 目标玩家
-            
+
         Returns:
             选择的卡牌
         """
@@ -655,10 +655,10 @@ class TerminalUI:
     def choose_suit(self, player: 'Player') -> 'CardSuit':
         """
         选择花色
-        
+
         Args:
             player: 玩家
-            
+
         Returns:
             选择的花色
         """
@@ -681,14 +681,14 @@ class TerminalUI:
             print("无效选择")
 
     def guanxing_selection(self, player: 'Player',
-                          cards: List['Card']) -> Tuple[List['Card'], List['Card']]:
+                           cards: List['Card']) -> Tuple[List['Card'], List['Card']]:
         """
         观星技能的牌序选择
-        
+
         Args:
             player: 玩家
             cards: 观看的卡牌
-            
+
         Returns:
             (放牌堆顶的牌, 放牌堆底的牌)
         """
@@ -716,14 +716,14 @@ class TerminalUI:
             print("无效输入，请重新输入")
 
     def show_skill_menu(self, player: 'Player',
-                       usable_skills: List[str]) -> Optional[str]:
+                        usable_skills: List[str]) -> Optional[str]:
         """
         显示技能菜单
-        
+
         Args:
             player: 玩家
             usable_skills: 可用技能ID列表
-            
+
         Returns:
             选择的技能ID，取消返回None
         """
@@ -761,7 +761,7 @@ class TerminalUI:
     def show_game_over(self, winner_message: str, is_victory: bool) -> None:
         """
         显示游戏结束画面
-        
+
         Args:
             winner_message: 胜利消息
             is_victory: 玩家是否获胜
@@ -849,7 +849,7 @@ class TerminalUI:
     def _pad_to_width(self, text: str, target_width: int, align: str = 'left') -> str:
         """
         将文本填充到指定宽度（正确处理中文字符）
-        
+
         Args:
             text: 文本
             target_width: 目标宽度

@@ -46,7 +46,7 @@ class CardSubtype(Enum):
     WEAPON = "weapon"         # 武器
     ARMOR = "armor"           # 防具
     TREASURE = "treasure"     # 宝物
-    HORSE_PLUS = "horse_plus" # +1马（防御马）
+    HORSE_PLUS = "horse_plus"  # +1马（防御马）
     HORSE_MINUS = "horse_minus"  # -1马（攻击马）
 
 
@@ -91,7 +91,7 @@ class CardSuit(Enum):
 class Card:
     """
     卡牌类
-    
+
     Attributes:
         id: 卡牌唯一标识符
         name: 卡牌名称
@@ -165,12 +165,12 @@ class Card:
     def can_target(self, user: 'Player', target: 'Player', game_engine: Any) -> bool:
         """
         检查是否可以对目标使用此牌
-        
+
         Args:
             user: 使用者
             target: 目标
             game_engine: 游戏引擎
-            
+
         Returns:
             是否可以使用
         """
@@ -242,7 +242,7 @@ class Deck:
     def __init__(self, data_path: Optional[str] = None):
         """
         初始化牌堆
-        
+
         Args:
             data_path: 卡牌数据文件路径
         """
@@ -256,7 +256,7 @@ class Deck:
     def load_cards(self, data_path: str) -> None:
         """
         从JSON文件加载卡牌数据
-        
+
         Args:
             data_path: JSON文件路径
         """
@@ -332,10 +332,10 @@ class Deck:
     def draw(self, count: int = 1) -> List[Card]:
         """
         摸牌
-        
+
         Args:
             count: 摸牌数量
-            
+
         Returns:
             摸到的卡牌列表
         """
@@ -359,7 +359,7 @@ class Deck:
     def discard(self, cards: List[Card]) -> None:
         """
         弃牌
-        
+
         Args:
             cards: 要弃置的卡牌列表
         """
@@ -368,10 +368,10 @@ class Deck:
     def peek(self, count: int = 1) -> List[Card]:
         """
         查看牌堆顶的牌（不取出）
-        
+
         Args:
             count: 查看数量
-            
+
         Returns:
             牌堆顶的卡牌列表
         """
@@ -384,7 +384,7 @@ class Deck:
     def put_on_top(self, cards: List[Card]) -> None:
         """
         将牌放到牌堆顶
-        
+
         Args:
             cards: 要放置的卡牌列表
         """
@@ -393,7 +393,7 @@ class Deck:
     def put_on_bottom(self, cards: List[Card]) -> None:
         """
         将牌放到牌堆底
-        
+
         Args:
             cards: 要放置的卡牌列表
         """

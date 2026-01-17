@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from game.engine import GameEngine, GamePhase
     from game.hero import Hero
 
+
 class RichTerminalUI:
     """
     Rich TUI Class
@@ -212,7 +213,7 @@ class RichTerminalUI:
         return icons.get(suit, "?")
 
     def _get_suit_color(self, suit: CardSuit) -> str:
-        return "red" if suit in [CardSuit.HEART, CardSuit.DIAMOND] else "white" # Using white for black suits on dark terminal
+        return "red" if suit in [CardSuit.HEART, CardSuit.DIAMOND] else "white"  # Using white for black suits on dark terminal
 
     def _render_header(self, engine: 'GameEngine') -> Panel:
         phase_names = {
@@ -362,7 +363,7 @@ class RichTerminalUI:
             info.append("[H] Help\n")
             info.append("[Q] Quit\n")
         else:
-             info.append(f"Waiting for {engine.current_player.name}...\n", style="yellow")
+            info.append(f"Waiting for {engine.current_player.name}...\n", style="yellow")
 
         return Panel(info, title="Actions")
 
@@ -572,7 +573,7 @@ class RichTerminalUI:
             bottom = [c for c in cards if c not in top]
             return top, bottom
         except ValueError:
-            return [], cards[:] # Fail safe
+            return [], cards[:]  # Fail safe
 
     def show_skill_menu(self, player: 'Player', usable_skills: List[str]) -> Optional[str]:
         if not usable_skills: return None

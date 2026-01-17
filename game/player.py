@@ -49,7 +49,7 @@ class EquipmentSlot(Enum):
     """装备槽位枚举"""
     WEAPON = "weapon"           # 武器
     ARMOR = "armor"             # 防具
-    HORSE_MINUS = "horse_minus" # -1马（攻击马）
+    HORSE_MINUS = "horse_minus"  # -1马（攻击马）
     HORSE_PLUS = "horse_plus"   # +1马（防御马）
 
 
@@ -67,10 +67,10 @@ class Equipment:
     def equip(self, card: 'Card') -> Optional['Card']:
         """
         装备一张卡牌，返回被替换的旧装备（如果有）
-        
+
         Args:
             card: 要装备的卡牌
-            
+
         Returns:
             被替换的旧装备，如果没有则返回None
         """
@@ -96,10 +96,10 @@ class Equipment:
     def unequip(self, slot: EquipmentSlot) -> Optional['Card']:
         """
         卸下指定槽位的装备
-        
+
         Args:
             slot: 装备槽位
-            
+
         Returns:
             卸下的装备，如果没有则返回None
         """
@@ -123,10 +123,10 @@ class Equipment:
     def unequip_card(self, card: 'Card') -> bool:
         """
         根据卡牌移除装备
-        
+
         Args:
             card: 要移除的装备卡牌
-            
+
         Returns:
             是否成功移除
         """
@@ -216,7 +216,7 @@ class Equipment:
 class Player:
     """
     玩家类
-    
+
     Attributes:
         id: 玩家ID
         name: 玩家名称
@@ -270,7 +270,7 @@ class Player:
     def set_hero(self, hero: 'Hero') -> None:
         """
         设置武将
-        
+
         Args:
             hero: 武将对象
         """
@@ -286,7 +286,7 @@ class Player:
     def draw_cards(self, cards: List['Card']) -> None:
         """
         将卡牌加入手牌
-        
+
         Args:
             cards: 要加入的卡牌列表
         """
@@ -295,10 +295,10 @@ class Player:
     def remove_card(self, card: 'Card') -> bool:
         """
         从手牌中移除一张卡牌
-        
+
         Args:
             card: 要移除的卡牌
-            
+
         Returns:
             是否成功移除
         """
@@ -310,10 +310,10 @@ class Player:
     def remove_cards(self, cards: List['Card']) -> List['Card']:
         """
         从手牌中移除多张卡牌
-        
+
         Args:
             cards: 要移除的卡牌列表
-            
+
         Returns:
             成功移除的卡牌列表
         """
@@ -326,10 +326,10 @@ class Player:
     def get_card_by_index(self, index: int) -> Optional['Card']:
         """
         根据索引获取手牌
-        
+
         Args:
             index: 索引（0开始）
-            
+
         Returns:
             卡牌对象，如果索引无效返回None
         """
@@ -340,10 +340,10 @@ class Player:
     def has_card(self, card_name: str) -> bool:
         """
         检查手牌中是否有指定名称的牌
-        
+
         Args:
             card_name: 卡牌名称
-            
+
         Returns:
             是否拥有
         """
@@ -352,10 +352,10 @@ class Player:
     def get_cards_by_name(self, card_name: str) -> List['Card']:
         """
         获取手牌中所有指定名称的牌
-        
+
         Args:
             card_name: 卡牌名称
-            
+
         Returns:
             卡牌列表
         """
@@ -368,10 +368,10 @@ class Player:
     def equip_card(self, card: 'Card') -> Optional['Card']:
         """
         装备一张卡牌
-        
+
         Args:
             card: 要装备的卡牌
-            
+
         Returns:
             被替换的旧装备
         """
@@ -380,7 +380,7 @@ class Player:
     def take_damage(self, damage: int, source: Optional['Player'] = None) -> None:
         """
         受到伤害
-        
+
         Args:
             damage: 伤害值
             source: 伤害来源
@@ -392,10 +392,10 @@ class Player:
     def heal(self, amount: int) -> int:
         """
         回复体力
-        
+
         Args:
             amount: 回复量
-            
+
         Returns:
             实际回复量
         """
@@ -439,7 +439,7 @@ class Player:
     def use_alcohol(self) -> bool:
         """
         使用酒
-        
+
         Returns:
             是否成功使用
         """
@@ -452,7 +452,7 @@ class Player:
     def consume_drunk(self) -> bool:
         """
         消耗酒状态（使用杀时调用）
-        
+
         Returns:
             是否有酒加成
         """

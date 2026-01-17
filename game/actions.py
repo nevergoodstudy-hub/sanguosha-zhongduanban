@@ -58,7 +58,7 @@ class GameAction(ABC):
     def validate(self, engine: 'GameEngine') -> tuple[bool, str]:
         """
         验证动作是否合法
-        
+
         Returns:
             (是否合法, 错误信息)
         """
@@ -68,7 +68,7 @@ class GameAction(ABC):
     def execute(self, engine: 'GameEngine') -> bool:
         """
         执行动作
-        
+
         Returns:
             是否执行成功
         """
@@ -275,7 +275,7 @@ class ActionValidator:
 
     @staticmethod
     def validate_play_card(player: 'Player', card: 'Card',
-                          targets: List['Player'], engine: 'GameEngine') -> tuple[bool, str]:
+                           targets: List['Player'], engine: 'GameEngine') -> tuple[bool, str]:
         """验证出牌动作"""
         from .card import CardType, CardName
 
@@ -321,7 +321,7 @@ class ActionValidator:
 
     @staticmethod
     def validate_use_skill(player: 'Player', skill_id: str,
-                          engine: 'GameEngine') -> tuple[bool, str]:
+                           engine: 'GameEngine') -> tuple[bool, str]:
         """验证技能使用"""
         if not engine.skill_system:
             return False, "技能系统未初始化"

@@ -162,7 +162,7 @@ class EventBus:
                   priority: int = 0) -> None:
         """
         订阅事件
-        
+
         Args:
             event_type: 事件类型
             handler: 事件处理器
@@ -194,10 +194,10 @@ class EventBus:
     def publish(self, event: GameEvent) -> GameEvent:
         """
         发布事件
-        
+
         Args:
             event: 游戏事件
-            
+
         Returns:
             处理后的事件（可能被修改或取消）
         """
@@ -230,11 +230,11 @@ class EventBus:
     def emit(self, event_type: EventType, **kwargs) -> GameEvent:
         """
         快捷发布事件
-        
+
         Args:
             event_type: 事件类型
             **kwargs: 事件数据
-            
+
         Returns:
             处理后的事件
         """
