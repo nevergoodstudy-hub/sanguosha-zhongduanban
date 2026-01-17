@@ -32,7 +32,7 @@ class CardSubtype(Enum):
     DODGE = "dodge"           # 闪
     HEAL = "heal"             # 桃
     ALCOHOL = "alcohol"       # 酒
-    
+
     # 锦囊牌子类型
     SINGLE_TARGET = "single_target"   # 单体锦囊
     AOE = "aoe"                       # 范围锦囊（AOE）
@@ -41,7 +41,7 @@ class CardSubtype(Enum):
     COUNTER = "counter"               # 反制锦囊
     DELAY = "delay"                   # 延时锦囊
     CHAIN = "chain"                   # 连环锦囊（铁索连环）
-    
+
     # 装备牌子类型
     WEAPON = "weapon"         # 武器
     ARMOR = "armor"           # 防具
@@ -64,7 +64,7 @@ class CardSuit(Enum):
     HEART = "heart"       # 红心 ♥
     CLUB = "club"         # 梅花 ♣
     DIAMOND = "diamond"   # 方块 ♦
-    
+
     @property
     def symbol(self) -> str:
         """获取花色符号"""
@@ -75,12 +75,12 @@ class CardSuit(Enum):
             CardSuit.DIAMOND: "♦"
         }
         return symbols.get(self, "?")
-    
+
     @property
     def is_red(self) -> bool:
         """是否为红色花色"""
         return self in (CardSuit.HEART, CardSuit.DIAMOND)
-    
+
     @property
     def is_black(self) -> bool:
         """是否为黑色花色"""
@@ -112,7 +112,7 @@ class Card:
     description: str = ""
     range: int = 1
     distance_modifier: int = 0
-    
+
     def __post_init__(self):
         """初始化后处理"""
         # 转换字符串类型为枚举类型
@@ -122,46 +122,46 @@ class Card:
             self.subtype = CardSubtype(self.subtype)
         if isinstance(self.suit, str):
             self.suit = CardSuit(self.suit)
-    
+
     @property
     def number_str(self) -> str:
         """获取点数字符串表示"""
         number_map = {1: "A", 11: "J", 12: "Q", 13: "K"}
         return number_map.get(self.number, str(self.number))
-    
+
     @property
     def suit_symbol(self) -> str:
         """获取花色符号"""
         return self.suit.symbol
-    
+
     @property
     def is_red(self) -> bool:
         """是否为红色牌"""
         return self.suit.is_red
-    
+
     @property
     def is_black(self) -> bool:
         """是否为黑色牌"""
         return self.suit.is_black
-    
+
     @property
     def display_name(self) -> str:
         """获取显示名称（包含花色和点数）"""
         return f"{self.name}{self.suit_symbol}{self.number_str}"
-    
+
     @property
     def short_name(self) -> str:
         """获取短名称"""
         return f"{self.name}"
-    
+
     def is_type(self, card_type: CardType) -> bool:
         """检查是否为指定类型"""
         return self.card_type == card_type
-    
+
     def is_subtype(self, subtype: CardSubtype) -> bool:
         """检查是否为指定子类型"""
         return self.subtype == subtype
-    
+
     def can_target(self, user: 'Player', target: 'Player', game_engine: Any) -> bool:
         """
         检查是否可以对目标使用此牌
@@ -177,12 +177,12 @@ class Card:
         # 基本检查：不能对自己使用杀
         if self.name == "杀" and user == target:
             return False
-        
+
         # 锦囊牌检查
         if self.name in ["决斗", "过河拆桥"]:
             if user == target:
                 return False
-        
+
         # 顺手牵羊需要距离检查
         if self.name == "顺手牵羊":
             if user == target:
@@ -190,19 +190,19 @@ class Card:
             distance = game_engine.calculate_distance(user, target)
             if distance > 1:
                 return False
-        
+
         # 检查目标是否存活
         if not target.is_alive:
             return False
-            
+
         return True
-    
+
     def __str__(self) -> str:
         return self.display_name
-    
+
     def __repr__(self) -> str:
         return f"Card({self.id}, {self.display_name})"
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
@@ -216,7 +216,7 @@ class Card:
             "range": self.range,
             "distance_modifier": self.distance_modifier
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Card':
         """从字典创建卡牌"""
@@ -238,7 +238,7 @@ class Deck:
     牌堆类
     管理游戏中的牌堆和弃牌堆
     """
-    
+
     def __init__(self, data_path: Optional[str] = None):
         """
         初始化牌堆
@@ -249,10 +249,10 @@ class Deck:
         self.draw_pile: List[Card] = []      # 摸牌堆
         self.discard_pile: List[Card] = []   # 弃牌堆
         self._all_cards: List[Card] = []     # 所有卡牌副本
-        
+
         if data_path:
             self.load_cards(data_path)
-    
+
     def load_cards(self, data_path: str) -> None:
         """
         从JSON文件加载卡牌数据
@@ -263,12 +263,12 @@ class Deck:
         path = Path(data_path)
         if not path.exists():
             raise FileNotFoundError(f"卡牌数据文件不存在: {data_path}")
-        
+
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
+
         self._all_cards.clear()
-        
+
         # 加载基本牌
         for card_data in data.get("basic_cards", []):
             card = Card(
@@ -283,7 +283,7 @@ class Deck:
             count = card_data.get("count", 1)
             for _ in range(count):
                 self._all_cards.append(card)
-        
+
         # 加载锦囊牌
         for card_data in data.get("trick_cards", []):
             card = Card(
@@ -298,7 +298,7 @@ class Deck:
             count = card_data.get("count", 1)
             for _ in range(count):
                 self._all_cards.append(card)
-        
+
         # 加载装备牌
         for card_data in data.get("equipment_cards", []):
             card = Card(
@@ -315,20 +315,20 @@ class Deck:
             count = card_data.get("count", 1)
             for _ in range(count):
                 self._all_cards.append(card)
-        
+
         # 初始化摸牌堆
         self.reset()
-    
+
     def reset(self) -> None:
         """重置牌堆（将所有牌放入摸牌堆并洗牌）"""
         self.draw_pile = [card for card in self._all_cards]
         self.discard_pile.clear()
         self.shuffle()
-    
+
     def shuffle(self) -> None:
         """洗牌"""
         random.shuffle(self.draw_pile)
-    
+
     def draw(self, count: int = 1) -> List[Card]:
         """
         摸牌
@@ -343,19 +343,19 @@ class Deck:
         for _ in range(count):
             if not self.draw_pile:
                 self._reshuffle_discard()
-            
+
             if self.draw_pile:
                 cards.append(self.draw_pile.pop())
-        
+
         return cards
-    
+
     def _reshuffle_discard(self) -> None:
         """将弃牌堆洗入摸牌堆"""
         if self.discard_pile:
             self.draw_pile.extend(self.discard_pile)
             self.discard_pile.clear()
             self.shuffle()
-    
+
     def discard(self, cards: List[Card]) -> None:
         """
         弃牌
@@ -364,7 +364,7 @@ class Deck:
             cards: 要弃置的卡牌列表
         """
         self.discard_pile.extend(cards)
-    
+
     def peek(self, count: int = 1) -> List[Card]:
         """
         查看牌堆顶的牌（不取出）
@@ -378,9 +378,9 @@ class Deck:
         # 如果牌堆不够，先洗入弃牌堆
         while len(self.draw_pile) < count and self.discard_pile:
             self._reshuffle_discard()
-        
+
         return self.draw_pile[-count:] if count <= len(self.draw_pile) else self.draw_pile[:]
-    
+
     def put_on_top(self, cards: List[Card]) -> None:
         """
         将牌放到牌堆顶
@@ -389,7 +389,7 @@ class Deck:
             cards: 要放置的卡牌列表
         """
         self.draw_pile.extend(cards)
-    
+
     def put_on_bottom(self, cards: List[Card]) -> None:
         """
         将牌放到牌堆底
@@ -399,25 +399,25 @@ class Deck:
         """
         for card in reversed(cards):
             self.draw_pile.insert(0, card)
-    
+
     @property
     def remaining(self) -> int:
         """获取摸牌堆剩余牌数"""
         return len(self.draw_pile)
-    
+
     @property
     def discarded(self) -> int:
         """获取弃牌堆牌数"""
         return len(self.discard_pile)
-    
+
     @property
     def is_empty(self) -> bool:
         """检查牌堆是否完全耗尽（摸牌堆和弃牌堆都为空）"""
         return len(self.draw_pile) == 0 and len(self.discard_pile) == 0
-    
+
     def __len__(self) -> int:
         return self.remaining
-    
+
     def __str__(self) -> str:
         return f"Deck(摸牌堆:{self.remaining}, 弃牌堆:{self.discarded})"
 
@@ -429,7 +429,7 @@ class CardName:
     SHA = "杀"
     SHAN = "闪"
     TAO = "桃"
-    
+
     # 锦囊牌
     JUEDOU = "决斗"
     NANMAN = "南蛮入侵"
@@ -439,17 +439,17 @@ class CardName:
     SHUNSHOU = "顺手牵羊"
     TAOYUAN = "桃园结义"
     WUXIE = "无懈可击"
-    
+
     # 延时锦囊
     LEBUSISHU = "乐不思蜀"
     BINGLIANG = "兵粮寸断"
     SHANDIAN = "闪电"
-    
+
     # 军争锦囊
     HUOGONG = "火攻"
     TIESUO = "铁索连环"
     JIU = "酒"
-    
+
     # 武器
     QINGLONG = "青龙偃月刀"
     ZHANGBA = "丈八蛇矛"
@@ -458,17 +458,17 @@ class CardName:
     QILIN = "麒麟弓"
     FANGTAN = "方天画戟"
     HANBING = "寒冰剑"
-    
+
     # 防具
     BAGUA = "八卦阵"
     RENWANG = "仁王盾"
     TENGJIA = "藤甲"
     BAIYINSHIZI = "白银狮子"
-    
+
     # 军争武器
     GUDINGDAO = "古锭刀"
     ZHUQUEYUSHAN = "朱雀羽扇"
-    
+
     # 坐骑
     CHITU = "赤兔"
     DILU = "的卢"

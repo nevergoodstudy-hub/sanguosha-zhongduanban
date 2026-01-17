@@ -9,7 +9,7 @@ from typing import List
 
 class ASCIIArt:
     """ASCII艺术类，提供各种装饰性文字和图形"""
-    
+
     # 游戏标题
     TITLE = """
 ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -42,7 +42,7 @@ class ASCIIArt:
         "wu": "【吴】",
         "qun": "【群】"
     }
-    
+
     # 身份图标
     IDENTITY_ICONS = {
         "lord": "【主公】",
@@ -50,7 +50,7 @@ class ASCIIArt:
         "rebel": "【反贼】",
         "spy": "【内奸】"
     }
-    
+
     # 花色符号
     SUIT_SYMBOLS = {
         "spade": "♠",
@@ -58,16 +58,16 @@ class ASCIIArt:
         "club": "♣",
         "diamond": "♦"
     }
-    
+
     # 体力符号
     HP_FULL = "♥"
     HP_EMPTY = "○"
     HP_LOST = "×"
-    
+
     # 分隔线
     SEPARATOR_SINGLE = "─" * 60
     SEPARATOR_DOUBLE = "═" * 60
-    
+
     # 边框字符
     BORDER_TOP_LEFT = "╔"
     BORDER_TOP_RIGHT = "╗"
@@ -80,7 +80,7 @@ class ASCIIArt:
     BORDER_T_UP = "╩"
     BORDER_T_RIGHT = "╠"
     BORDER_T_LEFT = "╣"
-    
+
     # 武将头像（简化版）
     HERO_PORTRAITS = {
         "liubei": [
@@ -132,12 +132,12 @@ class ASCIIArt:
             "  ╰───╯  "
         ]
     }
-    
+
     # 卡牌边框
     CARD_TOP = "┌─────┐"
     CARD_BOTTOM = "└─────┘"
     CARD_SIDE = "│"
-    
+
     # 游戏结束画面
     VICTORY = """
 ╔══════════════════════════════════════════════════════════════╗
@@ -180,7 +180,7 @@ class ASCIIArt:
         full_hearts = cls.HP_FULL * current_hp
         empty_hearts = cls.HP_EMPTY * (max_hp - current_hp)
         return full_hearts + empty_hearts
-    
+
     @classmethod
     def get_card_display(cls, name: str, suit: str, number: str) -> List[str]:
         """
@@ -195,10 +195,10 @@ class ASCIIArt:
             卡牌显示的字符串列表
         """
         suit_symbol = cls.SUIT_SYMBOLS.get(suit, "?")
-        
+
         # 确保名称长度为2（中文字符）
         display_name = name[:2] if len(name) >= 2 else name.ljust(2)
-        
+
         return [
             cls.CARD_TOP,
             f"│{suit_symbol}{number.ljust(3)}│",
@@ -206,7 +206,7 @@ class ASCIIArt:
             f"│   {suit_symbol}│",
             cls.CARD_BOTTOM
         ]
-    
+
     @classmethod
     def get_hero_portrait(cls, hero_id: str) -> List[str]:
         """
@@ -224,9 +224,9 @@ class ASCIIArt:
             "  │????│  ",
             "  ╰───╯  "
         ])
-    
+
     @classmethod
-    def create_box(cls, content: List[str], width: int = 60, 
+    def create_box(cls, content: List[str], width: int = 60,
                    title: str = "") -> List[str]:
         """
         创建带边框的文本框
@@ -240,23 +240,23 @@ class ASCIIArt:
             带边框的文本行列表
         """
         result = []
-        
+
         # 顶部边框
         if title:
             title_part = f" {title} "
             padding_left = (width - 2 - len(title_part)) // 2
             padding_right = width - 2 - len(title_part) - padding_left
-            top_line = (cls.BORDER_TOP_LEFT + 
-                       cls.BORDER_HORIZONTAL * padding_left + 
-                       title_part + 
-                       cls.BORDER_HORIZONTAL * padding_right + 
+            top_line = (cls.BORDER_TOP_LEFT +
+                       cls.BORDER_HORIZONTAL * padding_left +
+                       title_part +
+                       cls.BORDER_HORIZONTAL * padding_right +
                        cls.BORDER_TOP_RIGHT)
         else:
-            top_line = (cls.BORDER_TOP_LEFT + 
-                       cls.BORDER_HORIZONTAL * (width - 2) + 
+            top_line = (cls.BORDER_TOP_LEFT +
+                       cls.BORDER_HORIZONTAL * (width - 2) +
                        cls.BORDER_TOP_RIGHT)
         result.append(top_line)
-        
+
         # 内容
         for line in content:
             # 计算实际显示宽度（考虑中文字符）
@@ -266,15 +266,15 @@ class ASCIIArt:
                 padding = 0
             padded_line = f"{cls.BORDER_VERTICAL}{line}{' ' * padding}{cls.BORDER_VERTICAL}"
             result.append(padded_line)
-        
+
         # 底部边框
-        bottom_line = (cls.BORDER_BOTTOM_LEFT + 
-                      cls.BORDER_HORIZONTAL * (width - 2) + 
+        bottom_line = (cls.BORDER_BOTTOM_LEFT +
+                      cls.BORDER_HORIZONTAL * (width - 2) +
                       cls.BORDER_BOTTOM_RIGHT)
         result.append(bottom_line)
-        
+
         return result
-    
+
     @classmethod
     def _get_display_width(cls, text: str) -> int:
         """
@@ -293,7 +293,7 @@ class ASCIIArt:
             else:
                 width += 1
         return width
-    
+
     @classmethod
     def center_text(cls, text: str, width: int) -> str:
         """
@@ -309,7 +309,7 @@ class ASCIIArt:
         display_width = cls._get_display_width(text)
         padding = (width - display_width) // 2
         return " " * padding + text
-    
+
     @classmethod
     def get_menu(cls, title: str, options: List[str], width: int = 50) -> List[str]:
         """
@@ -329,9 +329,9 @@ class ASCIIArt:
         for i, option in enumerate(options, 1):
             content.append(f"  [{i}] {option}")
         content.append("")
-        
+
         return cls.create_box(content, width)
-    
+
     @classmethod
     def get_help_text(cls) -> str:
         """获取帮助文本"""

@@ -42,33 +42,39 @@ class TestHuogong:
         """测试火攻基本流程：目标展示手牌，使用者弃同花色造成伤害"""
         player = engine.players[0]
         target = engine.players[1]
-        
-        # 确保目标有手牌
-        if not target.hand:
-            engine.draw_cards(target, 2)
-        
-        # 给使用者添加火攻卡
-        player.draw_cards([huogong_card])
-        
-        # 获取目标手牌的花色
-        target_card_suit = target.hand[0].suit
-        
+
+        # 清空目标手牌，只给一张特定花色的牌
+        target.hand.clear()
+        target_card = Card(
+            id="target_hand_card",
+            name="桃",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.HEAL,
+            suit=CardSuit.HEART,
+            number=3
+        )
+        target.hand.append(target_card)
+
+        # 清空使用者手牌，给火攻和同花色牌
+        player.hand.clear()
+        player.hand.append(huogong_card)
+
         # 给使用者一张同花色的牌用于弃置
         matching_card = Card(
             id="matching_test",
             name="杀",
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
-            suit=target_card_suit,
+            suit=CardSuit.HEART,  # 与目标手牌同花色
             number=5
         )
-        player.draw_cards([matching_card])
-        
+        player.hand.append(matching_card)
+
         target_hp_before = target.hp
-        
+
         # 使用火攻
         result = engine._use_huogong(player, huogong_card, [target])
-        
+
         assert result is True
         # 如果有同花色牌，应该造成1点火焰伤害
         assert target.hp == target_hp_before - 1
