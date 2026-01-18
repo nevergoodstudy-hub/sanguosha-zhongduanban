@@ -18,6 +18,8 @@ import sys
 import os
 import copy
 import logging
+import random
+import time
 from pathlib import Path
 from typing import Optional, List, Dict
 
@@ -103,8 +105,6 @@ class SanguoshaGame:
         if not self.engine:
             return
 
-        import random
-
         # 获取所有武将
         all_heroes = self.engine.hero_repo.get_all_heroes()
         used_heroes = []  # 已被选择的武将
@@ -149,8 +149,6 @@ class SanguoshaGame:
 
     def _auto_choose_heroes_for_ai(self, used_heroes: List[str]) -> Dict[int, str]:
         """为AI玩家自动选择武将"""
-        import random
-
         all_heroes = self.engine.hero_repo.get_all_heroes()
         # 过滤掉已使用的武将
         available = [h for h in all_heroes if h.id not in used_heroes]
@@ -169,7 +167,6 @@ class SanguoshaGame:
 
     def _select_hero_for_ai(self, player: 'Player', available: List['Hero']) -> 'Hero':
         """根据AI身份智能选择武将"""
-        import random
         from game.hero import SkillType
 
         identity = player.identity
@@ -232,32 +229,64 @@ class SanguoshaGame:
         # 游戏结束
         self._handle_game_over()
 
+    def _show_turn_header(self, player: Player) -> None:
+        """显示回合头部信息"""
+        self.ui.show_log(f"")
+        self.ui.show_log(f"════════════════════════")
+        self.ui.show_log(f"【第{self.engine.round_count}回合】 {player.name}({player.hero.name}) 的回合")
+        self.ui.show_log(f"════════════════════════")
+
+    def _execute_prepare_phase(self, player: Player) -> None:
+        """执行准备阶段"""
+        self.ui.show_log(f"▶ 准备阶段")
+        self.engine.phase_prepare(player)
+
+    def _execute_draw_phase(self, player: Player, show_count: bool = True) -> int:
+        """执行摸牌阶段，返回摸牌数量"""
+        self.ui.show_log(f"▶ 摸牌阶段")
+        old_count = player.hand_count
+        self.engine.phase_draw(player)
+        new_cards = player.hand_count - old_count
+        if show_count:
+            if player.is_ai:
+                self.ui.show_log(f"  └─ {player.name} 摸了 {new_cards} 张牌")
+            else:
+                self.ui.show_log(f"  └─ 摸了 {new_cards} 张牌，当前手牌数: {player.hand_count}")
+        return new_cards
+
+    def _execute_discard_phase(self, player: Player) -> None:
+        """执行弃牌阶段"""
+        if player.need_discard > 0:
+            self.ui.show_log(f"▶ 弃牌阶段")
+            if player.is_ai:
+                self.ui.show_log(f"  └─ 需弃置 {player.need_discard} 张牌")
+            else:
+                self.ui.show_log(f"  └─ 需弃置 {player.need_discard} 张牌（手牌上限: {player.hp}）")
+                self.engine.phase = GamePhase.DISCARD
+                self.ui.show_game_state(self.engine, player)
+                self._human_discard_phase(player)
+                return
+            self.engine.phase_discard(player)
+
+    def _execute_end_phase(self, player: Player) -> None:
+        """执行结束阶段"""
+        self.ui.show_log(f"▶ 结束阶段")
+        self.engine.phase_end(player)
+        turn_end_msg = f"─── {player.name} 回合结束 ───" if player.is_ai else f"─── 回合结束 ───"
+        self.ui.show_log(turn_end_msg)
+
     def _run_ai_turn(self, player: Player) -> None:
         """执行AI回合"""
         if not self.engine:
             return
 
-        import time
-
-        self.ui.show_log(f"")
-        self.ui.show_log(f"════════════════════════")
-        self.ui.show_log(f"【第{self.engine.round_count}回合】 {player.name}({player.hero.name}) 的回合")
-        self.ui.show_log(f"════════════════════════")
+        self._show_turn_header(player)
         self.ui.show_game_state(self.engine, player)
 
-        # 重置回合状态
         player.reset_turn()
 
-        # 准备阶段
-        self.ui.show_log(f"▶ 准备阶段")
-        self.engine.phase_prepare(player)
-
-        # 摸牌阶段
-        self.ui.show_log(f"▶ 摸牌阶段")
-        old_count = player.hand_count
-        self.engine.phase_draw(player)
-        new_cards = player.hand_count - old_count
-        self.ui.show_log(f"  └─ {player.name} 摸了 {new_cards} 张牌")
+        self._execute_prepare_phase(player)
+        self._execute_draw_phase(player)
         self.ui.show_game_state(self.engine, player)
         time.sleep(0.3)
 
@@ -267,20 +296,11 @@ class SanguoshaGame:
         if player.id in self.engine.ai_bots:
             bot = self.engine.ai_bots[player.id]
             bot.play_phase(player, self.engine)
-
         self.ui.show_game_state(self.engine, player)
         time.sleep(0.3)
 
-        # 弃牌阶段
-        if player.need_discard > 0:
-            self.ui.show_log(f"▶ 弃牌阶段")
-            self.ui.show_log(f"  └─ 需弃置 {player.need_discard} 张牌")
-            self.engine.phase_discard(player)
-
-        # 结束阶段
-        self.ui.show_log(f"▶ 结束阶段")
-        self.engine.phase_end(player)
-        self.ui.show_log(f"─── {player.name} 回合结束 ───")
+        self._execute_discard_phase(player)
+        self._execute_end_phase(player)
         time.sleep(0.3)
 
     def _run_human_turn(self, player: Player) -> None:
@@ -288,25 +308,13 @@ class SanguoshaGame:
         if not self.engine:
             return
 
-        self.ui.show_log(f"")
-        self.ui.show_log(f"════════════════════════")
-        self.ui.show_log(f"【第{self.engine.round_count}回合】 {player.name}({player.hero.name}) 的回合")
-        self.ui.show_log(f"════════════════════════")
-
-        # 重置回合状态
+        self._show_turn_header(player)
         player.reset_turn()
 
-        # 准备阶段
-        self.ui.show_log(f"▶ 准备阶段")
-        self.engine.phase_prepare(player)
+        self._execute_prepare_phase(player)
         self.ui.show_game_state(self.engine, player)
 
-        # 摸牌阶段
-        self.ui.show_log(f"▶ 摸牌阶段")
-        old_hand_count = player.hand_count
-        self.engine.phase_draw(player)
-        new_cards = player.hand_count - old_hand_count
-        self.ui.show_log(f"  └─ 摸了 {new_cards} 张牌，当前手牌数: {player.hand_count}")
+        self._execute_draw_phase(player)
         self.ui.show_game_state(self.engine, player)
 
         # 出牌阶段
@@ -314,18 +322,8 @@ class SanguoshaGame:
         self.engine.phase = GamePhase.PLAY
         self._human_play_phase(player)
 
-        # 弃牌阶段
-        if player.need_discard > 0:
-            self.ui.show_log(f"▶ 弃牌阶段")
-            self.ui.show_log(f"  └─ 需弃置 {player.need_discard} 张牌（手牌上限: {player.hp}）")
-            self.engine.phase = GamePhase.DISCARD
-            self.ui.show_game_state(self.engine, player)
-            self._human_discard_phase(player)
-
-        # 结束阶段
-        self.ui.show_log(f"▶ 结束阶段")
-        self.engine.phase_end(player)
-        self.ui.show_log(f"─── 回合结束 ───")
+        self._execute_discard_phase(player)
+        self._execute_end_phase(player)
 
     def _human_play_phase(self, player: Player) -> None:
         """人类玩家出牌阶段 - 默认直接进入出牌模式"""
@@ -339,7 +337,6 @@ class SanguoshaGame:
             print("【自动跳过】当前无可用手牌或技能")
             print("=" * 50)
             self.ui.show_log(f"  └─ 无可出牌，自动结束出牌阶段")
-            import time
             time.sleep(1)
             return
 
@@ -372,11 +369,10 @@ class SanguoshaGame:
             if self.engine.is_game_over():
                 return
 
-            # 再次检查是否还有可操作的牌或技能
+        # 再次检查是否还有可操作的牌或技能
             if not self._can_do_anything(player):
                 print("\n【自动结束】已无可用手牌或技能")
                 self.ui.show_log(f"  └─ 无可出牌，自动结束出牌阶段")
-                import time
                 time.sleep(0.5)
                 break
 

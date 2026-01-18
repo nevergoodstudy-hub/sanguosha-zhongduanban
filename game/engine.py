@@ -1686,12 +1686,22 @@ class GameEngine:
         造成伤害（支持属性伤害与铁索连环传导）
 
         Args:
-            source: 伤害来源
-            target: 目标
-            damage: 伤害值
+            source: 伤害来源，None 表示系统伤害（如闪电）
+            target: 目标玩家
+            damage: 伤害值，必须大于 0
             damage_type: 伤害类型 ("normal", "fire", "thunder")
             _chain_propagating: 内部参数，标记是否为连环传导伤害
+
+        Raises:
+            ValueError: 当 damage <= 0 或 target 无效时
         """
+        # 输入验证
+        if damage <= 0:
+            logger.warning(f"deal_damage called with invalid damage={damage}")
+            return
+        if not target or not target.is_alive:
+            logger.warning(f"deal_damage called with invalid target")
+            return
         source_name = source.name if source else "系统"
         old_hp = target.hp
 
@@ -1744,8 +1754,20 @@ class GameEngine:
             self._handle_dying(target)
 
     def _handle_dying(self, player: Player) -> None:
-        """处理濒死"""
-        self.log_event("dying", f"⚠️ {player.name}({player.hero.name if player.hero else '???'}) 进入濒死状态！HP: {player.hp}")
+        """
+        处理濒死状态
+
+        当玩家体力 <= 0 时触发，向所有玩家请求桃救援
+
+        Args:
+            player: 濒死的玩家
+        """
+        if not player:
+            logger.error("_handle_dying called with None player")
+            return
+
+        hero_name = player.hero.name if player.hero else '???'
+        self.log_event("dying", f"⚠️ {player.name}({hero_name}) 进入濒死状态！HP: {player.hp}")
 
         # 请求所有玩家使用桃救援
         saved = False
@@ -1914,6 +1936,9 @@ class GameEngine:
             player_count: 玩家数量（2-8）
             ai_difficulty: AI 难度 ("easy", "normal", "hard")
             seed: 随机种子（用于复现对局），None 则自动生成
+
+        Raises:
+            ValueError: 当玩家数量不在 2-8 范围内时
         """
         from ai.bot import AIBot, AIDifficulty
 

@@ -677,34 +677,41 @@ class AIBot:
         """
         基于行为推断目标身份概率（M4-T02）
 
-        Returns:
-            各身份的概率字典
-        """
-        # 初始概率（基于人数分布）
-        player_count = len([p for p in engine.players if p.is_alive])
+        Args:
+            target: 目标玩家
+            engine: 游戏引擎
 
+        Returns:
+            各身份的概率字典 {'lord': float, 'loyalist': float, 'rebel': float, 'spy': float}
+        """
+        # 主公身份公开
+        if target.identity == Identity.LORD:
+            return {'lord': 1.0, 'loyalist': 0.0, 'rebel': 0.0, 'spy': 0.0}
+
+        # 初始概率（基于人数分布）
+        alive_count = len(engine.get_alive_players())
         probs = {
-            'lord': 0.0,  # 主公身份公开
+            'lord': 0.0,
             'loyalist': 0.25,
             'rebel': 0.50,
             'spy': 0.25
         }
 
-        # 主公身份公开
-        if target.identity.value == "lord":
-            return {'lord': 1.0, 'loyalist': 0.0, 'rebel': 0.0, 'spy': 0.0}
-
         # 基于已知行为调整概率
         if target.id in self.identity_guess:
             guessed = self.identity_guess[target.id]
-            if guessed.value == "loyalist":
+            if guessed == Identity.LOYALIST:
                 probs['loyalist'] = 0.7
                 probs['rebel'] = 0.15
                 probs['spy'] = 0.15
-            elif guessed.value == "rebel":
+            elif guessed == Identity.REBEL:
                 probs['rebel'] = 0.7
                 probs['loyalist'] = 0.15
                 probs['spy'] = 0.15
+            elif guessed == Identity.SPY:
+                probs['spy'] = 0.6
+                probs['rebel'] = 0.2
+                probs['loyalist'] = 0.2
 
         return probs
 
@@ -712,19 +719,32 @@ class AIBot:
                         target: Optional['Player'] = None) -> None:
         """
         记录玩家行为用于身份推断（M4-T02）
+
+        Args:
+            actor: 行为发起者
+            action_type: 行为类型 ('attack', 'save', 'help', 'harm')
+            target: 行为目标
         """
         if actor.id == self.player.id:
             return
 
-        # 找到主公
-        lord = None
-        for p in [self.player]:  # 简化，实际应遍历所有玩家
-            pass
+        if not target:
+            return
 
         # 攻击主公 → 可能是反贼
-        if action_type == "attack" and target and target.identity.value == "lord":
+        if action_type == "attack" and target.identity == Identity.LORD:
             self.identity_guess[actor.id] = Identity.REBEL
 
         # 救援主公 → 可能是忠臣
-        if action_type == "save" and target and target.identity.value == "lord":
+        elif action_type == "save" and target.identity == Identity.LORD:
             self.identity_guess[actor.id] = Identity.LOYALIST
+
+        # 帮助主公/忠臣 → 可能是忠臣
+        elif action_type == "help" and target.identity in [Identity.LORD, Identity.LOYALIST]:
+            if actor.id not in self.identity_guess:
+                self.identity_guess[actor.id] = Identity.LOYALIST
+
+        # 伤害忠臣 → 可能是反贼
+        elif action_type == "harm" and target.identity == Identity.LOYALIST:
+            if actor.id not in self.identity_guess:
+                self.identity_guess[actor.id] = Identity.REBEL

@@ -8,8 +8,12 @@
   <a href="https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban/releases/latest">
     <img src="https://img.shields.io/github/v/release/nevergoodstudy-hub/sanguosha-zhongduanban?label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC" alt="Latest Release">
   </a>
+  <a href="https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban/actions/workflows/ci.yml">
+    <img src="https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
   <img src="https://img.shields.io/badge/Python-3.8%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-green" alt="Platform">
+  <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
 </p>
 
 ```

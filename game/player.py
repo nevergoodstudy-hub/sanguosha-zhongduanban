@@ -528,6 +528,13 @@ class Player:
             return self.hero.has_skill(skill_id)
         return False
 
+    @property
+    def gender(self) -> str:
+        """获取性别（从武将获取）"""
+        if self.hero:
+            return self.hero.gender
+        return "male"  # 默认男性
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典（用于调试）"""
         return {

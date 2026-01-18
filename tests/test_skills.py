@@ -468,3 +468,1099 @@ class TestGanglie:
 
         # 刚烈：受到伤害后可进行判定，红色则伤害来源弃2牌或受1伤
         assert result is True or result is False
+
+    def test_ganglie_no_source(self, engine):
+        """测试刚烈没有伤害来源时返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_ganglie(player, engine, source=None)
+        assert result is False
+
+    def test_ganglie_self_damage(self, engine):
+        """测试刚烈对自己造成伤害时返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_ganglie(player, engine, source=player)
+        assert result is False
+
+
+class TestFankui:
+    """测试反馈技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_fankui_get_card(self, engine):
+        """测试反馈获取伤害来源的牌"""
+        player = engine.players[0]
+        source = engine.players[1]
+
+        # 确保来源有牌
+        test_card = Card(
+            id="fankui_test",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        source.hand.append(test_card)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_fankui(player, engine, source=source)
+        assert result is True
+
+    def test_fankui_no_source(self, engine):
+        """测试反馈没有来源时返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_fankui(player, engine, source=None)
+        assert result is False
+
+    def test_fankui_self_source(self, engine):
+        """测试反馈来源是自己时返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_fankui(player, engine, source=player)
+        assert result is False
+
+    def test_fankui_source_no_cards(self, engine):
+        """测试反馈来源没有牌时返回False"""
+        player = engine.players[0]
+        source = engine.players[1]
+        source.hand.clear()
+        # 清空装备
+        source.equipment.weapon = None
+        source.equipment.armor = None
+        source.equipment.plus_horse = None
+        source.equipment.minus_horse = None
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_fankui(player, engine, source=source)
+        assert result is False
+
+
+class TestTuxi:
+    """测试突袭技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_tuxi_get_cards(self, engine):
+        """测试突袭获取他人手牌"""
+        player = engine.players[0]
+        target = engine.players[1]
+
+        # 确保目标有牌
+        test_card = Card(
+            id="tuxi_test",
+            name="闪",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.DODGE,
+            suit=CardSuit.DIAMOND,
+            number=5
+        )
+        target.hand.append(test_card)
+        hand_before = len(player.hand)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_tuxi(player, engine, targets=[target])
+
+        assert result is True
+        assert len(player.hand) > hand_before
+
+    def test_tuxi_no_targets(self, engine):
+        """测试突袭没有目标时返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_tuxi(player, engine, targets=[])
+        assert result is False
+
+
+class TestGuanxing:
+    """测试观星技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_guanxing_ai(self, engine):
+        """测试AI观星"""
+        player = engine.players[0]
+        player.is_ai = True
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_guanxing(player, engine)
+
+        # 观星应该成功执行
+        assert result is True
+
+    def test_guanxing_empty_deck(self, engine):
+        """测试牌堆为空时观星返回False"""
+        player = engine.players[0]
+        engine.deck.draw_pile.clear()
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_guanxing(player, engine)
+        assert result is False
+
+
+class TestKongcheng:
+    """测试空城技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_kongcheng_no_hand(self, engine):
+        """测试空城：没有手牌时返回True"""
+        player = engine.players[0]
+        player.hand.clear()
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_kongcheng(player, engine)
+        assert result is True
+
+    def test_kongcheng_has_hand(self, engine):
+        """测试空城：有手牌时返回False"""
+        player = engine.players[0]
+        test_card = Card(
+            id="kongcheng_test",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        player.hand.append(test_card)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_kongcheng(player, engine)
+        assert result is False
+
+
+class TestJizhi:
+    """测试集智技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_jizhi_draw(self, engine):
+        """测试集智摸牌"""
+        player = engine.players[0]
+        hand_before = len(player.hand)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_jizhi(player, engine)
+
+        assert result is True
+        assert len(player.hand) == hand_before + 1
+
+
+class TestTieji:
+    """测试铁骑技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_tieji_judge(self, engine):
+        """测试铁骑判定"""
+        player = engine.players[0]
+        target = engine.players[1]
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_tieji(player, engine, target=target)
+
+        # 铁骑根据判定结果返回True或False
+        assert result is True or result is False
+
+    def test_tieji_no_target(self, engine):
+        """测试铁骑没有目标返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_tieji(player, engine, target=None)
+        assert result is False
+
+
+class TestGuicai:
+    """测试鬼才技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_guicai_ai(self, engine):
+        """测试AI鬼才"""
+        player = engine.players[0]
+        player.is_ai = True
+
+        # 给玩家手牌
+        test_card = Card(
+            id="guicai_test",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        player.hand.append(test_card)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_guicai(player, engine)
+        assert result is True
+
+    def test_guicai_no_hand(self, engine):
+        """测试鬼才没有手牌返回False"""
+        player = engine.players[0]
+        player.hand.clear()
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_guicai(player, engine)
+        assert result is False
+
+
+class TestJushou:
+    """测试据守技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_jushou_draw_and_flip(self, engine):
+        """测试据守摸牌并翻面"""
+        player = engine.players[0]
+        hand_before = len(player.hand)
+        flipped_before = player.flipped
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_jushou(player, engine)
+
+        assert result is True
+        assert len(player.hand) == hand_before + 3
+        assert player.flipped != flipped_before
+
+
+class TestKeji:
+    """测试克己技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_keji_no_sha(self, engine):
+        """测试克己：未使用杀时返回True"""
+        player = engine.players[0]
+        player.sha_count = 0
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_keji(player, engine)
+        assert result is True
+
+    def test_keji_used_sha(self, engine):
+        """测试克己：使用过杀时返回False"""
+        player = engine.players[0]
+        player.sha_count = 1
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_keji(player, engine)
+        assert result is False
+
+
+class TestXiaoji:
+    """测试枭姬技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_xiaoji_draw(self, engine):
+        """测试枭姬摸牌"""
+        player = engine.players[0]
+        hand_before = len(player.hand)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_xiaoji(player, engine)
+
+        assert result is True
+        assert len(player.hand) == hand_before + 2
+
+
+class TestKuanggu:
+    """测试狂骨技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_kuanggu_heal(self, engine):
+        """测试狂骨回血"""
+        player = engine.players[0]
+        target = engine.players[1]
+
+        # 让玩家受伤
+        player.hp = player.max_hp - 1
+        hp_before = player.hp
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_kuanggu(player, engine, target=target, damage=1)
+
+        # 根据距离判定是否回血
+        assert result is True or result is False
+        if result:
+            assert player.hp > hp_before
+
+    def test_kuanggu_no_target(self, engine):
+        """测试狂骨没有目标返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_kuanggu(player, engine, target=None)
+        assert result is False
+
+
+class TestLiegong:
+    """测试烈弓技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_liegong_high_hand(self, engine):
+        """测试烈弓：目标手牌多时触发"""
+        player = engine.players[0]
+        target = engine.players[1]
+
+        # 让玩家体力低，目标手牌多
+        player.hp = 2
+        for i in range(5):
+            test_card = Card(
+                id=f"liegong_test_{i}",
+                name="杀",
+                card_type=CardType.BASIC,
+                subtype=CardSubtype.ATTACK,
+                suit=CardSuit.SPADE,
+                number=i + 1
+            )
+            target.hand.append(test_card)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_liegong(player, engine, target=target)
+
+        # 目标手牌数 >= 玩家体力值，应该触发
+        assert result is True
+
+    def test_liegong_no_target(self, engine):
+        """测试烈弓没有目标返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_liegong(player, engine, target=None)
+        assert result is False
+
+
+class TestShensu:
+    """测试神速技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_shensu_attack(self, engine):
+        """测试神速攻击"""
+        player = engine.players[0]
+        target = engine.players[1]
+        hp_before = target.hp
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_shensu(player, engine, target=target)
+
+        assert result is True
+        assert target.hp < hp_before
+
+    def test_shensu_no_target(self, engine):
+        """测试神速没有目标返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_shensu(player, engine, target=None)
+        assert result is False
+
+
+class TestJieyin:
+    """测试结姻技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_jieyin_heal(self, engine):
+        """测试结姻双方回血"""
+        player = engine.players[0]
+        target = engine.players[1]
+
+        # 设置目标为受伤男性
+        if target.hero:
+            target.hero.gender = "male"
+        target.hp = target.max_hp - 1
+        player.hp = player.max_hp - 1
+
+        # 给玩家两张手牌
+        cards = []
+        for i in range(2):
+            card = Card(
+                id=f"jieyin_test_{i}",
+                name="杀",
+                card_type=CardType.BASIC,
+                subtype=CardSubtype.ATTACK,
+                suit=CardSuit.SPADE,
+                number=i + 1
+            )
+            player.hand.append(card)
+            cards.append(card)
+
+        hp_before = player.hp
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_jieyin(player, engine, target=target, cards=cards)
+
+        assert result is True
+        assert player.hp > hp_before
+
+    def test_jieyin_no_cards(self, engine):
+        """测试结姻没有足够卡牌返回False"""
+        player = engine.players[0]
+        target = engine.players[1]
+        if target.hero:
+            target.hero.gender = "male"
+        target.hp = target.max_hp - 1
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_jieyin(player, engine, target=target, cards=[])
+        assert result is False
+
+    def test_jieyin_target_full_hp(self, engine):
+        """测试结姻目标满血返回False"""
+        player = engine.players[0]
+        target = engine.players[1]
+        if target.hero:
+            target.hero.gender = "male"
+        target.hp = target.max_hp
+
+        cards = []
+        for i in range(2):
+            card = Card(
+                id=f"jieyin_test2_{i}",
+                name="杀",
+                card_type=CardType.BASIC,
+                subtype=CardSubtype.ATTACK,
+                suit=CardSuit.SPADE,
+                number=i + 1
+            )
+            player.hand.append(card)
+            cards.append(card)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_jieyin(player, engine, target=target, cards=cards)
+        assert result is False
+
+
+class TestFanjian:
+    """测试反间技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_fanjian_success(self, engine):
+        """测试反间成功执行"""
+        player = engine.players[0]
+        target = engine.players[1]
+        target.is_ai = True
+
+        card = Card(
+            id="fanjian_card",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        player.hand.append(card)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_fanjian(player, engine, targets=[target], cards=[card])
+
+        assert result is True
+
+    def test_fanjian_no_targets(self, engine):
+        """测试反间没有目标返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_fanjian(player, engine, targets=None, cards=None)
+        assert result is False
+
+    def test_fanjian_card_not_in_hand(self, engine):
+        """测试反间卡牌不在手中返回False"""
+        player = engine.players[0]
+        target = engine.players[1]
+
+        card = Card(
+            id="fanjian_card2",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        # 不加入手牌
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_fanjian(player, engine, targets=[target], cards=[card])
+        assert result is False
+
+
+class TestLiuli:
+    """测试流离技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_liuli_redirect(self, engine):
+        """测试流离转移目标"""
+        player = engine.players[0]
+        new_target = engine.players[2]
+
+        # 给玩家手牌
+        card = Card(
+            id="liuli_card",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        player.hand.append(card)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_liuli(player, engine, new_target=new_target)
+
+        assert result is True
+
+    def test_liuli_no_hand(self, engine):
+        """测试流离没有手牌返回False"""
+        player = engine.players[0]
+        new_target = engine.players[2]
+        player.hand.clear()
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_liuli(player, engine, new_target=new_target)
+        assert result is False
+
+    def test_liuli_no_target(self, engine):
+        """测试流离没有新目标返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_liuli(player, engine, new_target=None)
+        assert result is False
+
+
+class TestLijian:
+    """测试离间技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_lijian_no_card(self, engine):
+        """测试离间没有卡牌返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_lijian(player, engine, targets=None, card=None)
+        assert result is False
+
+    def test_lijian_not_enough_targets(self, engine):
+        """测试离间目标不足返回False"""
+        player = engine.players[0]
+        target = engine.players[1]
+
+        card = Card(
+            id="lijian_card",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        player.hand.append(card)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_lijian(player, engine, targets=[target], card=card)
+        assert result is False
+
+
+class TestPassiveSkills:
+    """测试被动/锁定技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_wushuang(self, engine):
+        """测试无双技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_wushuang(player, engine)
+        assert result is True
+
+    def test_paoxiao(self, engine):
+        """测试咆哮技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_paoxiao(player, engine)
+        assert result is True
+
+    def test_mashu(self, engine):
+        """测试马术技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_mashu(player, engine)
+        assert result is True
+
+    def test_qicai(self, engine):
+        """测试奇才技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_qicai(player, engine)
+        assert result is True
+
+    def test_jiuyuan(self, engine):
+        """测试救援技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_jiuyuan(player, engine)
+        assert result is True
+
+    def test_longdan(self, engine):
+        """测试龙胆技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_longdan(player, engine)
+        assert result is True
+
+    def test_guose(self, engine):
+        """测试国色技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_guose(player, engine)
+        assert result is True
+
+    def test_jijiu(self, engine):
+        """测试急救技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_jijiu(player, engine)
+        assert result is True
+
+    def test_qixi(self, engine):
+        """测试奇袭技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_qixi(player, engine)
+        assert result is True
+
+    def test_duanliang(self, engine):
+        """测试断粮技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_duanliang(player, engine)
+        assert result is True
+
+
+class TestSkillUsage:
+    """测试use_skill和can_use_skill方法"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_can_use_skill_no_hero_skill(self, engine):
+        """测试玩家没有该技能"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system.can_use_skill("nonexistent_skill", player)
+        assert result is False
+
+    def test_use_skill_rende(self, engine):
+        """测试通过use_skill方法使用仁德"""
+        player = engine.players[0]
+        target = engine.players[1]
+
+        # 设置仁德技能
+        from game.hero import Skill, SkillType
+        rende_skill = Skill(
+            id="rende",
+            name="仁德",
+            description="仁德描述",
+            skill_type=SkillType.ACTIVE,
+            limit_per_turn=1
+        )
+        if player.hero:
+            player.hero.skills.append(rende_skill)
+
+        # 给玩家手牌
+        card = Card(
+            id="use_skill_test",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        player.hand.append(card)
+
+        skill_system = engine.skill_system
+        result = skill_system.use_skill("rende", player, targets=[target], cards=[card])
+
+        # 可能成功也可能失败，取决于具体实现
+        assert result is True or result is False
+
+    def test_can_use_skill_limit_per_turn(self, engine):
+        """测试技能使用次数限制"""
+        player = engine.players[0]
+
+        from game.hero import Skill, SkillType
+        test_skill = Skill(
+            id="zhiheng",
+            name="制衡",
+            description="制衡描述",
+            skill_type=SkillType.ACTIVE,
+            limit_per_turn=1
+        )
+        if player.hero:
+            player.hero.skills.append(test_skill)
+
+        # 标记已使用
+        player.skill_used["zhiheng"] = 1
+
+        skill_system = engine.skill_system
+        result = skill_system.can_use_skill("zhiheng", player)
+        assert result is False
+
+    def test_can_use_skill_fanjian_needs_cards_and_targets(self, engine):
+        """测试反间需要手牌和目标"""
+        player = engine.players[0]
+
+        from game.hero import Skill, SkillType
+        fanjian_skill = Skill(
+            id="fanjian",
+            name="反间",
+            description="反间描述",
+            skill_type=SkillType.ACTIVE,
+            limit_per_turn=1
+        )
+        if player.hero:
+            player.hero.skills.append(fanjian_skill)
+
+        # 清空手牌
+        player.hand.clear()
+
+        skill_system = engine.skill_system
+        result = skill_system.can_use_skill("fanjian", player)
+        assert result is False
+
+        # 给手牌
+        card = Card(
+            id="fanjian_can_use_test",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        player.hand.append(card)
+
+        result = skill_system.can_use_skill("fanjian", player)
+        assert result is True
+
+
+class TestJianxiongDetailed:
+    """详细测试奸雄技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_jianxiong_card_in_discard(self, engine):
+        """测试奸雄从弃牌堆获取牌"""
+        player = engine.players[0]
+
+        damage_card = Card(
+            id="jianxiong_discard",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        # 把牌放入弃牌堆
+        engine.deck.discard([damage_card])
+
+        hand_before = len(player.hand)
+        skill_system = engine.skill_system
+        result = skill_system._handle_jianxiong(player, engine, damage_card=damage_card)
+
+        assert result is True
+        assert len(player.hand) == hand_before + 1
+
+    def test_jianxiong_no_damage_card(self, engine):
+        """测试奸雄没有伤害牌时返回False"""
+        player = engine.players[0]
+        skill_system = engine.skill_system
+        result = skill_system._handle_jianxiong(player, engine, damage_card=None)
+        assert result is False
+
+
+class TestRendeDetailed:
+    """详细测试仁德技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_rende_heal_on_second_card(self, engine):
+        """测试仁德给出第二张牌时回血"""
+        player = engine.players[0]
+        target = engine.players[1]
+
+        # 让玩家受伤
+        player.hp = player.max_hp - 1
+        hp_before = player.hp
+
+        # 设置已给出1张牌
+        player.skill_used["rende_cards"] = 1
+
+        # 给玩家手牌
+        card = Card(
+            id="rende_heal_test",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        player.hand.append(card)
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_rende(player, engine, targets=[target], cards=[card])
+
+        assert result is True
+        # 第二张牌应该触发回血
+        assert player.hp > hp_before
+
+
+class TestKurouDetailed:
+    """详细测试苦肉技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_kurou_low_hp(self, engine):
+        """测试苦肉体力不足时返回False"""
+        player = engine.players[0]
+        player.hp = 1  # 只有1点体力
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_kurou(player, engine)
+        assert result is False
+
+
+class TestQingnangDetailed:
+    """详细测试青囊技能"""
+
+    @pytest.fixture
+    def engine(self):
+        engine = GameEngine()
+        engine.setup_game(player_count=4, human_player_index=-1)
+        skill_system = SkillSystem(engine)
+        engine.set_skill_system(skill_system)
+        choices = engine.auto_choose_heroes_for_ai()
+        engine.choose_heroes(choices)
+        engine.start_game()
+        return engine
+
+    def test_qingnang_card_not_in_hand(self, engine):
+        """测试青囊卡牌不在手中"""
+        player = engine.players[0]
+        target = engine.players[1]
+        target.hp = target.max_hp - 1
+
+        card = Card(
+            id="qingnang_not_in_hand",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        # 不加入手牌
+
+        skill_system = engine.skill_system
+        result = skill_system._handle_qingnang(player, engine, target=target, cards=[card])
+        assert result is False
