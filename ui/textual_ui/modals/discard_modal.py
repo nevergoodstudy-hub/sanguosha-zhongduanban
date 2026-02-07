@@ -15,15 +15,16 @@ from typing import List, Optional, Set, TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
-from textual.screen import ModalScreen
 from textual.widgets import Static, Button
 from textual.timer import Timer
+
+from ui.textual_ui.modals.base import AnimatedModalScreen
 
 if TYPE_CHECKING:
     from game.card import Card
 
 
-class DiscardModal(ModalScreen[Optional[List[int]]]):
+class DiscardModal(AnimatedModalScreen[Optional[List[int]]]):
     """弃牌阶段弹窗"""
 
     DEFAULT_CSS = """
@@ -133,6 +134,7 @@ class DiscardModal(ModalScreen[Optional[List[int]]]):
             )
 
     def on_mount(self) -> None:
+        super().on_mount()  # 淡入动画
         if self._countdown > 0:
             self._timer = self.set_interval(1.0, self._tick)
 

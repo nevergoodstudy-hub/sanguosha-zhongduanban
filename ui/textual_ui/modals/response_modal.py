@@ -21,15 +21,16 @@ from typing import Optional, List, TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
-from textual.screen import ModalScreen
 from textual.widgets import Static, Button, Label
 from textual.timer import Timer
+
+from ui.textual_ui.modals.base import AnimatedModalScreen
 
 if TYPE_CHECKING:
     from game.card import Card
 
 
-class ResponseModalBase(ModalScreen[bool]):
+class ResponseModalBase(AnimatedModalScreen[bool]):
     """
     响应类弹窗基类
 
@@ -136,6 +137,7 @@ class ResponseModalBase(ModalScreen[bool]):
                 )
 
     def on_mount(self) -> None:
+        super().on_mount()  # 淡入动画
         if self.countdown_seconds > 0:
             self._countdown_timer = self.set_interval(1.0, self._tick)
 

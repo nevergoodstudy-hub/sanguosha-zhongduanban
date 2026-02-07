@@ -15,11 +15,12 @@ from typing import Optional
 
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
-from textual.screen import ModalScreen
 from textual.widgets import Static, Button
 
+from ui.textual_ui.modals.base import AnimatedModalScreen
 
-class SuitSelectModal(ModalScreen[Optional[str]]):
+
+class SuitSelectModal(AnimatedModalScreen[Optional[str]]):
     """花色选择弹窗 — 四色大按钮"""
 
     DEFAULT_CSS = """

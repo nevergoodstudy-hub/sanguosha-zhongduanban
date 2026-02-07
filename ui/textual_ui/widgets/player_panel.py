@@ -14,6 +14,7 @@ from typing import Optional, TYPE_CHECKING
 
 from textual.message import Message
 from textual.reactive import reactive
+from textual.timer import Timer
 from textual.widgets import Static
 
 if TYPE_CHECKING:
@@ -79,6 +80,9 @@ class PlayerPanel(Static, can_focus=True):
         self.player_index = index
         self._distance: int = -1       # 与人类玩家的距离
         self._in_range: bool = False   # 是否在攻击范围内
+        self._prev_hp: int = player.hp if hasattr(player, 'hp') else 0  # P2-1
+        self._pulse_timer: Optional[Timer] = None  # P1-3: 呼吸脉冲
+        self._pulse_dim: bool = False
         self._update_tooltip()
 
     def _update_tooltip(self) -> None:
@@ -177,7 +181,9 @@ class PlayerPanel(Static, can_focus=True):
 
     def update_player(self, player, distance: int = -1,
                        in_range: bool = False) -> None:
-        """更新玩家数据并刷新"""
+        """更新玩家数据并刷新，带 HP 变化动画 (P2-1)"""
+        old_hp = self._prev_hp
+        new_hp = player.hp if hasattr(player, 'hp') else 0
         self._player = player
         self._distance = distance
         self._in_range = in_range
@@ -188,4 +194,50 @@ class PlayerPanel(Static, can_focus=True):
             self.add_class("dead")
         elif player.hp <= 0:
             self.add_class("dying")
+        # P2-1: HP 变化动画反馈
+        if new_hp != old_hp and player.is_alive:
+            css_cls = "pulse-damage" if new_hp < old_hp else "pulse-heal"
+            self.add_class(css_cls)
+            self.styles.animate(
+                "opacity", value=0.4, duration=0.2,
+                easing="out_cubic",
+                on_complete=lambda: self._hp_flash_restore(css_cls),
+            )
+        self._prev_hp = new_hp
         self.refresh()
+
+    def _hp_flash_restore(self, css_cls: str) -> None:
+        """恢复 HP 闪烁 (P2-1)"""
+        try:
+            self.styles.animate(
+                "opacity", value=1.0, duration=0.3,
+                easing="in_out_cubic",
+                on_complete=lambda: self.remove_class(css_cls),
+            )
+        except Exception:
+            self.remove_class(css_cls)
+
+    # P1-3: 目标选择呼吸脉冲
+    def start_pulse(self) -> None:
+        """启动 targetable 呼吸脉冲动画"""
+        if self._pulse_timer is not None:
+            return
+        self._pulse_dim = False
+        self._pulse_timer = self.set_interval(0.8, self._pulse_tick)
+
+    def stop_pulse(self) -> None:
+        """停止呼吸脉冲并恢复"""
+        if self._pulse_timer is not None:
+            self._pulse_timer.stop()
+            self._pulse_timer = None
+        self.styles.animate("opacity", value=1.0, duration=0.2)
+
+    def _pulse_tick(self) -> None:
+        """呼吸脉冲 tick: opacity 在 0.6 和 1.0 之间交替"""
+        target = 0.6 if not self._pulse_dim else 1.0
+        self._pulse_dim = not self._pulse_dim
+        try:
+            self.styles.animate("opacity", value=target, duration=0.6,
+                                easing="in_out_cubic")
+        except Exception:
+            pass

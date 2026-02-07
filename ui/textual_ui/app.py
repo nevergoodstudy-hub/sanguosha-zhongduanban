@@ -38,31 +38,6 @@ class SanguoshaApp(App):
     Screen {
         background: $surface;
     }
-
-    /* M3-T04: 动画效果 */
-    .card-btn {
-        transition: background 300ms;
-    }
-    .card-btn:hover {
-        background: $accent;
-    }
-    .card-btn:focus {
-        background: $success;
-        text-style: bold;
-    }
-
-    .flash-damage {
-        background: red 60%;
-        text-style: bold;
-    }
-    .flash-heal {
-        background: green 60%;
-        text-style: bold;
-    }
-    .flash-skill {
-        background: yellow 40%;
-        text-style: bold italic;
-    }
     """
 
     BINDINGS = [

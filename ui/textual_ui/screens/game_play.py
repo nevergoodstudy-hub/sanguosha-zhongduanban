@@ -389,7 +389,7 @@ class GamePlayScreen(Screen):
         return None
 
     def _highlight_targets(self, targets: list) -> None:
-        """为合法目标的 PlayerPanel 添加 .targetable 高亮"""
+        """为合法目标的 PlayerPanel 添加 .targetable 高亮 + 呼吸脉冲 (P1-3)"""
         try:
             from ui.textual_ui.widgets.player_panel import PlayerPanel
             opp_container = self.query_one("#opponents", VerticalScroll)
@@ -397,18 +397,21 @@ class GamePlayScreen(Screen):
             for panel in opp_container.query(PlayerPanel):
                 if id(panel._player) in target_ids:
                     panel.add_class("targetable")
+                    panel.start_pulse()
                 else:
                     panel.remove_class("targetable")
+                    panel.stop_pulse()
         except Exception:
             pass
 
     def _clear_target_highlights(self) -> None:
-        """移除所有 PlayerPanel 的 .targetable 高亮"""
+        """移除所有 PlayerPanel 的 .targetable 高亮 + 停止脉冲 (P1-3)"""
         try:
             from ui.textual_ui.widgets.player_panel import PlayerPanel
             opp_container = self.query_one("#opponents", VerticalScroll)
             for panel in opp_container.query(PlayerPanel):
                 panel.remove_class("targetable")
+                panel.stop_pulse()
         except Exception:
             pass
 
@@ -416,10 +419,31 @@ class GamePlayScreen(Screen):
         """标记等待状态，启动倒计时"""
         if request_type == "play_action":
             self._refresh_display()
+            # P3-1: 回合开始脉冲特效
+            self._turn_start_pulse()
             # 启动倒计时
             self._countdown_remaining = self.PLAY_PHASE_TIMEOUT
             self._update_countdown_display()
             self._start_countdown()
+
+    def _turn_start_pulse(self) -> None:
+        """回合开始特效: 对 info-panel 执行快速 opacity 脉冲 (P3-1)"""
+        try:
+            info_panel = self.query_one("#info-panel", Static)
+            info_panel.add_class("active-turn-glow")
+            info_panel.styles.animate(
+                "opacity", value=0.5,
+                duration=0.15,
+                easing="out_cubic",
+                on_complete=lambda: info_panel.styles.animate(
+                    "opacity", value=1.0,
+                    duration=0.25,
+                    easing="in_out_cubic",
+                    on_complete=lambda: info_panel.remove_class("active-turn-glow"),
+                ),
+            )
+        except Exception:
+            pass
 
     def _start_countdown(self) -> None:
         """启动每秒倒计时"""
@@ -486,29 +510,45 @@ class GamePlayScreen(Screen):
         self.app.call_from_thread(self._refresh_display)
 
     def _log(self, msg: str) -> None:
-        """写入战斗日志，根据内容添加视觉效果"""
+        """写入战斗日志，根据内容添加视觉效果 + 精准闪烁 (P0-4)"""
         try:
             log_widget = self.query_one("#battle-log", RichLog)
-            # M3-T04: 根据消息内容添加颜色标记 + 触发闪烁
             if "伤害" in msg or "受到" in msg or "损失" in msg:
                 msg = f"[bold red]⚡ {msg}[/bold red]"
-                self.flash_effect("flash-damage", "#opponents", 0.6)
+                self._flash_by_name(msg, "flash-damage", 0.6)
             elif "回复" in msg or "治疗" in msg or "桃】" in msg:
                 msg = f"[bold green]❤ {msg}[/bold green]"
-                self.flash_effect("flash-heal", "#info-panel", 0.5)
+                self._flash_by_name(msg, "flash-heal", 0.5)
             elif "发动【" in msg:
                 msg = f"[bold yellow]✨ {msg}[/bold yellow]"
-                self.flash_effect("flash-skill", "#battle-log", 0.4)
+                self._flash_by_name(msg, "flash-skill", 0.4)
             elif "死亡" in msg or "阵亡" in msg or "杀死" in msg:
                 msg = f"[bold red on black]💀 {msg}[/bold red on black]"
-                self.flash_effect("flash-damage", "#opponents", 1.0)
+                self._flash_by_name(msg, "flash-damage", 1.0)
             elif "你的回合" in msg:
                 msg = f"[bold cyan]🎮 {msg}[/bold cyan]"
             log_widget.write(msg)
-            # 自动滚动到底部
-            log_widget.scroll_end(animate=False)
+            # P1-1: 平滑滚动到底部
+            log_widget.scroll_end(animate=True)
         except Exception:
             pass
+
+    def _flash_by_name(self, msg: str, css_class: str,
+                       duration: float) -> None:
+        """从 log 消息中解析角色名，精准闪烁对应 PlayerPanel (P0-4)"""
+        target_widget_id = "#battle-log"
+        try:
+            from ui.textual_ui.widgets.player_panel import PlayerPanel
+            opp_container = self.query_one("#opponents", VerticalScroll)
+            for panel in opp_container.query(PlayerPanel):
+                if panel._player and panel._player.name in msg:
+                    self.flash_effect(css_class, f"#{panel.id}"
+                                      if panel.id else "#battle-log",
+                                      duration)
+                    return
+        except Exception:
+            pass
+        self.flash_effect(css_class, target_widget_id, duration)
 
     def _refresh_display(self) -> None:
         """刷新界面显示"""
@@ -535,24 +575,23 @@ class GamePlayScreen(Screen):
         except Exception:
             pass
 
-        # 更新对手面板——使用 PlayerPanel
+        # 更新对手面板——使用 PlayerPanel + batch_update (P1-4)
         try:
             from ui.textual_ui.widgets.player_panel import PlayerPanel
             opp_container = self.query_one("#opponents", VerticalScroll)
             others = engine.get_other_players(human)
             existing = list(opp_container.query(PlayerPanel))
             if len(existing) != len(others):
-                # 重建
-                opp_container.remove_children()
-                for i, p in enumerate(others):
-                    panel = PlayerPanel(p, index=i)
-                    if not p.is_alive:
-                        panel.add_class("dead")
-                    if p == engine.current_player:
-                        panel.add_class("active-turn")
-                    opp_container.mount(panel)
+                with self.app.batch_update():
+                    opp_container.remove_children()
+                    for i, p in enumerate(others):
+                        panel = PlayerPanel(p, index=i, id=f"opp-{i}")
+                        if not p.is_alive:
+                            panel.add_class("dead")
+                        if p == engine.current_player:
+                            panel.add_class("active-turn")
+                        opp_container.mount(panel)
             else:
-                # 更新
                 for panel, p in zip(existing, others):
                     dist = engine.calculate_distance(human, p) if p.is_alive else -1
                     in_rng = engine.is_in_attack_range(human, p) if p.is_alive else False
@@ -564,14 +603,22 @@ class GamePlayScreen(Screen):
         except Exception:
             pass
 
-        # 更新手牌区——使用 CardWidget
+        # 更新手牌区——CardWidget + batch_update 防闪烁 + P0-3: .playable 提示
         try:
             from ui.textual_ui.widgets.card_widget import CardWidget
             hand_container = self.query_one("#hand-cards", Horizontal)
-            hand_container.remove_children()
-            for i, card in enumerate(human.hand):
-                widget = CardWidget(card, index=i)
-                hand_container.mount(widget)
+            is_player_turn = (engine.current_player == human)
+            can_sha = human.can_use_sha() if hasattr(human, 'can_use_sha') else True
+            has_targets = bool(engine.get_targets_in_range(human)) if is_player_turn else False
+            with self.app.batch_update():
+                hand_container.remove_children()
+                for i, card in enumerate(human.hand):
+                    widget = CardWidget(card, index=i)
+                    if is_player_turn and self._is_card_playable(
+                        card, human, can_sha, has_targets
+                    ):
+                        widget.add_class("playable")
+                    hand_container.mount(widget)
         except Exception:
             pass
 
@@ -619,27 +666,89 @@ class GamePlayScreen(Screen):
         except Exception:
             pass
 
-    # ==================== M3-T04: 视觉反馈 ====================
+    def _is_card_playable(self, card, player, can_sha: bool,
+                          has_targets: bool) -> bool:
+        """判断卡牌是否可在出牌阶段主动使用 (P0-3b)"""
+        try:
+            from game.constants import CardName
+            name = card.name if hasattr(card, 'name') else None
+            if name == CardName.SHAN:
+                return False
+            if name == CardName.WUXIE:
+                return False
+            if name == CardName.SHA:
+                return can_sha and has_targets
+            if name == CardName.TAO:
+                return player.hp < player.max_hp
+            if name == CardName.JIU:
+                return not getattr(player, 'drunk', False)
+            return True
+        except Exception:
+            return True
+
+    # ==================== M3-T04: 视觉反馈 (animate API) ====================
 
     def flash_effect(self, css_class: str, widget_id: str = "#battle-log",
                      duration: float = 0.5) -> None:
-        """对指定 widget 施加短暂的 CSS 类闪烁效果"""
+        """对指定 widget 施加两段式 opacity 脉冲闪烁 (P0-1)
+
+        使用 Textual 原生 animate() API:
+        阶段1: opacity 1.0→0.3 (快速变暗, out_cubic)
+        阶段2: opacity 0.3→1.0 (缓慢恢复, in_out_cubic)
+        CSS class 在整个过程中保持，动画结束后移除。
+        """
         try:
             widget = self.query_one(widget_id)
             widget.add_class(css_class)
-            self.set_timer(duration, lambda: widget.remove_class(css_class))
+            widget.styles.animate(
+                "opacity", value=0.3,
+                duration=duration * 0.4,
+                easing="out_cubic",
+                on_complete=lambda: self._flash_restore(
+                    widget, css_class, duration * 0.6
+                ),
+            )
         except Exception:
             pass
 
+    def _flash_restore(self, widget, css_class: str,
+                       duration: float) -> None:
+        """闪烁第二阶段: 恢复 opacity 并移除 CSS class"""
+        try:
+            widget.styles.animate(
+                "opacity", value=1.0,
+                duration=duration,
+                easing="in_out_cubic",
+                on_complete=lambda: widget.remove_class(css_class),
+            )
+        except Exception:
+            widget.remove_class(css_class)
+
     def _post_flash(self, css_class: str, widget_id: str = "#battle-log",
                     duration: float = 0.5) -> None:
-        """线程安全的闪烁效果"""
+        """线程安全的闪烁效果 — 确保在 UI 线程执行 animate() (P0-5)"""
         self.app.call_from_thread(self.flash_effect, css_class, widget_id, duration)
 
     # ==================== 事件处理 ====================
 
     def on_card_widget_card_clicked(self, event) -> None:
-        """处理 CardWidget 点击事件"""
+        """处理 CardWidget 点击事件 — P2-3: 卡牌打出渐隐动画"""
+        try:
+            from ui.textual_ui.widgets.card_widget import CardWidget
+            hand_container = self.query_one("#hand-cards", Horizontal)
+            widgets = list(hand_container.query(CardWidget))
+            if 0 <= event.index < len(widgets):
+                clicked = widgets[event.index]
+                clicked.add_class("card-played")
+                clicked.styles.animate(
+                    "opacity", value=0.0,
+                    duration=0.15,
+                    easing="out_cubic",
+                    on_complete=lambda: self._respond(f"card:{event.index}"),
+                )
+                return
+        except Exception:
+            pass
         self._respond(f"card:{event.index}")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

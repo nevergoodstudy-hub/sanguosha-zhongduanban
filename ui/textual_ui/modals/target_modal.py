@@ -15,14 +15,15 @@ from typing import List, Optional, TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
-from textual.screen import ModalScreen
 from textual.widgets import Static, Button
+
+from ui.textual_ui.modals.base import AnimatedModalScreen
 
 if TYPE_CHECKING:
     from game.player import Player
 
 
-class TargetSelectModal(ModalScreen[Optional[int]]):
+class TargetSelectModal(AnimatedModalScreen[Optional[int]]):
     """目标选择弹窗 — 点击目标按钮选中"""
 
     DEFAULT_CSS = """

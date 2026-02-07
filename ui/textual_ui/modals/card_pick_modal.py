@@ -20,15 +20,16 @@ from typing import List, Optional, TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical
-from textual.screen import ModalScreen
 from textual.widgets import Static, Button
+
+from ui.textual_ui.modals.base import AnimatedModalScreen
 
 if TYPE_CHECKING:
     from game.player import Player
     from game.card import Card
 
 
-class CardPickModal(ModalScreen[Optional[int]]):
+class CardPickModal(AnimatedModalScreen[Optional[int]]):
     """从目标玩家选一张牌"""
 
     DEFAULT_CSS = """

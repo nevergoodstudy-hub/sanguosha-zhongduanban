@@ -15,16 +15,17 @@ from typing import Optional, List, TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
-from textual.screen import ModalScreen
 from textual.widgets import Static, Button
 from textual.timer import Timer
+
+from ui.textual_ui.modals.base import AnimatedModalScreen
 
 if TYPE_CHECKING:
     from game.card import Card
     from game.player import Player
 
 
-class WuxieResponseModal(ModalScreen[bool]):
+class WuxieResponseModal(AnimatedModalScreen[bool]):
     """无懈可击响应弹窗 — 5秒倒计时，显示锦囊信息"""
 
     DEFAULT_CSS = """
@@ -99,6 +100,7 @@ class WuxieResponseModal(ModalScreen[bool]):
                 yield Button("⏭ 放弃", id="btn-skip-wuxie", variant="default")
 
     def on_mount(self) -> None:
+        super().on_mount()  # 淡入动画
         self._countdown_timer = self.set_interval(1.0, self._tick)
 
     def _tick(self) -> None:
