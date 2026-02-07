@@ -466,18 +466,35 @@ class GamePlayScreen(Screen):
             1.0, self._tick_countdown
         )
 
+    @staticmethod
+    def _countdown_color(secs: int, total: int = 30) -> str:
+        """根据剩余秒数计算 RGB 渐变色 (P2-2)
+
+        green(#27ae60) → yellow(#f39c12) → red(#e74c3c)
+        ratio > 0.5 时 green→yellow，ratio <= 0.5 时 yellow→red
+        """
+        ratio = max(0.0, min(1.0, secs / total))
+        if ratio > 0.5:
+            # green → yellow (ratio 1.0→0.5 maps to factor 0→1)
+            f = (1.0 - ratio) * 2  # 0→1
+            r = int(0x27 + (0xf3 - 0x27) * f)
+            g = int(0xae + (0x9c - 0xae) * f)
+            b = int(0x60 + (0x12 - 0x60) * f)
+        else:
+            # yellow → red (ratio 0.5→0 maps to factor 0→1)
+            f = (0.5 - ratio) * 2  # 0→1
+            r = int(0xf3 + (0xe7 - 0xf3) * f)
+            g = int(0x9c + (0x4c - 0x9c) * f)
+            b = int(0x12 + (0x3c - 0x12) * f)
+        return f"#{r:02x}{g:02x}{b:02x}"
+
     def _update_countdown_display(self) -> None:
-        """更新信息面板的倒计时显示"""
+        """更新信息面板的倒计时显示 — P2-2: RGB 渐变色"""
         try:
             info = self.query_one("#info-panel", Static)
             current = info.renderable
             secs = self._countdown_remaining
-            if secs > 10:
-                color = "green"
-            elif secs > 5:
-                color = "yellow"
-            else:
-                color = "red"
+            color = self._countdown_color(secs, self.PLAY_PHASE_TIMEOUT)
             info.update(
                 f"{current}\n\n[bold green]▶ 你的回合[/bold green]\n"
                 f"点击手牌出牌 / 按 E 结束\n"
@@ -522,9 +539,13 @@ class GamePlayScreen(Screen):
             elif "发动【" in msg:
                 msg = f"[bold yellow]✨ {msg}[/bold yellow]"
                 self._flash_by_name(msg, "flash-skill", 0.4)
+                # P3-2: 技能发动浮动 toast 通知
+                self._skill_toast(msg)
             elif "死亡" in msg or "阵亡" in msg or "杀死" in msg:
                 msg = f"[bold red on black]💀 {msg}[/bold red on black]"
                 self._flash_by_name(msg, "flash-damage", 1.0)
+                # P2-4: 死亡震动效果
+                self._trigger_death_shake(msg)
             elif "你的回合" in msg:
                 msg = f"[bold cyan]🎮 {msg}[/bold cyan]"
             log_widget.write(msg)
@@ -728,6 +749,34 @@ class GamePlayScreen(Screen):
                     duration: float = 0.5) -> None:
         """线程安全的闪烁效果 — 确保在 UI 线程执行 animate() (P0-5)"""
         self.app.call_from_thread(self.flash_effect, css_class, widget_id, duration)
+
+    def _skill_toast(self, msg: str) -> None:
+        """P3-2: 技能发动时显示 toast 浮动通知"""
+        try:
+            import re
+            m = re.search(r"发动【(.+?)】", msg)
+            if m:
+                skill_name = m.group(1)
+                self.notify(
+                    f"✨ 【{skill_name}】发动！",
+                    title="技能",
+                    severity="information",
+                    timeout=2,
+                )
+        except Exception:
+            pass
+
+    def _trigger_death_shake(self, msg: str) -> None:
+        """P2-4: 检测死亡消息并触发对应面板震动"""
+        try:
+            from ui.textual_ui.widgets.player_panel import PlayerPanel
+            opp_container = self.query_one("#opponents", VerticalScroll)
+            for panel in opp_container.query(PlayerPanel):
+                if panel._player and panel._player.name in msg:
+                    panel.death_shake()
+                    return
+        except Exception:
+            pass
 
     # ==================== 事件处理 ====================
 

@@ -217,6 +217,43 @@ class PlayerPanel(Static, can_focus=True):
         except Exception:
             self.remove_class(css_cls)
 
+    # P2-4: 死亡震动效果
+    def death_shake(self) -> None:
+        """死亡时快速抖动面板 (timer-based offset toggle)
+
+        连续 4 次 ±1 水平偏移，每次 0.06s，最后恢复 offset=(0,0)。
+        """
+        offsets = [(-1, 0), (1, 0), (-1, 0), (1, 0), (0, 0)]
+        for i, (x, y) in enumerate(offsets):
+            self.set_timer(
+                0.06 * i,
+                lambda _x=x, _y=y: self._apply_shake_offset(_x, _y),
+            )
+        # 震动结束后执行 opacity 渐隐到 dead 状态
+        self.set_timer(
+            0.06 * len(offsets),
+            self._finish_death_shake,
+        )
+
+    def _apply_shake_offset(self, x: int, y: int) -> None:
+        """设置 offset 用于震动"""
+        try:
+            self.styles.offset = (x, y)
+        except Exception:
+            pass
+
+    def _finish_death_shake(self) -> None:
+        """震动结束: opacity 渐隐并标记 dead"""
+        try:
+            self.styles.offset = (0, 0)
+            self.add_class("dead")
+            self.styles.animate(
+                "opacity", value=0.4, duration=0.4,
+                easing="out_cubic",
+            )
+        except Exception:
+            self.add_class("dead")
+
     # P1-3: 目标选择呼吸脉冲
     def start_pulse(self) -> None:
         """启动 targetable 呼吸脉冲动画"""
