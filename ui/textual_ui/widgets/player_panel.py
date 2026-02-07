@@ -222,16 +222,19 @@ class PlayerPanel(Static, can_focus=True):
         """死亡时快速抖动面板 (timer-based offset toggle)
 
         连续 4 次 ±1 水平偏移，每次 0.06s，最后恢复 offset=(0,0)。
+        注意: Textual set_timer(0.0) 会导致 ZeroDivisionError，
+        所以延迟最小值为 0.01s。
         """
         offsets = [(-1, 0), (1, 0), (-1, 0), (1, 0), (0, 0)]
         for i, (x, y) in enumerate(offsets):
+            delay = max(0.01, 0.06 * i)
             self.set_timer(
-                0.06 * i,
+                delay,
                 lambda _x=x, _y=y: self._apply_shake_offset(_x, _y),
             )
         # 震动结束后执行 opacity 渐隐到 dead 状态
         self.set_timer(
-            0.06 * len(offsets),
+            0.06 * (len(offsets) + 1),
             self._finish_death_shake,
         )
 
