@@ -1,9 +1,8 @@
 [project]
 name = "sanguosha"
-version = "1.0.0"
+version = "3.0.0"
 description = "三国杀命令行终端游戏"
 readme = "README.md"
-requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
     {name = "Sanguosha Team"}
@@ -11,19 +10,23 @@ authors = [
 keywords = ["game", "card-game", "three-kingdoms", "sanguosha"]
 
 dependencies = [
-    "colorama>=0.4.4",
     "rich>=13.0.0",
+    "textual>=0.40.0",
+    "websockets>=12.0",
 ]
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "ruff>=0.1.0",
+    "pytest-cov>=6.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-randomly>=3.15.0",
+    "hypothesis>=6.100.0",
+    "ruff>=0.8.0",
     "mypy>=1.0.0",
     "pre-commit>=3.0.0",
+    "pyinstaller>=5.0.0",
 ]
 
 [project.scripts]
@@ -33,89 +36,80 @@ sanguosha = "main:main"
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-# Black 配置
-[tool.black]
-line-length = 100
-target-version = ['py38', 'py39', 'py310', 'py311']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-    \.git
-    | \.mypy_cache
-    | \.pytest_cache
-    | __pycache__
-    | dist
-    | build
-    | \.venv
-    | venv
-)/
-'''
-
-# isort 配置
-[tool.isort]
-profile = "black"
-line_length = 100
-known_first_party = ["game", "ai", "ui", "tools"]
-skip = [".git", "__pycache__", "dist", "build", ".venv", "venv"]
-skip_glob = ["*/__pycache__/*"]
-
-# Ruff 配置 (替代 flake8)
+# Ruff 配置 (统一替代 Black + isort + flake8)
 [tool.ruff]
 line-length = 100
-target-version = "py38"
-exclude = [
-    ".git",
-    "__pycache__",
-    "dist",
-    "build",
-    ".venv",
-    "venv",
-    "*.pyc",
-]
+target-version = "py310"
+src = [".", "game", "ai", "ui", "net", "tools"]
 
 [tool.ruff.lint]
 select = [
     "E",      # pycodestyle errors
     "W",      # pycodestyle warnings
     "F",      # Pyflakes
-    "I",      # isort
+    "I",      # isort (替代 isort 工具)
     "B",      # flake8-bugbear
     "C4",     # flake8-comprehensions
-    "UP",     # pyupgrade
+    "UP",     # pyupgrade (自动升级旧语法)
     "SIM",    # flake8-simplify
+    "N",      # pep8-naming (命名规范)
+    "D",      # pydocstyle (文档字符串规范)
 ]
 ignore = [
-    "E501",   # line too long (handled by black)
+    "E501",   # line too long (由 ruff format 处理)
     "B008",   # do not perform function calls in argument defaults
     "C901",   # too complex
     "W191",   # indentation contains tabs
-    "E402",   # module level import not at top of file (needed for some imports)
+    "E402",   # module level import not at top of file
+    "D100",   # missing docstring in public module (渐进启用)
+    "D104",   # missing docstring in public package
+    "D105",   # missing docstring in magic method
+    "D107",   # missing docstring in __init__
+    "D203",   # conflicts with D211 (one-blank-line-before-class)
+    "D213",   # conflicts with D212 (multi-line-summary-second-line)
+    "N802",   # function name lowercase (部分中文项目方法名)
+    "N806",   # variable in function should be lowercase
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]  # unused imports in __init__.py are OK
-"tests/*" = ["B011"]      # assert in tests is OK
+"__init__.py" = ["F401", "D104"]  # unused imports and missing docstring in __init__.py are OK
+"tests/*" = ["B011", "D", "N"]    # tests: relaxed docstring and naming rules
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"  # 使用 Google 风格 docstring
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
 
 # MyPy 配置
 [tool.mypy]
-python_version = "3.9"
-warn_return_any = false  # 简化警告
+python_version = "3.14"
+warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false  # 逐步启用
+disallow_untyped_defs = true   # 强制类型注解
 check_untyped_defs = true
 ignore_missing_imports = true
-no_implicit_optional = false  # 允许隐式Optional
+no_implicit_optional = true    # 禁止隐式Optional
+strict_equality = true
 exclude = [
     "dist",
     "build",
     "venv",
     ".venv",
     "__pycache__",
+    "sanguosha_backup_*",
 ]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+warn_return_any = false
+
+[[tool.mypy.overrides]]
+module = "ui.*"
+disallow_untyped_defs = false  # UI 层渐进启用
 
 # Pytest 配置
 [tool.pytest.ini_options]
@@ -130,7 +124,7 @@ filterwarnings = [
 
 # Coverage 配置
 [tool.coverage.run]
-source = ["game", "ai", "ui"]
+source = ["game", "ai", "ui", "net"]
 branch = true
 omit = [
     "*/tests/*",
@@ -138,6 +132,7 @@ omit = [
 ]
 
 [tool.coverage.report]
+fail_under = 50  # 覆盖率门禁：起步 50%，后续逐步上调
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

@@ -10,6 +10,9 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
 import copy
 
+from .card import CardName
+from .constants import SkillId
+
 if TYPE_CHECKING:
     from .card import Card, CardSubtype
     from .hero import Hero, Skill
@@ -63,6 +66,35 @@ class Equipment:
     armor: Optional['Card'] = None
     horse_minus: Optional['Card'] = None  # -1马（攻击马，如赤兔）
     horse_plus: Optional['Card'] = None   # +1马（防御马，如的卢）
+
+    def __post_init__(self) -> None:
+        """校验预设装备的子类型是否匹配槽位"""
+        from .card import CardSubtype
+
+        _slot_subtype = {
+            'weapon': CardSubtype.WEAPON,
+            'armor': CardSubtype.ARMOR,
+            'horse_minus': CardSubtype.HORSE_MINUS,
+            'horse_plus': CardSubtype.HORSE_PLUS,
+        }
+        for slot, expected in _slot_subtype.items():
+            card = getattr(self, slot)
+            if card is not None and card.subtype != expected:
+                raise ValueError(
+                    f"槽位 {slot} 期望子类型 {expected}, "
+                    f"实际为 {card.subtype}"
+                )
+
+    # -- 可读性别名 --
+    @property
+    def attack_horse(self) -> Optional['Card']:
+        """攻击马（-1马）别名"""
+        return self.horse_minus
+
+    @property
+    def defense_horse(self) -> Optional['Card']:
+        """防御马（+1马）别名"""
+        return self.horse_plus
 
     def equip(self, card: 'Card') -> Optional['Card']:
         """
@@ -464,11 +496,11 @@ class Player:
     def can_use_sha(self) -> bool:
         """检查是否可以使用杀"""
         # 检查诸葛连弩效果
-        if self.equipment.weapon and self.equipment.weapon.name == "诸葛连弩":
+        if self.equipment.weapon and self.equipment.weapon.name == CardName.ZHUGENU:
             return True
 
-        # 检查咆哮技能
-        if self.hero and self.hero.has_skill("paoxiao"):
+        # 检查咸哮技能
+        if self.hero and self.hero.has_skill(SkillId.PAOXIAO):
             return True
 
         # 正常情况每回合只能使用一次杀

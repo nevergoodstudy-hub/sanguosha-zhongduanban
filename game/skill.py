@@ -7,13 +7,22 @@
 from __future__ import annotations
 from typing import Optional, List, Dict, Any, Callable, TYPE_CHECKING
 from dataclasses import dataclass
+import json
+import logging
 import random
+from pathlib import Path
+
+from .hero import SkillType
+from .skill_dsl import SkillDsl
+from .skill_interpreter import SkillInterpreter
 
 if TYPE_CHECKING:
     from .player import Player
     from .engine import GameEngine
     from .card import Card
     from .hero import Skill
+
+logger = logging.getLogger(__name__)
 
 
 class SkillSystem:
@@ -31,7 +40,12 @@ class SkillSystem:
         """
         self.engine = game_engine
 
-        # 技能处理器映射
+        # M2-T02: DSL 解释器
+        self._interpreter = SkillInterpreter(game_engine)
+        self._dsl_registry: Dict[str, SkillDsl] = {}
+        self._load_dsl_definitions()
+
+        # 技能处理器映射（Python fallback）
         self._skill_handlers: Dict[str, Callable] = {
             # 蜀国武将
             "rende": self._handle_rende,       # 刘备-仁德
@@ -78,6 +92,32 @@ class SkillSystem:
             "xiaoji": self._handle_xiaoji,     # 孙尚香-枭姬
         }
 
+    def _load_dsl_definitions(self) -> None:
+        """M2-T03: 从 data/skill_dsl.json 加载 DSL 定义"""
+        dsl_path = Path(__file__).parent.parent / "data" / "skill_dsl.json"
+        if not dsl_path.exists():
+            logger.info("No skill_dsl.json found, DSL disabled")
+            return
+        try:
+            with open(dsl_path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            for skill_id, dsl_data in raw.items():
+                if skill_id.startswith("_"):
+                    continue  # skip comments
+                dsl = SkillDsl.from_dict(dsl_data)
+                errors = dsl.validate()
+                if errors:
+                    logger.warning("DSL validation errors for %s: %s", skill_id, errors)
+                else:
+                    self._dsl_registry[skill_id] = dsl
+            logger.info("Loaded %d skill DSL definitions", len(self._dsl_registry))
+        except Exception as e:
+            logger.error("Failed to load skill DSL: %s", e)
+
+    def get_dsl(self, skill_id: str) -> Optional[SkillDsl]:
+        """获取技能的 DSL 定义（无则 None）"""
+        return self._dsl_registry.get(skill_id)
+
     def can_use_skill(self, skill_id: str, player: 'Player') -> bool:
         """
         检查玩家是否可以使用指定技能
@@ -114,6 +154,9 @@ class SkillSystem:
         """
         触发技能
 
+        优先使用 DSL 解释器执行，若 DSL 未定义或执行失败，
+        回退到 Python handler。
+
         Args:
             skill_id: 技能ID
             player: 使用技能的玩家
@@ -123,6 +166,24 @@ class SkillSystem:
         Returns:
             是否成功触发
         """
+        # DSL-first: 尝试通过解释器执行
+        dsl = self._dsl_registry.get(skill_id)
+        if dsl is not None:
+            try:
+                result = self._interpreter.execute(
+                    dsl, player, skill_id,
+                    targets=kwargs.get('targets'),
+                    cards=kwargs.get('cards'),
+                    source=kwargs.get('source'),
+                    damage_card=kwargs.get('damage_card'),
+                )
+                if result:
+                    return True
+                # DSL 返回 False（条件不满足等），回退到 Python
+            except Exception as e:
+                logger.warning("DSL exec failed for %s, fallback: %s", skill_id, e)
+
+        # Python fallback
         if skill_id not in self._skill_handlers:
             return False
 
@@ -173,9 +234,97 @@ class SkillSystem:
         usable = []
         if player.hero:
             for skill in player.hero.skills:
-                if skill.skill_type.value == "active" and self.can_use_skill(skill.id, player):
+                if skill.skill_type == SkillType.ACTIVE and self.can_use_skill(skill.id, player):
                     usable.append(skill.id)
         return usable
+
+    # ==================== M1-T04: EventBus 被动技能注册 ====================
+
+    def register_event_handlers(self, event_bus) -> None:
+        """
+        在 EventBus 上注册被动技能的事件处理器。
+
+        被动技能（如奸雄、反馈、刚烈）通过监听语义事件自动触发，
+        而非由引擎在代码中内联调用。
+        """
+        from .events import EventType
+        event_bus.subscribe(EventType.DAMAGE_INFLICTED, self._on_damage_inflicted)
+
+    def _on_damage_inflicted(self, event) -> None:
+        """
+        EventBus handler: 伤害结算后触发被动技能
+
+        监听 DAMAGE_INFLICTED 事件，自动触发相关被动技能：
+        - 奸雄：受到伤害后获得造成伤害的牌
+        - 反馈：受到伤害后获取伤害来源一张牌
+        - 刚烈：受到伤害后判定反击
+
+        使用 DSL-first + Python fallback 策略。
+        """
+        from .constants import SkillId
+
+        target = event.data.get('target')
+        source = event.data.get('source')
+        damage_card = event.data.get('card')
+
+        if not target or not target.is_alive:
+            return
+
+        # 奸雄：受到伤害后可获得造成伤害的牌
+        if target.has_skill(SkillId.JIANXIONG) and source:
+            self._trigger_with_dsl_fallback(
+                SkillId.JIANXIONG, target,
+                damage_card=damage_card,
+                _py_handler=self._handle_jianxiong,
+                _py_kwargs={'damage_card': damage_card},
+            )
+
+        # 反馈：受到伤害后获取来源一张牌
+        if target.has_skill(SkillId.FANKUI) and source and source != target:
+            self._trigger_with_dsl_fallback(
+                SkillId.FANKUI, target,
+                source=source,
+                _py_handler=self._handle_fankui,
+                _py_kwargs={'source': source},
+            )
+
+        # 刚烈：受到伤害后判定反击
+        if target.has_skill(SkillId.GANGLIE) and source and source != target:
+            self._trigger_with_dsl_fallback(
+                SkillId.GANGLIE, target,
+                source=source,
+                _py_handler=self._handle_ganglie,
+                _py_kwargs={'source': source},
+            )
+
+    def _trigger_with_dsl_fallback(
+        self,
+        skill_id: str,
+        player: 'Player',
+        *,
+        _py_handler: Callable,
+        _py_kwargs: Optional[Dict[str, Any]] = None,
+        **dsl_kwargs,
+    ) -> bool:
+        """
+        内部辅助：DSL-first + Python fallback 触发被动技能。
+
+        用于 _on_damage_inflicted 等 EventBus 处理器，
+        它们直接调用具体 handler 而非经过 trigger_skill。
+        """
+        dsl = self._dsl_registry.get(skill_id)
+        if dsl is not None:
+            try:
+                result = self._interpreter.execute(
+                    dsl, player, skill_id, **dsl_kwargs
+                )
+                if result:
+                    return True
+            except Exception as e:
+                logger.warning("DSL exec failed for %s, fallback: %s", skill_id, e)
+
+        py_kw = _py_kwargs or {}
+        return _py_handler(player, self.engine, **py_kw)
 
     # ==================== 技能处理器 ====================
 
@@ -221,15 +370,17 @@ class SkillSystem:
         """
         激将：主公技，让其他蜀势力角色代替出杀
         """
-        if player.identity.value != "lord":
-            return False
-
+        from .player import Identity
         from .hero import Kingdom
+        from .card import CardName
+
+        if player.identity != Identity.LORD:
+            return False
 
         # 寻找蜀势力角色
         for other in engine.get_other_players(player):
             if other.hero and other.hero.kingdom == Kingdom.SHU:
-                sha_cards = other.get_cards_by_name("杀")
+                sha_cards = other.get_cards_by_name(CardName.SHA)
                 if sha_cards:
                     # AI自动响应
                     if other.is_ai:
@@ -239,14 +390,12 @@ class SkillSystem:
                         engine.log_event("skill", f"{other.name} 响应【激将】，打出了【杀】")
                         return True
                     else:
-                        # 人类玩家需要UI确认
-                        if engine.ui:
-                            result = engine.ui.ask_for_jijiang(other)
-                            if result:
-                                other.remove_card(result)
-                                engine.deck.discard([result])
-                                engine.log_event("skill", f"{other.name} 响应【激将】，打出了【杀】")
-                                return True
+                        result = engine.request_handler.ask_for_jijiang(other)
+                        if result:
+                            other.remove_card(result)
+                            engine.deck.discard([result])
+                            engine.log_event("skill", f"{other.name} 响应【激将】，打出了【杀】")
+                            return True
 
         return False
 
@@ -268,14 +417,16 @@ class SkillSystem:
         """
         护驾：主公技，让其他魏势力角色代替出闪
         """
-        if player.identity.value != "lord":
-            return False
-
+        from .player import Identity
         from .hero import Kingdom
+        from .card import CardName
+
+        if player.identity != Identity.LORD:
+            return False
 
         for other in engine.get_other_players(player):
             if other.hero and other.hero.kingdom == Kingdom.WEI:
-                shan_cards = other.get_cards_by_name("闪")
+                shan_cards = other.get_cards_by_name(CardName.SHAN)
                 if shan_cards:
                     if other.is_ai:
                         card = shan_cards[0]
@@ -284,13 +435,12 @@ class SkillSystem:
                         engine.log_event("skill", f"{other.name} 响应【护驾】，打出了【闪】")
                         return True
                     else:
-                        if engine.ui:
-                            result = engine.ui.ask_for_hujia(other)
-                            if result:
-                                other.remove_card(result)
-                                engine.deck.discard([result])
-                                engine.log_event("skill", f"{other.name} 响应【护驾】，打出了【闪】")
-                                return True
+                        result = engine.request_handler.ask_for_hujia(other)
+                        if result:
+                            other.remove_card(result)
+                            engine.deck.discard([result])
+                            engine.log_event("skill", f"{other.name} 响应【护驾】，打出了【闪】")
+                            return True
 
         return False
 
@@ -354,44 +504,19 @@ class SkillSystem:
 
         engine.log_event("skill", f"{player.name} 发动【观星】，观看牌堆顶 {len(cards)} 张牌")
 
+        # 通过请求处理器统一路由观星排列
+        top_cards, bottom_cards = engine.request_handler.guanxing_selection(player, cards)
+
+        # 取出这些牌
+        for _ in range(len(cards)):
+            engine.deck.draw_pile.pop()
+
         if player.is_ai:
-            # AI策略：把好牌放顶部
-            # 简单逻辑：优先级 桃 > 闪 > 杀 > 其他
-            def card_priority(c: 'Card') -> int:
-                if c.name == "桃":
-                    return 0
-                elif c.name == "闪":
-                    return 1
-                elif c.name == "杀":
-                    return 2
-                elif c.name == "无中生有":
-                    return 3
-                return 10
-
-            sorted_cards = sorted(cards, key=card_priority)
-
-            # 取出这些牌
-            for _ in range(len(cards)):
-                engine.deck.draw_pile.pop()
-
-            # 一半放顶部，一半放底部
-            half = len(sorted_cards) // 2
-            top_cards = sorted_cards[:half+1]
-            bottom_cards = sorted_cards[half+1:]
-
             engine.deck.put_on_top(top_cards)
             engine.deck.put_on_bottom(bottom_cards)
         else:
-            # 人类玩家需要UI交互
-            if engine.ui:
-                top_cards, bottom_cards = engine.ui.guanxing_selection(player, cards)
-
-                # 取出这些牌
-                for _ in range(len(cards)):
-                    engine.deck.draw_pile.pop()
-
-                engine.deck.put_on_top(list(reversed(top_cards)))
-                engine.deck.put_on_bottom(bottom_cards)
+            engine.deck.put_on_top(list(reversed(top_cards)))
+            engine.deck.put_on_bottom(bottom_cards)
 
         return True
 
@@ -427,16 +552,7 @@ class SkillSystem:
         engine.log_event("skill", f"{player.name} 对 {target.name} 发动【反间】")
 
         # 让目标选择花色
-        if target.is_ai:
-            # AI随机选择
-            from .card import CardSuit
-            guessed_suit = random.choice(list(CardSuit))
-        else:
-            if engine.ui:
-                guessed_suit = engine.ui.choose_suit(target)
-            else:
-                from .card import CardSuit
-                guessed_suit = random.choice(list(CardSuit))
+        guessed_suit = engine.request_handler.choose_suit(target)
 
         engine.log_event("skill", f"{target.name} 猜测花色为 {guessed_suit.symbol}")
 
@@ -610,11 +726,65 @@ class SkillSystem:
         return len(targets) > 0
 
     def _handle_guose(self, player: 'Player', engine: 'GameEngine',
-                      card: 'Card' = None, target: 'Player' = None, **kwargs) -> bool:
+                      card: 'Card' = None, target: 'Player' = None,
+                      targets: list = None, cards: list = None, **kwargs) -> bool:
         """
-        国色：可以将一张方块牌当【乐不思蜀】使用
-        （转化技能，暂未实现延时锦囊）
+        国色：出牌阶段，可以将一张方块牌当【乐不思蜀】使用
         """
+        from .card import Card, CardType, CardSubtype, CardSuit, CardName
+
+        # 从 targets/cards 列表兼容
+        if target is None and targets:
+            target = targets[0]
+        if card is None and cards:
+            card = cards[0]
+
+        if not card or not target:
+            # AI 自动选择
+            if player.is_ai:
+                diamond_cards = [c for c in player.hand if c.suit == CardSuit.DIAMOND]
+                if not diamond_cards:
+                    return False
+                card = diamond_cards[0]
+                # 选择敌人作为目标
+                others = engine.get_other_players(player)
+                valid = [t for t in others if t.is_alive
+                         and not any(c.name == CardName.LEBUSISHU for c in t.judge_area)]
+                if not valid:
+                    return False
+                target = valid[0]
+            else:
+                return False
+
+        # 验证：牌必须是方块
+        if card.suit != CardSuit.DIAMOND:
+            return False
+
+        # 验证：目标判定区不能已有乐不思蜀
+        if any(c.name == CardName.LEBUSISHU for c in target.judge_area):
+            engine.log_event("error", f"{target.name} 判定区已有【乐不思蜀】")
+            return False
+
+        # 移除原牌
+        if card in player.hand:
+            player.remove_card(card)
+        else:
+            # 可能是装备区的方块牌
+            engine._remove_equipment(player, card)
+        engine.deck.discard([card])
+
+        # 创建虚拟乐不思蜀放入判定区
+        virtual_lebu = Card(
+            id=f"virtual_lebu_{card.id}",
+            name=CardName.LEBUSISHU,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.DELAY,
+            suit=card.suit,
+            number=card.number,
+        )
+        target.judge_area.insert(0, virtual_lebu)
+        engine.log_event("skill",
+            f"{player.name} 发动【国色】，将 {card.display_name} 当【乐不思蜀】对 {target.name} 使用")
         return True
 
     def _handle_liuli(self, player: 'Player', engine: 'GameEngine',
@@ -724,11 +894,67 @@ class SkillSystem:
         return False
 
     def _handle_duanliang(self, player: 'Player', engine: 'GameEngine',
-                          card: 'Card' = None, **kwargs) -> bool:
+                          card: 'Card' = None, target: 'Player' = None,
+                          targets: list = None, cards: list = None, **kwargs) -> bool:
         """
-        断粮：将黑色基本牌或装备牌当【兵粮寸断】使用
+        断粮：出牌阶段，可以将黑色基本牌或装备牌当【兵粮寸断】使用；
+        可以对距离2以内的角色使用
         """
-        # 转化技能，在出牌时检查
+        from .card import Card, CardType, CardSubtype, CardSuit, CardName
+
+        if target is None and targets:
+            target = targets[0]
+        if card is None and cards:
+            card = cards[0]
+
+        if not card or not target:
+            # AI 自动选择
+            if player.is_ai:
+                black_cards = [c for c in player.hand
+                               if c.is_black and c.card_type in (CardType.BASIC, CardType.EQUIPMENT)]
+                if not black_cards:
+                    return False
+                card = black_cards[0]
+                others = engine.get_other_players(player)
+                valid = [t for t in others if t.is_alive
+                         and engine.calculate_distance(player, t) <= 2
+                         and not any(c.name == CardName.BINGLIANG for c in t.judge_area)]
+                if not valid:
+                    return False
+                target = valid[0]
+            else:
+                return False
+
+        # 验证：牌必须是黑色基本牌或装备牌
+        if not card.is_black or card.card_type not in (CardType.BASIC, CardType.EQUIPMENT):
+            return False
+
+        # 断粮扩展距离至2
+        if engine.calculate_distance(player, target) > 2:
+            engine.log_event("error", f"{target.name} 距离太远，断粮只能对距离2以内的角色使用")
+            return False
+
+        if any(c.name == CardName.BINGLIANG for c in target.judge_area):
+            engine.log_event("error", f"{target.name} 判定区已有【兵粮寸断】")
+            return False
+
+        if card in player.hand:
+            player.remove_card(card)
+        else:
+            engine._remove_equipment(player, card)
+        engine.deck.discard([card])
+
+        virtual_bl = Card(
+            id=f"virtual_bl_{card.id}",
+            name=CardName.BINGLIANG,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.DELAY,
+            suit=card.suit,
+            number=card.number,
+        )
+        target.judge_area.insert(0, virtual_bl)
+        engine.log_event("skill",
+            f"{player.name} 发动【断粮】，将 {card.display_name} 当【兵粮寸断】对 {target.name} 使用")
         return True
 
     def _handle_jushou(self, player: 'Player', engine: 'GameEngine', **kwargs) -> bool:
@@ -742,11 +968,70 @@ class SkillSystem:
         return True
 
     def _handle_qixi(self, player: 'Player', engine: 'GameEngine',
-                     card: 'Card' = None, **kwargs) -> bool:
+                     card: 'Card' = None, target: 'Player' = None,
+                     targets: list = None, cards: list = None, **kwargs) -> bool:
         """
-        奇袭：将黑色牌当【过河拆桥】使用
+        奇袭：出牌阶段，可以将任意黑色牌当【过河拆桥】使用
+        可以被无懈可击抵消
         """
-        # 转化技能，在出牌时检查
+        from .card import Card, CardType, CardSubtype, CardSuit, CardName
+
+        if target is None and targets:
+            target = targets[0]
+        if card is None and cards:
+            card = cards[0]
+
+        if not card or not target:
+            # AI 自动选择
+            if player.is_ai:
+                black_cards = [c for c in player.hand if c.is_black]
+                if not black_cards:
+                    return False
+                card = black_cards[0]
+                others = engine.get_other_players(player)
+                valid = [t for t in others if t.is_alive and t.has_any_card()]
+                if not valid:
+                    return False
+                target = valid[0]
+            else:
+                return False
+
+        if not card.is_black:
+            return False
+
+        if not target.has_any_card():
+            engine.log_event("error", f"{target.name} 没有牌可以被拆")
+            return False
+
+        # 移除原牌
+        if card in player.hand:
+            player.remove_card(card)
+        else:
+            engine._remove_equipment(player, card)
+        engine.deck.discard([card])
+
+        engine.log_event("skill",
+            f"{player.name} 发动【奇袭】，将 {card.display_name} 当【过河拆桥】对 {target.name} 使用")
+
+        # 创建虚拟过河拆桥用于无懈可击判定
+        virtual_guohe = Card(
+            id=f"virtual_guohe_{card.id}",
+            name=CardName.GUOHE,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.SINGLE_TARGET,
+            suit=card.suit,
+            number=card.number,
+        )
+
+        # 无懈可击拦截
+        if engine._request_wuxie(virtual_guohe, player, target):
+            engine.log_event("effect", f"【奇袭】(过河拆桥) 被无懈可击抵消")
+            return True
+
+        # 选择并弃置目标一张牌
+        discarded = engine._choose_and_discard_card(player, target)
+        if discarded:
+            engine.log_event("effect", f"{target.name} 的 {discarded.display_name} 被弃置")
         return True
 
     def _handle_keji(self, player: 'Player', engine: 'GameEngine', **kwargs) -> bool:
@@ -761,26 +1046,56 @@ class SkillSystem:
     def _handle_kurou(self, player: 'Player', engine: 'GameEngine', **kwargs) -> bool:
         """
         苦肉：出牌阶段，失去1点体力摸两张牌
+        原版规则：允许 hp=1 时发动进入濒死，被救后摸牌
         """
-        if player.hp <= 1:
-            return False
-
         player.hp -= 1
-        cards = engine.deck.draw(2)
-        player.draw_cards(cards)
-        engine.log_event("skill", f"{player.name} 发动【苦肉】，失去 1 点体力，摸了 2 张牌")
+        engine.log_event("skill", f"{player.name} 发动【苦肉】，失去 1 点体力")
+
+        # 检查濒死
+        if player.hp <= 0:
+            player.is_dying = True
+            saved = engine.damage_system._handle_dying(player)
+            if not saved:
+                engine.damage_system._handle_death(player)
+                return True  # 技能发动成功但角色死亡
+
+        # 存活则摸牌
+        if player.is_alive:
+            cards = engine.deck.draw(2)
+            player.draw_cards(cards)
+            engine.log_event("skill", f"{player.name} 摸了 2 张牌")
         return True
 
     def _handle_shensu(self, player: 'Player', engine: 'GameEngine',
-                       target: 'Player' = None, choice: int = 1, **kwargs) -> bool:
+                       target: 'Player' = None, choice: int = 1,
+                       targets: list = None, cards: list = None, **kwargs) -> bool:
         """
-        神速：跳过阶段视为对目标使用杀
+        神速：
+        选项1: 跳过判定阶段和摸牌阶段，视为对一名角色使用一张【杀】
+        选项2: 跳过出牌阶段并弃置一张装备牌，视为对一名角色使用一张【杀】
         """
+        if target is None and targets:
+            target = targets[0]
+
         if not target:
             return False
 
-        engine.log_event("skill", f"{player.name} 发动【神速】，视为对 {target.name} 使用【杀】")
-        engine.deal_damage(player, target, 1)
+        if not target.is_alive:
+            return False
+
+        engine.log_event("skill",
+            f"{player.name} 发动【神速】(选项{choice})，视为对 {target.name} 使用【杀】")
+
+        # 视为使用杀 — 目标可以出闪
+        from .constants import SkillId
+        required_shan = 2 if player.has_skill(SkillId.WUSHUANG) else 1
+        shan_count = engine._request_shan(target, required_shan)
+
+        if shan_count >= required_shan:
+            engine.log_event("dodge", f"  🛡 {target.name} 打出【闪】，成功闪避【神速】！")
+        else:
+            engine.deal_damage(player, target, 1)
+
         return True
 
     def _handle_jieyin(self, player: 'Player', engine: 'GameEngine',

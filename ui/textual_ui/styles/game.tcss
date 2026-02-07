@@ -1,0 +1,217 @@
+/* ============================================================
+   三国杀 TUI — 全局样式表 (game.tcss)
+   使用 Textual 主题变量 ($primary, $secondary, $accent 等)
+   ============================================================ */
+
+/* ---------- 全局 Screen 基底 ---------- */
+Screen {
+    background: $surface;
+}
+
+/* ---------- 卡牌按钮 ---------- */
+.card-btn {
+    min-width: 16;
+    margin: 0 1;
+    transition: background 300ms, color 200ms;
+}
+.card-btn:hover {
+    background: $accent;
+    color: $text;
+}
+.card-btn:focus {
+    background: $success;
+    text-style: bold;
+}
+.card-btn-selected {
+    min-width: 16;
+    margin: 0 1;
+    background: $success-darken-1;
+    text-style: bold;
+}
+
+/* ---------- 花色颜色 ---------- */
+.suit-red {
+    color: #e74c3c;
+}
+.suit-black {
+    color: #ecf0f1;
+}
+
+/* ---------- 闪烁动画类 ---------- */
+.flash-damage {
+    background: #e74c3c 60%;
+    text-style: bold;
+    transition: background 600ms;
+}
+.flash-heal {
+    background: #27ae60 60%;
+    text-style: bold;
+    transition: background 500ms;
+}
+.flash-skill {
+    background: #f39c12 40%;
+    text-style: bold italic;
+    transition: background 400ms;
+}
+
+/* ---------- 玩家面板状态 ---------- */
+.player-panel {
+    height: auto;
+    padding: 0 1;
+    border: round $primary;
+    transition: background 300ms, border 300ms;
+}
+.player-panel:hover {
+    border: heavy $accent;
+    background: $primary-darken-1;
+}
+.player-panel.targetable {
+    border: heavy $warning;
+    background: $warning-darken-3;
+}
+.player-panel.dead {
+    opacity: 40%;
+    text-style: strike;
+}
+.player-panel.dying {
+    background: $error-darken-2;
+    border: heavy $error;
+}
+.player-panel.active-turn {
+    border: double $accent;
+    background: $accent-darken-3;
+}
+
+/* ---------- HP 条颜色 ---------- */
+.hp-full {
+    color: #27ae60;
+}
+.hp-wounded {
+    color: #f39c12;
+}
+.hp-danger {
+    color: #e74c3c;
+}
+
+/* ---------- 阶段指示器 ---------- */
+.phase-indicator {
+    height: auto;
+    padding: 0 1;
+}
+.phase-current {
+    text-style: bold;
+    color: $accent;
+}
+.phase-done {
+    color: $foreground-muted;
+}
+
+/* ---------- Modal 通用 ---------- */
+.modal-overlay {
+    align: center middle;
+    background: $background 70%;
+}
+.modal-box {
+    width: 60;
+    max-width: 80%;
+    height: auto;
+    max-height: 80%;
+    border: thick $primary;
+    background: $surface;
+    padding: 1 2;
+}
+.modal-title {
+    text-align: center;
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}
+.modal-btn {
+    width: 100%;
+    margin: 1 0 0 0;
+}
+.modal-btn-row {
+    layout: horizontal;
+    height: auto;
+    margin-top: 1;
+}
+.modal-btn-row Button {
+    width: 1fr;
+    margin: 0 1;
+}
+.modal-countdown {
+    text-align: center;
+    color: $warning;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+/* ---------- 装备槽 ---------- */
+.equip-slot {
+    height: 1;
+    padding: 0 1;
+    color: $foreground-muted;
+}
+.equip-slot.equipped {
+    color: $secondary;
+    text-style: bold;
+}
+
+/* ---------- 手牌区 ---------- */
+#hand-cards {
+    height: auto;
+    layout: horizontal;
+    overflow-x: auto;
+}
+
+/* ---------- 操作栏 ---------- */
+#action-bar {
+    height: 3;
+    layout: horizontal;
+    dock: bottom;
+}
+.action-btn {
+    margin: 0 1;
+}
+.action-btn:disabled {
+    opacity: 50%;
+}
+
+/* ---------- P4: 动画增强 ---------- */
+
+/* 卡牌打出渐隐 */
+.card-played {
+    opacity: 30%;
+    transition: opacity 400ms;
+}
+
+/* 伤害脉冲 */
+.pulse-damage {
+    background: #e74c3c 50%;
+    transition: background 600ms;
+}
+
+/* 治疗脉冲 */
+.pulse-heal {
+    background: #27ae60 50%;
+    transition: background 500ms;
+}
+
+/* 回合指示边框 */
+.active-turn-glow {
+    border: double $accent;
+    transition: border 500ms;
+}
+
+/* 可操作手牌提示 */
+CardWidget.playable {
+    border: round $warning;
+    transition: border 300ms;
+}
+
+/* 可选目标呼吸 */
+PlayerPanel.targetable {
+    border: heavy $warning;
+    background: $warning-darken-3;
+    transition: background 400ms, border 400ms;
+}

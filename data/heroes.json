@@ -532,6 +532,31 @@
           "type": "trigger"
         }
       ]
+    },
+    {
+      "id": "xushu",
+      "name": "徐庶",
+      "kingdom": "shu",
+      "max_hp": 3,
+      "gender": "male",
+      "title": "忠孝的侠客",
+      "_comment": "M2 测试武将：纯数据驱动，技能完全通过 DSL 实现",
+      "skills": [
+        {
+          "id": "tuixin",
+          "name": "推心",
+          "description": "结束阶段，你可以摸两张牌。",
+          "type": "trigger",
+          "timing": "end"
+        },
+        {
+          "id": "zhufu",
+          "name": "祤福",
+          "description": "主动技，失去1点体力，摸三张牌。",
+          "type": "active",
+          "phase": "play"
+        }
+      ]
     }
   ],
   "kingdoms": {

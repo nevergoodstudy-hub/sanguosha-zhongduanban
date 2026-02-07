@@ -9,22 +9,34 @@
 
 from __future__ import annotations
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING
-from dataclasses import dataclass, field
-from enum import Enum, auto
+
+# GamePhase 从 engine 导入，避免重复定义（engine 先于本模块定义该枚举）
+from .engine import GamePhase
+from .events import EventType
+from .constants import SkillId
+from .hero import SkillTiming
+
+# M1-T04: 阶段 → EventType 映射
+_PHASE_START_EVENTS: Dict[GamePhase, EventType] = {
+    GamePhase.PREPARE: EventType.PHASE_PREPARE_START,
+    GamePhase.JUDGE: EventType.PHASE_JUDGE_START,
+    GamePhase.DRAW: EventType.PHASE_DRAW_START,
+    GamePhase.PLAY: EventType.PHASE_PLAY_START,
+    GamePhase.DISCARD: EventType.PHASE_DISCARD_START,
+    GamePhase.END: EventType.PHASE_END_START,
+}
+_PHASE_END_EVENTS: Dict[GamePhase, EventType] = {
+    GamePhase.PREPARE: EventType.PHASE_PREPARE_END,
+    GamePhase.JUDGE: EventType.PHASE_JUDGE_END,
+    GamePhase.DRAW: EventType.PHASE_DRAW_END,
+    GamePhase.PLAY: EventType.PHASE_PLAY_END,
+    GamePhase.DISCARD: EventType.PHASE_DISCARD_END,
+    GamePhase.END: EventType.PHASE_END_END,
+}
 
 if TYPE_CHECKING:
     from .engine import GameEngine
     from .player import Player
-
-
-class GamePhase(Enum):
-    """游戏阶段枚举"""
-    PREPARE = "prepare"       # 准备阶段
-    JUDGE = "judge"           # 判定阶段
-    DRAW = "draw"             # 摸牌阶段
-    PLAY = "play"             # 出牌阶段
-    DISCARD = "discard"       # 弃牌阶段
-    END = "end"               # 结束阶段
 
 
 # 阶段顺序
@@ -36,15 +48,6 @@ PHASE_ORDER = [
     GamePhase.DISCARD,
     GamePhase.END,
 ]
-
-
-@dataclass
-class PhaseContext:
-    """阶段执行上下文"""
-    player: 'Player'
-    phase: GamePhase
-    skipped: bool = False
-    extra_data: Dict = field(default_factory=dict)
 
 
 class TurnManager:
@@ -90,6 +93,8 @@ class TurnManager:
         if not player.is_alive:
             return
 
+        # M1-T04: 发布回合开始语义事件
+        self.engine.event_bus.emit(EventType.TURN_START, player=player)
         self.engine.log_event("turn_start", f"=== {player.name} 的回合 ===")
         player.reset_turn()
 
@@ -100,6 +105,8 @@ class TurnManager:
             self._execute_phase(player, phase)
 
         self.engine.log_event("turn_end", f"=== {player.name} 的回合结束 ===")
+        # M1-T04: 发布回合结束语义事件
+        self.engine.event_bus.emit(EventType.TURN_END, player=player)
 
     def _execute_phase(self, player: 'Player', phase: GamePhase) -> None:
         """
@@ -112,9 +119,18 @@ class TurnManager:
         self.current_phase = phase
         self.engine.phase = phase
 
+        # M1-T04: 发布阶段开始/结束语义事件
+        start_evt = _PHASE_START_EVENTS.get(phase)
+        if start_evt:
+            self.engine.event_bus.emit(start_evt, player=player)
+
         handler = self._phase_handlers.get(phase)
         if handler:
             handler(player)
+
+        end_evt = _PHASE_END_EVENTS.get(phase)
+        if end_evt:
+            self.engine.event_bus.emit(end_evt, player=player)
 
     def _execute_prepare_phase(self, player: 'Player') -> None:
         """执行准备阶段"""
@@ -123,7 +139,7 @@ class TurnManager:
         # 触发准备阶段技能（如观星）
         if self.engine.skill_system and player.hero:
             for skill in player.hero.skills:
-                if skill.timing and skill.timing.value == "prepare":
+                if skill.timing and skill.timing == SkillTiming.PREPARE:
                     self.engine.skill_system.trigger_skill(skill.id, player, self.engine)
 
     def _execute_judge_phase(self, player: 'Player') -> None:
@@ -145,12 +161,12 @@ class TurnManager:
         draw_count = 2
 
         # 英姿技能：多摸一张
-        if player.has_skill("yingzi"):
+        if player.has_skill(SkillId.YINGZI):
             draw_count += 1
             self.engine.log_event("skill", f"{player.name} 发动【英姿】，多摸一张牌")
 
         # 突袭技能在摸牌阶段触发
-        if player.has_skill("tuxi"):
+        if player.has_skill(SkillId.TUXI):
             if self._try_trigger_tuxi(player, draw_count):
                 return  # 突袭成功，跳过正常摸牌
 
@@ -229,16 +245,8 @@ class TurnManager:
 
     def _execute_end_phase(self, player: 'Player') -> None:
         """执行结束阶段"""
-        # 触发结束阶段技能（如闭月）
-        if player.has_skill("biyue"):
-            self._trigger_biyue(player)
-
-    def _trigger_biyue(self, player: 'Player') -> None:
-        """触发闭月技能"""
-        cards = self.engine.deck.draw(1)
-        if cards:
-            player.draw_cards(cards)
-            self.engine.log_event("skill", f"{player.name} 发动【闭月】，摸了 1 张牌")
+        # 结束阶段技能（闭月等）由 skill_system 通过事件触发
+        pass
 
     def get_current_phase(self) -> GamePhase:
         """获取当前阶段"""

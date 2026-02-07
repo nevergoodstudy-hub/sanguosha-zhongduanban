@@ -175,16 +175,16 @@ class Card:
             是否可以使用
         """
         # 基本检查：不能对自己使用杀
-        if self.name == "杀" and user == target:
+        if self.name == CardName.SHA and user == target:
             return False
 
         # 锦囊牌检查
-        if self.name in ["决斗", "过河拆桥"]:
+        if self.name in [CardName.JUEDOU, CardName.GUOHE]:
             if user == target:
                 return False
 
         # 顺手牵羊需要距离检查
-        if self.name == "顺手牵羊":
+        if self.name == CardName.SHUNSHOU:
             if user == target:
                 return False
             distance = game_engine.calculate_distance(user, target)
@@ -439,6 +439,7 @@ class CardName:
     SHUNSHOU = "顺手牵羊"
     TAOYUAN = "桃园结义"
     WUXIE = "无懈可击"
+    JIEDAO = "借刀杀人"
 
     # 延时锦囊
     LEBUSISHU = "乐不思蜀"

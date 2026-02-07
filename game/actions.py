@@ -278,6 +278,7 @@ class ActionValidator:
                            targets: List['Player'], engine: 'GameEngine') -> tuple[bool, str]:
         """验证出牌动作"""
         from .card import CardType, CardName
+        from .constants import SkillId
 
         # 检查卡牌是否在手牌中
         if card not in player.hand:
@@ -286,7 +287,7 @@ class ActionValidator:
         # 杀的验证
         if card.name == CardName.SHA:
             if not player.can_use_sha():
-                if not player.has_skill("paoxiao"):
+                if not player.has_skill(SkillId.PAOXIAO):
                     return False, "本回合已使用过杀"
 
             if not targets:
@@ -297,7 +298,7 @@ class ActionValidator:
                     return False, f"{target.name} 不在攻击范围内"
 
                 # 空城检测
-                if target.has_skill("kongcheng") and target.hand_count == 0:
+                if target.has_skill(SkillId.KONGCHENG) and target.hand_count == 0:
                     return False, f"{target.name} 发动空城，不是杀的合法目标"
 
         # 桃的验证

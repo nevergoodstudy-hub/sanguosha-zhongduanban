@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 UI模块
-提供终端界面显示
+提供 Textual TUI 终端界面
 """
 
-from .terminal import TerminalUI
-from .ascii_art import ASCIIArt
+from .textual_ui import SanguoshaApp
 
-__all__ = ['TerminalUI', 'ASCIIArt']
+__all__ = ['SanguoshaApp']

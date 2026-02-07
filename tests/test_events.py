@@ -112,6 +112,18 @@ class TestEventBus:
         assert len(history) == 3
         assert history[-1].message == "消息4"
 
+    def test_once_fires_only_once(self):
+        """测试 once() 仅触发一次"""
+        def handler(event):
+            self.received_events.append(event)
+
+        self.bus.once(EventType.LOG_MESSAGE, handler)
+        self.bus.emit(EventType.LOG_MESSAGE, message="第一次")
+        self.bus.emit(EventType.LOG_MESSAGE, message="第二次")
+
+        assert len(self.received_events) == 1
+        assert self.received_events[0].message == "第一次"
+
 
 class TestGameEvent:
     """游戏事件测试"""

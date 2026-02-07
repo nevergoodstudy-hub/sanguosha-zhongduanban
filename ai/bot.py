@@ -11,7 +11,8 @@ import random
 
 # 导入运行时需要的类
 from game.player import Identity
-from game.card import CardType
+from game.card import CardType, CardName
+from game.constants import SkillId
 
 if TYPE_CHECKING:
     from game.player import Player
@@ -99,7 +100,7 @@ class AIBot:
             是否继续攻击
         """
         # 有杀且是敌人就继续
-        sha_count = len(player.get_cards_by_name("杀"))
+        sha_count = len(player.get_cards_by_name(CardName.SHA))
         if sha_count > 1:
             return self._is_enemy(player, target)
         return False
@@ -136,31 +137,31 @@ class AIBot:
             return engine.use_card(player, card)
 
         # 自用锦囊
-        if card.name in ["无中生有", "桃园结义"]:
+        if card.name in [CardName.WUZHONG, CardName.TAOYUAN]:
             return engine.use_card(player, card)
 
         # 桃（需要时使用）
-        if card.name == "桃":
+        if card.name == CardName.TAO:
             if player.hp < player.max_hp:
                 return engine.use_card(player, card)
             return False
 
         # 需要目标的牌
-        if card.name == "杀":
+        if card.name == CardName.SHA:
             if player.can_use_sha():
                 targets = engine.get_targets_in_range(player)
                 if targets:
                     target = random.choice(targets)
                     return engine.use_card(player, card, [target])
 
-        elif card.name in ["决斗", "过河拆桥"]:
+        elif card.name in [CardName.JUEDOU, CardName.GUOHE]:
             others = engine.get_other_players(player)
-            valid_targets = [t for t in others if t.has_any_card() or card.name != "过河拆桥"]
+            valid_targets = [t for t in others if t.has_any_card() or card.name != CardName.GUOHE]
             if valid_targets:
                 target = random.choice(valid_targets)
                 return engine.use_card(player, card, [target])
 
-        elif card.name == "顺手牵羊":
+        elif card.name == CardName.SHUNSHOU:
             others = engine.get_other_players(player)
             valid_targets = [t for t in others
                              if engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
@@ -168,7 +169,7 @@ class AIBot:
                 target = random.choice(valid_targets)
                 return engine.use_card(player, card, [target])
 
-        elif card.name in ["南蛮入侵", "万箭齐发"]:
+        elif card.name in [CardName.NANMAN, CardName.WANJIAN]:
             return engine.use_card(player, card)
 
         return False
@@ -198,7 +199,7 @@ class AIBot:
                 continue
 
             # 2. 使用无中生有
-            wuzhong = player.get_cards_by_name("无中生有")
+            wuzhong = player.get_cards_by_name(CardName.WUZHONG)
             if wuzhong:
                 if engine.use_card(player, wuzhong[0]):
                     played = True
@@ -206,7 +207,7 @@ class AIBot:
 
             # 3. 使用桃回复体力
             if player.hp < player.max_hp - 1:  # 保留一些桃用于濒死
-                tao = player.get_cards_by_name("桃")
+                tao = player.get_cards_by_name(CardName.TAO)
                 if tao and player.hp <= 2:
                     if engine.use_card(player, tao[0]):
                         played = True
@@ -214,9 +215,9 @@ class AIBot:
 
             # 4. 使用杀
             if player.can_use_sha():
-                sha = player.get_cards_by_name("杀")
+                sha = player.get_cards_by_name(CardName.SHA)
                 # 武圣可以用红牌当杀
-                if player.has_skill("wusheng") and not sha:
+                if player.has_skill(SkillId.WUSHENG) and not sha:
                     sha = player.get_red_cards()
 
                 if sha:
@@ -229,22 +230,29 @@ class AIBot:
 
             # 5. 使用控制锦囊
             for card in list(player.hand):
-                if card.name == "过河拆桥":
+                if card.name == CardName.GUOHE:
                     target = self._choose_dismount_target(player, engine)
                     if target:
                         if engine.use_card(player, card, [target]):
                             played = True
                             break
 
-                elif card.name == "顺手牵羊":
+                elif card.name == CardName.SHUNSHOU:
                     target = self._choose_steal_target(player, engine)
                     if target:
                         if engine.use_card(player, card, [target]):
                             played = True
                             break
 
-                elif card.name == "决斗":
+                elif card.name == CardName.JUEDOU:
                     target = self._choose_duel_target(player, engine)
+                    if target:
+                        if engine.use_card(player, card, [target]):
+                            played = True
+                            break
+
+                elif card.name == CardName.JIEDAO:
+                    target = self._choose_jiedao_target(player, engine)
                     if target:
                         if engine.use_card(player, card, [target]):
                             played = True
@@ -255,7 +263,7 @@ class AIBot:
 
             # 6. 使用AOE锦囊（如果大部分目标是敌人）
             for card in list(player.hand):
-                if card.name in ["南蛮入侵", "万箭齐发"]:
+                if card.name in [CardName.NANMAN, CardName.WANJIAN]:
                     if self._should_use_aoe(player, engine):
                         if engine.use_card(player, card):
                             played = True
@@ -312,12 +320,12 @@ class AIBot:
                     value += 30
 
                 # 无闪更容易命中
-                shan_count = len(target.get_cards_by_name("闪"))
+                shan_count = len(target.get_cards_by_name(CardName.SHAN))
                 if shan_count == 0:
                     value += 25
 
                 # 无桃更容易击杀
-                tao_count = len(target.get_cards_by_name("桃"))
+                tao_count = len(target.get_cards_by_name(CardName.TAO))
                 if tao_count == 0:
                     value += 15
 
@@ -373,6 +381,23 @@ class AIBot:
             return enemies[0]
         return None
 
+    def _choose_jiedao_target(self, player: 'Player',
+                              engine: 'GameEngine') -> Optional['Player']:
+        """选择借刀杀人的目标——有武器的他人（优先敌人）"""
+        others = engine.get_other_players(player)
+        with_weapon = [t for t in others if t.equipment.weapon and t.is_alive]
+        if not with_weapon:
+            return None
+        # 优先选择有武器的敌人（会被迫交刀或杀人）
+        enemies_w = [t for t in with_weapon if self._is_enemy(player, t)]
+        if enemies_w:
+            return random.choice(enemies_w)
+        # 其次选友军（友军会帮忙杀敌人）
+        friends_w = [t for t in with_weapon if not self._is_enemy(player, t)]
+        if friends_w:
+            return random.choice(friends_w)
+        return None
+
     def _should_use_aoe(self, player: 'Player', engine: 'GameEngine') -> bool:
         """判断是否应该使用AOE"""
         others = engine.get_other_players(player)
@@ -404,21 +429,51 @@ class AIBot:
     def _should_use_skill(self, player: 'Player', skill_id: str,
                           engine: 'GameEngine') -> bool:
         """判断是否应该使用技能"""
-        if skill_id == "zhiheng":
-            # 制衡：手牌中有闲置的牌时使用
+        if skill_id == SkillId.ZHIHENG:
             useless_cards = self._count_useless_cards(player, engine)
             return useless_cards >= 2
 
-        elif skill_id == "rende":
-            # 仁德：有多余的牌且有需要帮助的友军
+        elif skill_id == SkillId.RENDE:
             if player.hand_count > 4:
                 friends = self._get_friends(player, engine)
                 return len(friends) > 0
 
-        elif skill_id == "fanjian":
-            # 反间：有手牌就对敌人使用
+        elif skill_id == SkillId.FANJIAN:
             enemies = [p for p in engine.get_other_players(player) if self._is_enemy(player, p)]
             return player.hand_count > 0 and len(enemies) > 0
+
+        elif skill_id == SkillId.GUOSE:
+            # 国色：有方块牌且有存活敌人
+            diamond_cards = [c for c in player.hand if c.suit.value == "diamond"]
+            enemies = [p for p in engine.get_other_players(player)
+                       if self._is_enemy(player, p) and p.is_alive]
+            return len(diamond_cards) > 0 and len(enemies) > 0
+
+        elif skill_id == SkillId.DUANLIANG:
+            # 断粮：有黑色基本/装备牌且有距离≤2的敌人
+            black_cards = [c for c in player.hand
+                           if c.suit.is_black and c.card_type.value in ("basic", "equipment")]
+            enemies = [p for p in engine.get_other_players(player)
+                       if self._is_enemy(player, p) and p.is_alive
+                       and engine.calculate_distance(player, p) <= 2]
+            return len(black_cards) > 0 and len(enemies) > 0
+
+        elif skill_id == SkillId.QIXI:
+            # 奇袭：有黑色牌且有持牌敌人
+            black_cards = [c for c in player.hand if c.suit.is_black]
+            enemies = [p for p in engine.get_other_players(player)
+                       if self._is_enemy(player, p) and p.is_alive and p.has_any_card()]
+            return len(black_cards) > 0 and len(enemies) > 0
+
+        elif skill_id == SkillId.KUROU:
+            # 苦肉：体力≥2且手牌少时发动换取摸牌
+            return player.hp >= 2 and player.hand_count <= 2
+
+        elif skill_id == SkillId.SHENSU:
+            # 神速：有存活敌人且攻击范围内有目标
+            enemies = [p for p in engine.get_other_players(player)
+                       if self._is_enemy(player, p) and p.is_alive]
+            return len(enemies) > 0
 
         return False
 
@@ -426,9 +481,9 @@ class AIBot:
         """计算无用卡牌数量"""
         useless = 0
         for card in player.hand:
-            if card.name == "闪":
-                useless += max(0, len(player.get_cards_by_name("闪")) - 2)
-            elif card.name == "杀":
+            if card.name == CardName.SHAN:
+                useless += max(0, len(player.get_cards_by_name(CardName.SHAN)) - 2)
+            elif card.name == CardName.SHA:
                 if not player.can_use_sha():
                     useless += 1
         return useless
@@ -443,21 +498,19 @@ class AIBot:
         if not engine.skill_system:
             return False
 
-        if skill_id == "zhiheng":
-            # 选择要弃置的牌
+        if skill_id == SkillId.ZHIHENG:
             cards_to_discard = self._smart_discard(player, min(3, player.hand_count))
             return engine.skill_system.use_skill(skill_id, player, cards=cards_to_discard)
 
-        elif skill_id == "rende":
-            # 选择牌和目标
+        elif skill_id == SkillId.RENDE:
             friends = self._get_friends(player, engine)
             if friends and player.hand_count > 2:
                 target = random.choice(friends)
-                cards = [player.hand[0]]  # 给一张牌
+                cards = [player.hand[0]]
                 return engine.skill_system.use_skill(skill_id, player,
                                                      targets=[target], cards=cards)
 
-        elif skill_id == "fanjian":
+        elif skill_id == SkillId.FANJIAN:
             enemies = [p for p in engine.get_other_players(player) if self._is_enemy(player, p)]
             if enemies and player.hand:
                 target = random.choice(enemies)
@@ -465,7 +518,86 @@ class AIBot:
                 return engine.skill_system.use_skill(skill_id, player,
                                                      targets=[target], cards=[card])
 
+        elif skill_id == SkillId.GUOSE:
+            # 国色：选方块牌 + 敌人目标 → 视为乐不思蜀
+            diamond_cards = [c for c in player.hand if c.suit.value == "diamond"]
+            enemies = [p for p in engine.get_other_players(player)
+                       if self._is_enemy(player, p) and p.is_alive]
+            if diamond_cards and enemies:
+                card = diamond_cards[0]
+                target = self._choose_control_target(enemies)
+                return engine.skill_system.use_skill(skill_id, player,
+                                                     targets=[target], cards=[card])
+
+        elif skill_id == SkillId.DUANLIANG:
+            # 断粮：选黑色基本/装备牌 + 距离≤2敌人 → 视为兵粮寸断
+            black_cards = [c for c in player.hand
+                           if c.suit.is_black and c.card_type.value in ("basic", "equipment")]
+            enemies = [p for p in engine.get_other_players(player)
+                       if self._is_enemy(player, p) and p.is_alive
+                       and engine.calculate_distance(player, p) <= 2]
+            if black_cards and enemies:
+                card = self._pick_least_valuable(black_cards, player)
+                target = self._choose_control_target(enemies)
+                return engine.skill_system.use_skill(skill_id, player,
+                                                     targets=[target], cards=[card])
+
+        elif skill_id == SkillId.QIXI:
+            # 奇袭：选黑色牌 + 持牌敌人 → 视为过河拆桥
+            black_cards = [c for c in player.hand if c.suit.is_black]
+            enemies = [p for p in engine.get_other_players(player)
+                       if self._is_enemy(player, p) and p.is_alive and p.has_any_card()]
+            if black_cards and enemies:
+                card = self._pick_least_valuable(black_cards, player)
+                target = self._choose_dismount_target_from(enemies)
+                if target:
+                    return engine.skill_system.use_skill(skill_id, player,
+                                                         targets=[target], cards=[card])
+
+        elif skill_id == SkillId.KUROU:
+            # 苦肉：自损1血换取摸2牌
+            return engine.skill_system.use_skill(skill_id, player)
+
+        elif skill_id == SkillId.SHENSU:
+            # 神速：视为对敌人使用杀
+            enemies = [p for p in engine.get_other_players(player)
+                       if self._is_enemy(player, p) and p.is_alive]
+            if enemies:
+                target = self._choose_best_target(player, enemies, engine)
+                if target:
+                    return engine.skill_system.use_skill(skill_id, player,
+                                                         targets=[target])
+
         return False
+
+    def _choose_control_target(self, enemies: List['Player']) -> 'Player':
+        """选择控制类技能（国色/断粮）的最佳目标——优先手牌多、体力高的"""
+        enemies.sort(key=lambda t: (t.hand_count + t.hp), reverse=True)
+        return enemies[0]
+
+    def _choose_dismount_target_from(self, enemies: List['Player']) -> Optional['Player']:
+        """从敌人列表选择过河拆桥/奇袭目标——优先有装备的"""
+        with_equip = [t for t in enemies if t.equipment.has_equipment()]
+        if with_equip:
+            return random.choice(with_equip)
+        return random.choice(enemies) if enemies else None
+
+    def _pick_least_valuable(self, cards: list, player: 'Player') -> 'Card':
+        """从候选牌中选价值最低的牌作为转化素材"""
+        def card_value(card):
+            if card.name == CardName.TAO:
+                return 100
+            elif card.name == CardName.WUXIE:
+                return 90
+            elif card.name == CardName.SHAN:
+                return 70
+            elif card.name == CardName.SHA:
+                return 40 if player.can_use_sha() else 15
+            elif card.card_type == CardType.EQUIPMENT:
+                return 25
+            return 50
+        cards.sort(key=card_value)
+        return cards[0]
 
     def _smart_discard(self, player: 'Player', count: int) -> List['Card']:
         """智能弃牌"""
@@ -474,20 +606,20 @@ class AIBot:
 
         # 卡牌优先级（低的先弃）
         def card_priority(card: 'Card') -> int:
-            if card.name == "桃":
+            if card.name == CardName.TAO:
                 return 100  # 最高优先级保留
-            elif card.name == "无懈可击":
+            elif card.name == CardName.WUXIE:
                 return 90
-            elif card.name == "闪":
+            elif card.name == CardName.SHAN:
                 return 70
-            elif card.name == "杀":
+            elif card.name == CardName.SHA:
                 # 如果不能用杀了，优先弃掉
                 if not player.can_use_sha():
                     return 20
                 return 60
-            elif card.name == "无中生有":
+            elif card.name == CardName.WUZHONG:
                 return 80
-            elif card.card_type.value == "equipment":
+            elif card.card_type == CardType.EQUIPMENT:
                 return 30  # 装备优先级低（应该已经装上了）
             else:
                 return 50
@@ -498,11 +630,17 @@ class AIBot:
     # ==================== 困难AI ====================
 
     def _hard_play_phase(self, player: 'Player', engine: 'GameEngine') -> None:
-        """困难模式：深度策略 + 嘲讽值系统"""
-        # 更新嘲讽值
+        """困难模式：深度策略 + 嘲讽值系统 + 局势评估"""
         self._update_threat_values(engine)
+        state = self.evaluate_game_state(engine)
 
-        # 使用普通AI的逻辑，但在目标选择时考虑嘲讽值
+        # 危险时优先回血
+        if state['danger_level'] > 60 and player.hp < player.max_hp:
+            tao = player.get_cards_by_name(CardName.TAO)
+            if tao:
+                engine.use_card(player, tao[0])
+
+        # 使用普通AI逻辑（目标选择已利用嘲讽值）
         self._normal_play_phase(player, engine)
 
     def _update_threat_values(self, engine: 'GameEngine') -> None:

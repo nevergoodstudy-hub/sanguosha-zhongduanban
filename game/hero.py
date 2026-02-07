@@ -124,7 +124,7 @@ class Skill:
             return False
 
         # 主公技检查
-        if self.is_lord_skill and player.identity.value != "lord":
+        if self.is_lord_skill and player.identity.value != "lord":  # Identity not imported here, keep string
             return False
 
         return True

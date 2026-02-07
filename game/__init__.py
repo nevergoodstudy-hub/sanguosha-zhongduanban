@@ -39,5 +39,5 @@ __all__ = [
     'ActionType', 'RequestType', 'ActionValidator', 'ActionExecutor'
 ]
 
-__version__ = '1.1.0'
-__author__ = 'Sanguosha Dev Team'
+__version__ = "3.0.0"
+__author__ = "Sanguosha Dev Team"

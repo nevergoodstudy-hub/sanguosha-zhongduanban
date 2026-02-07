@@ -13,19 +13,17 @@ from dataclasses import dataclass
 from enum import Enum
 import logging
 
+from .card import CardName, DamageType
+from .constants import SkillId
+from .hero import Kingdom
+from .events import EventType
+
 if TYPE_CHECKING:
     from .engine import GameEngine
     from .player import Player
     from .card import Card
 
 logger = logging.getLogger(__name__)
-
-
-class DamageType(Enum):
-    """伤害类型"""
-    NORMAL = "normal"       # 普通伤害
-    FIRE = "fire"          # 火焰伤害
-    THUNDER = "thunder"    # 雷电伤害
 
 
 @dataclass
@@ -109,6 +107,15 @@ class DamageSystem:
         # 记录伤害日志
         self._log_damage(source_name, target, actual_damage, damage_type, old_hp)
 
+        # M1-T04: 发布 DAMAGE_INFLICTED 语义事件
+        self.engine.event_bus.emit(
+            EventType.DAMAGE_INFLICTED,
+            source=source,
+            target=target,
+            damage=actual_damage,
+            damage_type=damage_type,
+        )
+
         # 处理铁索连环传导
         chain_targets = []
         chain_triggered = False
@@ -154,7 +161,7 @@ class DamageSystem:
 
         # 藤甲效果：火焰伤害+1
         if damage_type == "fire" and target.equipment.armor:
-            if target.equipment.armor.name == "藤甲":
+            if target.equipment.armor.name == CardName.TENGJIA:
                 actual_damage += 1
                 self.engine.log_event(
                     "equipment",
@@ -162,7 +169,7 @@ class DamageSystem:
                 )
 
         # 白银狮子效果：受到大于1点伤害时，防止多余的伤害
-        if target.equipment.armor and target.equipment.armor.name == "白银狮子":
+        if target.equipment.armor and target.equipment.armor.name == CardName.BAIYINSHIZI:
             if actual_damage > 1:
                 original_damage = actual_damage
                 actual_damage = 1
@@ -244,7 +251,6 @@ class DamageSystem:
         Returns:
             是否被救活
         """
-        from .card import CardName
         from .player import Identity
 
         hero_name = player.hero.name if player.hero else '???'
@@ -281,10 +287,10 @@ class DamageSystem:
                         )
 
                         # 救援技能（孙权）
-                        if (player.has_skill("jiuyuan") and
+                        if (player.has_skill(SkillId.JIUYUAN) and
                             player.identity == Identity.LORD and
                             savior.hero and
-                            savior.hero.kingdom.value == "wu"):
+                            savior.hero.kingdom == Kingdom.WU):
                             player.heal(1)
                             self.engine.log_event(
                                 "skill",
@@ -293,19 +299,16 @@ class DamageSystem:
                     else:
                         break
                 else:
-                    # 人类玩家选择
-                    if self.engine.ui:
-                        result = self.engine.ui.ask_for_tao(savior, player)
-                        if result:
-                            savior.remove_card(result)
-                            player.heal(1)
-                            self.engine.deck.discard([result])
-                            self.engine.log_event(
-                                "save",
-                                f"{savior.name} 使用【桃】救援了 {player.name}"
-                            )
-                        else:
-                            break
+                    # 人类玩家选择 — 通过 request_handler 路由
+                    result = self.engine.request_handler.request_tao(savior, player)
+                    if result:
+                        savior.remove_card(result)
+                        player.heal(1)
+                        self.engine.deck.discard([result])
+                        self.engine.log_event(
+                            "save",
+                            f"{savior.name} 使用【桃】救援了 {player.name}"
+                        )
                     else:
                         break
 

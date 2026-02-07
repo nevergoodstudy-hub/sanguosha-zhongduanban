@@ -1,0 +1,167 @@
+{
+  "_comment": "技能 DSL 定义 — 由 SkillInterpreter 解释执行",
+  "biyue": {
+    "trigger": "phase_end",
+    "steps": [
+      {"draw": 1},
+      {"log": "{player} 发动【{skill}】，摸了 1 张牌"}
+    ]
+  },
+  "jushou": {
+    "trigger": "phase_end",
+    "steps": [
+      {"draw": 3},
+      {"flip": true},
+      {"log": "{player} 发动【{skill}】，摸了 3 张牌并翻面"}
+    ]
+  },
+  "kurou": {
+    "trigger": "active",
+    "phase": "play",
+    "condition": [{"check": "hp_above", "value": 2}],
+    "steps": [
+      {"lose_hp": 1},
+      {"draw": 2},
+      {"log": "{player} 发动【{skill}】，失去 1 点体力，摸了 2 张牌"}
+    ]
+  },
+  "xiaoji": {
+    "trigger": "on_lose_equip",
+    "steps": [
+      {"draw": 2},
+      {"log": "{player} 发动【{skill}】，摸了 2 张牌"}
+    ]
+  },
+  "qingnang": {
+    "trigger": "active",
+    "phase": "play",
+    "limit": 1,
+    "condition": [{"check": "has_hand_cards", "min": 1}],
+    "cost": [{"discard": {"from": "hand", "count": 1}}],
+    "target": {"type": "any"},
+    "steps": [
+      {"heal": {"target": "target", "amount": 1}},
+      {"log": "{player} 发动【{skill}】，{target} 回复了 1 点体力"}
+    ]
+  },
+  "jianxiong": {
+    "trigger": "after_damaged",
+    "steps": [
+      {"get_card": {"from": "damage_card"}},
+      {"log": "{player} 发动【{skill}】，获得了伤害牌"}
+    ]
+  },
+  "fankui": {
+    "trigger": "after_damaged",
+    "steps": [
+      {"get_card": {"from": "source"}},
+      {"log": "{player} 发动【{skill}】，获得了 {source} 的一张牌"}
+    ]
+  },
+  "ganglie": {
+    "trigger": "after_damaged",
+    "steps": [
+      {"log": "{player} 发动【{skill}】"},
+      {"judge": {
+        "success_if": {"not_suit": "heart"},
+        "success": [
+          {"if": {"check": "source_hand_ge", "value": 2},
+           "then": [{"discard": {"from": "hand", "player": "source", "count": 2}}, {"log": "{source} 弃置了两张牌"}],
+           "else": [{"damage": {"target": "source", "amount": 1}}]}
+        ],
+        "fail": []
+      }}
+    ]
+  },
+  "keji": {
+    "trigger": "phase_discard",
+    "condition": [{"check": "no_sha_used"}],
+    "steps": [
+      {"log": "{player} 发动【{skill}】，跳过弃牌阶段"}
+    ]
+  },
+  "kuanggu": {
+    "trigger": "after_damage_dealt",
+    "condition": [
+      {"check": "distance_le", "value": 1},
+      {"check": "hp_below_max"}
+    ],
+    "steps": [
+      {"heal": 1},
+      {"log": "{player} 发动【{skill}】，回复了 1 点体力"}
+    ]
+  },
+  "yingzi": {
+    "trigger": "phase_draw",
+    "steps": [
+      {"log": "{player} 发动【{skill}】，多摸一张牌"}
+    ]
+  },
+  "zhiheng": {
+    "trigger": "active",
+    "phase": "play",
+    "limit": 1,
+    "condition": [{"check": "has_hand_cards", "min": 1}],
+    "steps": [
+      {"log": "{player} 发动【{skill}】，弃置牌后摸等量的牌"}
+    ]
+  },
+  "rende": {
+    "trigger": "active",
+    "phase": "play",
+    "condition": [{"check": "has_hand_cards", "min": 1}],
+    "steps": [
+      {"transfer": {"from": "hand", "to": "target.hand"}},
+      {"log": "{player} 发动【{skill}】"}
+    ]
+  },
+  "jieyin": {
+    "trigger": "active",
+    "phase": "play",
+    "limit": 1,
+    "condition": [{"check": "has_hand_cards", "min": 2}],
+    "cost": [{"discard": {"from": "hand", "count": 2}}],
+    "target": {"type": "wounded_male"},
+    "steps": [
+      {"heal": {"target": "self", "amount": 1}},
+      {"heal": {"target": "target", "amount": 1}},
+      {"log": "{player} 发动【{skill}】，与 {target} 各回复 1 点体力"}
+    ]
+  },
+  "liegong": {
+    "trigger": "on_use_sha",
+    "condition": [
+      {"check": "target_hand_ge_hp"},
+      {"check": "target_hand_le_range", "operator": "or"}
+    ],
+    "steps": [
+      {"log": "{player} 发动【{skill}】，{target} 不能使用【闪】"}
+    ]
+  },
+  "shensu": {
+    "trigger": "active",
+    "steps": [
+      {"log": "{player} 发动【{skill}】，视为对 {target} 使用【杀】"},
+      {"damage": {"target": "target", "amount": 1}}
+    ]
+  },
+  "tuixin": {
+    "_comment": "徐庶测试技能：结束阶段摸两张牌",
+    "trigger": "phase_end",
+    "steps": [
+      {"draw": 2},
+      {"log": "{player} 发动【{skill}】，摸了 2 张牌"}
+    ]
+  },
+  "zhufu": {
+    "_comment": "徐庶测试技能：主动失去1点体力，摸三张牌",
+    "trigger": "active",
+    "phase": "play",
+    "condition": [{"check": "hp_above", "value": 2}],
+    "steps": [
+      {"lose_hp": 1},
+      {"draw": 3},
+      {"log": "{player} 发动【{skill}】，失去 1 点体力，摸了 3 张牌"}
+    ]
+  }
+}

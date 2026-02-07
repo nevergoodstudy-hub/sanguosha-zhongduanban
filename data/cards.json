@@ -833,6 +833,26 @@
       "count": 1
     },
     {
+      "id": "jiedao_club_Q",
+      "name": "借刀杀人",
+      "type": "trick",
+      "subtype": "single_target",
+      "suit": "club",
+      "number": 12,
+      "description": "出牌阶段，对一名装备有武器的其他角色使用。令其对你指定的一名角色使用【杀】，否则将其装备区的武器牌交给你。",
+      "count": 1
+    },
+    {
+      "id": "jiedao_club_K",
+      "name": "借刀杀人",
+      "type": "trick",
+      "subtype": "single_target",
+      "suit": "club",
+      "number": 13,
+      "description": "出牌阶段，对一名装备有武器的其他角色使用。令其对你指定的一名角色使用【杀】，否则将其装备区的武器牌交给你。",
+      "count": 1
+    },
+    {
       "id": "taoyuan_heart_A",
       "name": "桃园结义",
       "type": "trick",

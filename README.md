@@ -11,15 +11,15 @@
   <a href="https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban/actions/workflows/ci.yml">
     <img src="https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
-  <img src="https://img.shields.io/badge/Python-3.8%2B-blue" alt="Python">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-green" alt="Platform">
-  <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black">
+  <img src="https://img.shields.io/badge/code%20style-ruff-261230.svg" alt="Code style: ruff">
 </p>
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
 ║                    【 三 国 杀 】                              ║
-║                   命令行终端版 v1.1                           ║
+║                   命令行终端版 v3.0                           ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -46,11 +46,14 @@
 ## ✨ 功能特性
 
 ### 核心功能
-- ✅ 支持2-4人对战（1人玩家 + AI）
+- ✅ 支持2-8人对战（1人玩家 + AI）
 - ✅ 完整的身份模式：主公、忠臣、反贼、内奸
 - ✅ 回合制游戏流程：准备→判定→摸牌→出牌→弃牌→结束
 - ✅ 体力值系统和手牌上限机制
-- ✅ 事件驱动架构与动作系统 ✨**New**
+- ✅ 事件驱动架构与动作系统
+- ✅ Textual TUI: 现代终端图形界面，支持鼠标点击交互
+- ✅ 网络对战: WebSocket 服务端/客户端
+- ✅ 存档/读档系统
 
 ### 军争篇机制 ✨**v1.1.0 New**
 - 🍺 **酒**：出牌阶段使下一张杀伤害+1，濒死时回复1点体力
@@ -106,9 +109,22 @@
 - 🟡 **普通模式**：基础策略决策
 - 🔴 **困难模式**：深度策略 + 嘲讽值系统
 
+### 🖥️ Textual TUI 模式 ✨**v3.1 唯一 UI**
+
+Textual 图形界面，支持鼠标点击交互：
+
+```bash
+python main.py
+```
+
+- 🎮 主菜单 / 游戏设置 / 英雄选择 / 游戏主界面 / 规则查看
+- 🃏 手牌点击出牌，卡片式展示（CardWidget）
+- 🎯 ModalScreen 弹窗: 目标选择 / 无懈可击响应 / 花色猜测 / 手牌拾取
+- 📊 HP血条 / 装备栏 / 回合指示器 / 玩家面板
+
 ## 💻 系统要求
 
-- **Python**: 3.8 或更高版本
+- **Python**: 3.10 或更高版本
 - **操作系统**: Windows / macOS / Linux
 - **终端**: 支持UTF-8编码的终端
 
@@ -124,11 +140,14 @@ cd sanguosha
 # 或者直接下载并解压
 ```
 
-### 2. 安装依赖（可选）
+### 2. 安装依赖
 
 ```bash
-# 安装colorama以获得彩色输出支持（可选）
-pip install colorama
+# 安装所有依赖
+pip install -e .
+
+# 或安装开发依赖
+pip install -e ".[dev]"
 ```
 
 ### 3. 验证安装
@@ -143,7 +162,7 @@ python main.py
 
 ```bash
 cd sanguosha
-python main.py
+python main.py              # Textual TUI 模式
 ```
 
 ### 游戏流程
@@ -357,9 +376,10 @@ sanguosha/
 
 ### 代码规范
 
-- 遵循 PEP8 规范
-- 使用 Type Hints 类型注解
-- 完整的 docstring 文档
+- 使用 [Ruff](https://docs.astral.sh/ruff/) 统一代码风格 (替代 Black + isort + flake8)
+- MyPy 渐进严格模式 (`disallow_untyped_defs = true`)
+- Type Hints 类型注解 + PEP 561 `py.typed`
+- Google 风格 docstring
 - 模块化设计，低耦合高内聚
 
 ### 扩展指南

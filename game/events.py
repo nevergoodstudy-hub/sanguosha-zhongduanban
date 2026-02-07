@@ -5,6 +5,7 @@
 """
 
 from __future__ import annotations
+import bisect
 from enum import Enum, auto
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Callable, TYPE_CHECKING
@@ -147,16 +148,27 @@ class EventBus:
     """
     事件总线
     负责事件的发布和订阅
+
+    内部存储格式: (-priority, insertion_order, handler)
+    使用 bisect.insort 维护有序列表，避免每次 subscribe 全量 sort。
     """
 
     def __init__(self):
-        # 事件处理器映射：事件类型 -> 处理器列表
-        self._handlers: Dict[EventType, List[tuple[int, EventHandler]]] = defaultdict(list)
+        # 事件处理器映射：事件类型 -> 有序 handler 列表
+        # 每个元素为 (-priority, seq, handler)，按自然升序即优先级降序
+        self._handlers: Dict[EventType, List[tuple[int, int, EventHandler]]] = defaultdict(list)
         # 全局处理器（监听所有事件）
-        self._global_handlers: List[tuple[int, EventHandler]] = []
+        self._global_handlers: List[tuple[int, int, EventHandler]] = []
+        # 插入序号（用于同优先级 FIFO 稳定排序）
+        self._seq: int = 0
         # 事件历史记录
         self._event_history: List[GameEvent] = []
         self._max_history: int = 100
+
+    def _next_seq(self) -> int:
+        seq = self._seq
+        self._seq += 1
+        return seq
 
     def subscribe(self, event_type: EventType, handler: EventHandler,
                   priority: int = 0) -> None:
@@ -168,25 +180,32 @@ class EventBus:
             handler: 事件处理器
             priority: 优先级（数字越大越先执行）
         """
-        self._handlers[event_type].append((priority, handler))
-        # 按优先级排序
-        self._handlers[event_type].sort(key=lambda x: x[0], reverse=True)
+        entry = (-priority, self._next_seq(), handler)
+        bisect.insort(self._handlers[event_type], entry)
 
     def subscribe_all(self, handler: EventHandler, priority: int = 0) -> None:
         """订阅所有事件"""
-        self._global_handlers.append((priority, handler))
-        self._global_handlers.sort(key=lambda x: x[0], reverse=True)
+        entry = (-priority, self._next_seq(), handler)
+        bisect.insort(self._global_handlers, entry)
+
+    def once(self, event_type: EventType, handler: EventHandler,
+             priority: int = 0) -> None:
+        """订阅事件（仅触发一次后自动取消订阅）"""
+        def _wrapper(event: GameEvent) -> None:
+            handler(event)
+            self.unsubscribe(event_type, _wrapper)
+        self.subscribe(event_type, _wrapper, priority)
 
     def unsubscribe(self, event_type: EventType, handler: EventHandler) -> None:
         """取消订阅"""
         self._handlers[event_type] = [
-            (p, h) for p, h in self._handlers[event_type] if h != handler
+            entry for entry in self._handlers[event_type] if entry[2] != handler
         ]
 
     def unsubscribe_all(self, handler: EventHandler) -> None:
         """取消订阅所有事件"""
         self._global_handlers = [
-            (p, h) for p, h in self._global_handlers if h != handler
+            entry for entry in self._global_handlers if entry[2] != handler
         ]
         for event_type in self._handlers:
             self.unsubscribe(event_type, handler)
@@ -207,7 +226,7 @@ class EventBus:
             self._event_history = self._event_history[-self._max_history:]
 
         # 调用全局处理器
-        for _, handler in self._global_handlers:
+        for _, _, handler in self._global_handlers:
             if event.cancelled:
                 break
             try:
@@ -217,7 +236,7 @@ class EventBus:
 
         # 调用特定事件处理器
         if not event.cancelled:
-            for _, handler in self._handlers.get(event.event_type, []):
+            for _, _, handler in self._handlers.get(event.event_type, []):
                 if event.cancelled:
                     break
                 try:

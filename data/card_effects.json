@@ -1,0 +1,39 @@
+{
+  "_comment": "卡牌效果 DSL 定义 — 简单卡牌通过数据配置",
+  "tao": {
+    "display_name": "桃",
+    "needs_target": false,
+    "condition": {"check": "hp_below_max"},
+    "condition_fail_msg": "体力已满，无法使用桃",
+    "condition_fail_action": "return_card",
+    "wuxie": false,
+    "steps": [
+      {"heal": {"target": "self", "amount": 1}},
+      {"log": "{player} 使用了【桃】，回复了 1 点体力"}
+    ],
+    "discard_after": true
+  },
+  "wuzhongshengyou": {
+    "display_name": "无中生有",
+    "needs_target": false,
+    "wuxie": true,
+    "wuxie_target": "self",
+    "steps": [
+      {"draw": {"target": "self", "count": 2}},
+      {"log": "{player} 摸了 2 张牌"}
+    ],
+    "discard_after": true
+  },
+  "taoyuanjieyi": {
+    "display_name": "桃园结义",
+    "needs_target": false,
+    "scope": "all_alive_from_player",
+    "wuxie": true,
+    "wuxie_per_target": true,
+    "steps": [
+      {"heal": {"target": "current", "amount": 1, "if_wounded": true}},
+      {"log_if_healed": "{target} 回复了 1 点体力"}
+    ],
+    "discard_after": true
+  }
+}
