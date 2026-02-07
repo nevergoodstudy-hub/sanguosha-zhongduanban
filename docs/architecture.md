@@ -120,9 +120,12 @@ data/
   └── skill_dsl.json    ── 技能 DSL 声明
 ```
 
-## 已知架构问题 (待 Phase B 改进)
+## 已知架构问题
 
-1. **SanguoshaGame 过大** (820 行): 同时承担控制器 + 视图适配器职责
-2. **GameEngine 过大** (1000+ 行): 回合管理/效果/伤害/日志/胜负 混合
-3. **双重分发路径**: `_card_handlers` 旧字典 与 `effect_registry` 新系统并存
-4. **Screen 未拆分**: Textual `app.py` 中所有 Screen 类在同一文件
+1. **GameEngine 过大** (1400+ 行): 回合管理/效果/伤害/日志/胜负 混合，待进一步拆分
+2. **双重分发路径**: `_card_handlers` 旧字典 与 `effect_registry` 新系统并存
+
+### 已解决
+- ✅ Screen 已拆分为 6 个独立文件 (`screens/` 目录)
+- ✅ SanguoshaGame 已重构为 GameController
+- ✅ DamageType 枚举已统一到 `card.py`
