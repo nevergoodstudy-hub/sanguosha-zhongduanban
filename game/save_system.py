@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-存档与读档系统 (M4-T06)
+"""存档与读档系统 (M4-T06)
 
 功能:
 - 序列化完整游戏状态为 JSON
@@ -9,17 +7,19 @@
 """
 
 from __future__ import annotations
+
 import json
 import logging
 import time
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Tuple, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from .card import Card
     from .engine import GameEngine
     from .player import Player
-    from .card import Card
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ SAVE_DIR = "saves"
 SCHEMA_VERSION: int = 2
 
 # 迁移注册表: source_schema → (target_schema, migration_fn)
-_MIGRATIONS: Dict[int, Tuple[int, Callable[[Dict[str, Any]], Dict[str, Any]]]] = {}
+_MIGRATIONS: dict[int, tuple[int, Callable[[dict[str, Any]], dict[str, Any]]]] = {}
 
 
 def register_migration(from_schema: int, to_schema: int):
@@ -42,14 +42,14 @@ def register_migration(from_schema: int, to_schema: int):
         from_schema: 源 schema 版本
         to_schema: 目标 schema 版本 (必须 > from_schema)
     """
-    def decorator(fn: Callable[[Dict[str, Any]], Dict[str, Any]]):
+    def decorator(fn: Callable[[dict[str, Any]], dict[str, Any]]):
         _MIGRATIONS[from_schema] = (to_schema, fn)
         return fn
     return decorator
 
 
 @register_migration(from_schema=1, to_schema=2)
-def _migrate_v1_to_v2(data: Dict[str, Any]) -> Dict[str, Any]:
+def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
     """v1 → v2: 为玩家补充 judge_area / is_chained / is_flipped 字段。"""
     for player in data.get("players", []):
         player.setdefault("judge_area", [])
@@ -59,7 +59,7 @@ def _migrate_v1_to_v2(data: Dict[str, Any]) -> Dict[str, Any]:
     return data
 
 
-def apply_migrations(data: Dict[str, Any]) -> Dict[str, Any]:
+def apply_migrations(data: dict[str, Any]) -> dict[str, Any]:
     """按链式顺序将存档数据迁移到当前 schema 版本。
 
     无 schema_version 字段的旧存档视为 schema 1。
@@ -90,7 +90,7 @@ def apply_migrations(data: Dict[str, Any]) -> Dict[str, Any]:
 
 # ==================== 序列化 ====================
 
-def serialize_card(card: 'Card') -> Dict[str, Any]:
+def serialize_card(card: Card) -> dict[str, Any]:
     """序列化单张卡牌"""
     return {
         "name": card.name if isinstance(card.name, str) else card.name.value
@@ -101,7 +101,7 @@ def serialize_card(card: 'Card') -> Dict[str, Any]:
     }
 
 
-def serialize_player(player: 'Player') -> Dict[str, Any]:
+def serialize_player(player: Player) -> dict[str, Any]:
     """序列化玩家状态"""
     data = {
         "id": player.id,
@@ -132,15 +132,12 @@ def serialize_player(player: 'Player') -> Dict[str, Any]:
     return data
 
 
-def serialize_engine(engine: 'GameEngine') -> Dict[str, Any]:
-    """
-    序列化完整游戏状态
+def serialize_engine(engine: GameEngine) -> dict[str, Any]:
+    """序列化完整游戏状态
 
     Returns:
         可 JSON 化的 dict，包含所有重建游戏所需信息
     """
-    from .engine import GameState, GamePhase
-
     data = {
         "save_version": SAVE_VERSION,
         "schema_version": SCHEMA_VERSION,
@@ -173,9 +170,8 @@ def serialize_engine(engine: 'GameEngine') -> Dict[str, Any]:
 
 # ==================== 持久化 ====================
 
-def save_game(engine: 'GameEngine', filepath: Optional[str] = None) -> str:
-    """
-    保存游戏到文件
+def save_game(engine: GameEngine, filepath: str | None = None) -> str:
+    """保存游戏到文件
 
     Args:
         engine: 游戏引擎
@@ -199,9 +195,8 @@ def save_game(engine: 'GameEngine', filepath: Optional[str] = None) -> str:
     return filepath
 
 
-def load_game(filepath: str) -> Dict[str, Any]:
-    """
-    从文件加载存档数据
+def load_game(filepath: str) -> dict[str, Any]:
+    """从文件加载存档数据
 
     Args:
         filepath: 存档文件路径
@@ -214,7 +209,7 @@ def load_game(filepath: str) -> Dict[str, Any]:
         json.JSONDecodeError: JSON 格式错误
         ValueError: 版本不兼容
     """
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         data = json.load(f)
 
     # Schema 迁移
@@ -223,9 +218,8 @@ def load_game(filepath: str) -> Dict[str, Any]:
     return data
 
 
-def list_saves(save_dir: str = SAVE_DIR) -> List[Dict[str, Any]]:
-    """
-    列出所有存档文件
+def list_saves(save_dir: str = SAVE_DIR) -> list[dict[str, Any]]:
+    """列出所有存档文件
 
     Returns:
         存档信息列表 (路径、时间、玩家数、回合数)
@@ -237,7 +231,7 @@ def list_saves(save_dir: str = SAVE_DIR) -> List[Dict[str, Any]]:
     saves = []
     for f in sorted(path.glob("save_*.json"), reverse=True):
         try:
-            with open(f, "r", encoding="utf-8") as fp:
+            with open(f, encoding="utf-8") as fp:
                 data = json.load(fp)
             saves.append({
                 "filepath": str(f),
@@ -265,8 +259,7 @@ def delete_save(filepath: str) -> bool:
 # ==================== 回放增强 ====================
 
 class EnhancedReplay:
-    """
-    增强回放器 (M4-T06)
+    """增强回放器 (M4-T06)
 
     支持:
     - 单步前进
@@ -274,9 +267,9 @@ class EnhancedReplay:
     - 变速播放
     """
 
-    def __init__(self, save_data: Dict[str, Any]):
+    def __init__(self, save_data: dict[str, Any]):
         self.save_data = save_data
-        self.action_log: List[Dict[str, Any]] = save_data.get("action_log", [])
+        self.action_log: list[dict[str, Any]] = save_data.get("action_log", [])
         self.current_step: int = 0
         self.total_steps: int = len(self.action_log)
         self.speed: float = 1.0  # 1.0 = 正常速度
@@ -289,13 +282,13 @@ class EnhancedReplay:
         return self.current_step / self.total_steps
 
     @property
-    def current_action(self) -> Optional[Dict[str, Any]]:
+    def current_action(self) -> dict[str, Any] | None:
         """当前步骤的动作"""
         if 0 <= self.current_step < self.total_steps:
             return self.action_log[self.current_step]
         return None
 
-    def step_forward(self) -> Optional[Dict[str, Any]]:
+    def step_forward(self) -> dict[str, Any] | None:
         """前进一步"""
         if self.current_step < self.total_steps:
             action = self.action_log[self.current_step]
@@ -330,7 +323,7 @@ class EnhancedReplay:
         """当前步骤间的延迟 (秒)"""
         return 0.5 / self.speed
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """获取回放摘要"""
         return {
             "total_steps": self.total_steps,

@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-伤害系统模块
+"""伤害系统模块
 负责伤害计算、濒死处理、死亡处理和铁索连环传导
 
 本模块将伤害相关逻辑从 GameEngine 中解耦，
@@ -8,46 +6,46 @@
 """
 
 from __future__ import annotations
-from typing import List, Optional, Callable, TYPE_CHECKING
-from dataclasses import dataclass
-from enum import Enum
+
 import logging
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from i18n import t as _t
 
 from .card import CardName, DamageType
 from .constants import SkillId
-from .hero import Kingdom
 from .events import EventType
+from .hero import Kingdom
 
 if TYPE_CHECKING:
     from .engine import GameEngine
     from .player import Player
-    from .card import Card
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class DamageEvent:
     """伤害事件数据"""
-    source: Optional['Player']  # 伤害来源，None 表示系统伤害
-    target: 'Player'           # 伤害目标
+    source: Player | None  # 伤害来源，None 表示系统伤害
+    target: Player           # 伤害目标
     damage: int                # 伤害值
     damage_type: DamageType    # 伤害类型
     is_chain: bool = False     # 是否为连环传导伤害
 
 
-@dataclass
+@dataclass(slots=True)
 class DamageResult:
     """伤害结果"""
     actual_damage: int          # 实际造成的伤害
     target_died: bool           # 目标是否死亡
     chain_triggered: bool       # 是否触发了连环
-    chain_targets: List['Player']  # 连环传导目标
+    chain_targets: list[Player]  # 连环传导目标
 
 
 class DamageSystem:
-    """
-    伤害系统
+    """伤害系统
 
     负责处理所有伤害相关的逻辑：
     - 伤害计算（含装备效果）
@@ -56,9 +54,8 @@ class DamageSystem:
     - 铁索连环传导
     """
 
-    def __init__(self, engine: 'GameEngine'):
-        """
-        初始化伤害系统
+    def __init__(self, engine: GameEngine):
+        """初始化伤害系统
 
         Args:
             engine: 游戏引擎引用
@@ -67,14 +64,13 @@ class DamageSystem:
 
     def deal_damage(
         self,
-        source: Optional['Player'],
-        target: 'Player',
+        source: Player | None,
+        target: Player,
         damage: int,
         damage_type: str = "normal",
         is_chain: bool = False
     ) -> DamageResult:
-        """
-        造成伤害
+        """造成伤害
 
         Args:
             source: 伤害来源，None 表示系统伤害
@@ -95,7 +91,7 @@ class DamageSystem:
             logger.warning("deal_damage called with invalid target")
             return DamageResult(0, False, False, [])
 
-        source_name = source.name if source else "系统"
+        source_name = source.name if source else _t("game.damage_system")
         old_hp = target.hp
 
         # 计算实际伤害（应用装备效果）
@@ -142,12 +138,11 @@ class DamageSystem:
 
     def _calculate_actual_damage(
         self,
-        target: 'Player',
+        target: Player,
         base_damage: int,
         damage_type: str
     ) -> int:
-        """
-        计算实际伤害（应用装备效果）
+        """计算实际伤害（应用装备效果）
 
         Args:
             target: 目标玩家
@@ -165,7 +160,7 @@ class DamageSystem:
                 actual_damage += 1
                 self.engine.log_event(
                     "equipment",
-                    f"  🔥 {target.name} 的【藤甲】被火焰点燃，伤害+1！"
+                    _t("damage.tengjia_fire", name=target.name)
                 )
 
         # 白银狮子效果：受到大于1点伤害时，防止多余的伤害
@@ -175,7 +170,7 @@ class DamageSystem:
                 actual_damage = 1
                 self.engine.log_event(
                     "equipment",
-                    f"  🦁 {target.name} 的【白银狮子】防止了 {original_damage - 1} 点伤害！"
+                    _t("damage.baiyinshizi_prevent", name=target.name, prevented=original_damage - 1)
                 )
 
         return actual_damage
@@ -183,7 +178,7 @@ class DamageSystem:
     def _log_damage(
         self,
         source_name: str,
-        target: 'Player',
+        target: Player,
         damage: int,
         damage_type: str,
         old_hp: int
@@ -191,25 +186,25 @@ class DamageSystem:
         """记录伤害日志"""
         damage_type_display = {
             "normal": "",
-            "fire": "🔥火焰",
-            "thunder": "⚡雷电"
+            "fire": _t("game.damage_fire"),
+            "thunder": _t("game.damage_thunder")
         }.get(damage_type, "")
 
         self.engine.log_event(
             "damage",
-            f"💔 {target.name} 受到 {source_name} 的 {damage} 点{damage_type_display}伤害 "
-            f"[{old_hp}→{target.hp}/{target.max_hp}]"
+            _t("game.damage", target=target.name, source=source_name,
+               damage=damage, type=damage_type_display,
+               old_hp=old_hp, new_hp=target.hp, max_hp=target.max_hp)
         )
 
     def _handle_chain_damage(
         self,
-        source: Optional['Player'],
-        original_target: 'Player',
+        source: Player | None,
+        original_target: Player,
         damage: int,
         damage_type: str
-    ) -> List['Player']:
-        """
-        处理铁索连环传导伤害
+    ) -> list[Player]:
+        """处理铁索连环传导伤害
 
         Args:
             source: 伤害来源
@@ -224,7 +219,7 @@ class DamageSystem:
         original_target.break_chain()
         self.engine.log_event(
             "chain",
-            f"  🔗 {original_target.name} 的铁索连环被触发！伤害传导中..."
+            _t("game.chain_trigger", player=original_target.name)
         )
 
         chain_targets = []
@@ -232,7 +227,7 @@ class DamageSystem:
         # 按座位顺序传导给其他被连环的角色
         for player in self.engine.players:
             if player.is_alive and player != original_target and player.is_chained:
-                self.engine.log_event("chain", f"  🔗 伤害传导至 {player.name}！")
+                self.engine.log_event("chain", _t("game.chain_propagate", player=player.name))
                 player.break_chain()  # 解除连环状态
                 chain_targets.append(player)
 
@@ -241,9 +236,8 @@ class DamageSystem:
 
         return chain_targets
 
-    def _handle_dying(self, player: 'Player') -> bool:
-        """
-        处理濒死状态
+    def _handle_dying(self, player: Player) -> bool:
+        """处理濒死状态
 
         Args:
             player: 濒死的玩家
@@ -256,7 +250,7 @@ class DamageSystem:
         hero_name = player.hero.name if player.hero else '???'
         self.engine.log_event(
             "dying",
-            f"⚠️ {player.name}({hero_name}) 进入濒死状态！HP: {player.hp}"
+            _t("game.dying", player=player.name, hero=hero_name, hp=player.hp)
         )
 
         # 从当前玩家开始按座位顺序请求救援
@@ -283,7 +277,7 @@ class DamageSystem:
                         self.engine.deck.discard([card])
                         self.engine.log_event(
                             "save",
-                            f"{savior.name} 使用【桃】救援了 {player.name}"
+                            _t("game.save", savior=savior.name, player=player.name)
                         )
 
                         # 救援技能（孙权）
@@ -294,7 +288,7 @@ class DamageSystem:
                             player.heal(1)
                             self.engine.log_event(
                                 "skill",
-                                f"{player.name} 发动【救援】，额外回复1点体力"
+                                _t("game.jiuyuan", player=player.name)
                             )
                     else:
                         break
@@ -307,7 +301,7 @@ class DamageSystem:
                         self.engine.deck.discard([result])
                         self.engine.log_event(
                             "save",
-                            f"{savior.name} 使用【桃】救援了 {player.name}"
+                            _t("game.save", savior=savior.name, player=player.name)
                         )
                     else:
                         break
@@ -317,7 +311,7 @@ class DamageSystem:
 
         return player.hp > 0
 
-    def _ai_should_save(self, savior: 'Player', dying: 'Player') -> bool:
+    def _ai_should_save(self, savior: Player, dying: Player) -> bool:
         """AI决定是否救援"""
         from .player import Identity
 
@@ -335,14 +329,12 @@ class DamageSystem:
             return True
         return False
 
-    def _handle_death(self, player: 'Player') -> None:
+    def _handle_death(self, player: Player) -> None:
         """处理死亡"""
-        from .player import Identity, EquipmentSlot
-
         player.die()
         self.engine.log_event(
             "death",
-            f"【{player.name}】阵亡！身份是【{player.identity.chinese_name}】"
+            _t("game.death", player=player.name, identity=player.identity.chinese_name)
         )
 
         # 弃置所有牌
@@ -357,7 +349,7 @@ class DamageSystem:
         # 检查游戏是否结束
         self.engine.check_game_over()
 
-    def _handle_rewards_and_penalties(self, dead_player: 'Player') -> None:
+    def _handle_rewards_and_penalties(self, dead_player: Player) -> None:
         """处理击杀奖惩"""
         from .player import Identity
 
@@ -372,7 +364,7 @@ class DamageSystem:
             killer.draw_cards(cards)
             self.engine.log_event(
                 "reward",
-                f"{killer.name} 杀死反贼，摸三张牌"
+                _t("game.reward_rebel", killer=killer.name)
             )
 
         # 主公杀死忠臣，弃置所有牌
@@ -384,7 +376,7 @@ class DamageSystem:
             self.engine.deck.discard(discard_cards)
             self.engine.log_event(
                 "penalty",
-                f"{killer.name} 杀死忠臣，弃置所有牌"
+                _t("game.penalty_loyalist", killer=killer.name)
             )
 
 
@@ -393,10 +385,9 @@ class DamageSystem:
 
 def calculate_damage_with_modifiers(
     base_damage: int,
-    modifiers: List[int]
+    modifiers: list[int]
 ) -> int:
-    """
-    计算带修正的伤害
+    """计算带修正的伤害
 
     Args:
         base_damage: 基础伤害

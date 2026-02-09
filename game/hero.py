@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
-"""
-武将系统模块
+"""武将系统模块
 定义武将类、技能类和势力
 """
 
 from __future__ import annotations
-from enum import Enum
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Callable, TYPE_CHECKING
+
 import json
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .player import Player
     from .engine import GameEngine
+    from .player import Player
 
 
 class Kingdom(Enum):
@@ -25,14 +24,9 @@ class Kingdom(Enum):
 
     @property
     def chinese_name(self) -> str:
-        """获取中文名称"""
-        names = {
-            Kingdom.WEI: "魏",
-            Kingdom.SHU: "蜀",
-            Kingdom.WU: "吴",
-            Kingdom.QUN: "群"
-        }
-        return names.get(self, "?")
+        """获取国际化显示名称"""
+        from i18n import kingdom_name
+        return kingdom_name(self.value)
 
     @property
     def color(self) -> str:
@@ -54,28 +48,13 @@ class SkillType(Enum):
     TRANSFORM = "transform"  # 转化技能
 
 
-class SkillTiming(Enum):
-    """技能触发时机枚举"""
-    PREPARE = "prepare"         # 准备阶段
-    JUDGE = "judge"             # 判定阶段
-    DRAW = "draw"               # 摸牌阶段
-    PLAY = "play"               # 出牌阶段
-    DISCARD = "discard"         # 弃牌阶段
-    END = "end"                 # 结束阶段
-    BEFORE_ATTACK = "before_attack"     # 使用杀前
-    AFTER_ATTACK = "after_attack"       # 使用杀后
-    BEFORE_DAMAGED = "before_damaged"   # 受到伤害前
-    AFTER_DAMAGED = "after_damaged"     # 受到伤害后
-    BEFORE_DYING = "before_dying"       # 濒死前
-    ON_DEATH = "on_death"               # 死亡时
-    RESPOND = "respond"                 # 响应时（需要出闪/杀时）
-    CARD_USED_OUTSIDE_TURN = "card_used_outside_turn"   # 回合外使用牌时
+# SkillTiming 已移动到 constants.py，作为单一事实来源 (SSOT)
+from .constants import SkillTiming
 
 
 @dataclass
 class Skill:
-    """
-    技能类
+    """技能类
 
     Attributes:
         id: 技能唯一标识符
@@ -92,11 +71,11 @@ class Skill:
     name: str
     description: str
     skill_type: SkillType
-    timing: Optional[SkillTiming] = None
+    timing: SkillTiming | None = None
     is_lord_skill: bool = False
     is_compulsory: bool = False
     limit_per_turn: int = 0
-    target_card: Optional[str] = None
+    target_card: str | None = None
 
     # 运行时状态
     used_count: int = field(default=0, repr=False)
@@ -108,9 +87,8 @@ class Skill:
         if isinstance(self.timing, str):
             self.timing = SkillTiming(self.timing)
 
-    def can_use(self, player: 'Player', game_engine: 'GameEngine') -> bool:
-        """
-        检查技能是否可以使用
+    def can_use(self, player: Player, game_engine: GameEngine) -> bool:
+        """检查技能是否可以使用
 
         Args:
             player: 使用技能的玩家
@@ -123,8 +101,8 @@ class Skill:
         if self.limit_per_turn > 0 and self.used_count >= self.limit_per_turn:
             return False
 
-        # 主公技检查
-        if self.is_lord_skill and player.identity.value != "lord":  # Identity not imported here, keep string
+        # 主公技检查 — 避免循环导入，使用字符串值比较
+        if self.is_lord_skill and getattr(player.identity, 'value', None) != "lord":
             return False
 
         return True
@@ -137,7 +115,7 @@ class Skill:
         """使用技能（增加使用次数）"""
         self.used_count += 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,
@@ -152,7 +130,7 @@ class Skill:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Skill':
+    def from_dict(cls, data: dict[str, Any]) -> Skill:
         """从字典创建技能"""
         timing = None
         if data.get("timing"):
@@ -184,8 +162,7 @@ class Skill:
 
 @dataclass
 class Hero:
-    """
-    武将类
+    """武将类
 
     Attributes:
         id: 武将唯一标识符
@@ -202,16 +179,15 @@ class Hero:
     max_hp: int
     gender: str
     title: str
-    skills: List[Skill] = field(default_factory=list)
+    skills: list[Skill] = field(default_factory=list)
 
     def __post_init__(self):
         """初始化后处理"""
         if isinstance(self.kingdom, str):
             self.kingdom = Kingdom(self.kingdom)
 
-    def get_skill(self, skill_id: str) -> Optional[Skill]:
-        """
-        根据ID获取技能
+    def get_skill(self, skill_id: str) -> Skill | None:
+        """根据ID获取技能
 
         Args:
             skill_id: 技能ID
@@ -224,9 +200,8 @@ class Hero:
                 return skill
         return None
 
-    def get_skill_by_name(self, skill_name: str) -> Optional[Skill]:
-        """
-        根据名称获取技能
+    def get_skill_by_name(self, skill_name: str) -> Skill | None:
+        """根据名称获取技能
 
         Args:
             skill_name: 技能名称
@@ -249,7 +224,7 @@ class Hero:
             skill.reset_turn()
 
     @property
-    def skill_names(self) -> List[str]:
+    def skill_names(self) -> list[str]:
         """获取所有技能名称列表"""
         return [skill.name for skill in self.skills]
 
@@ -258,7 +233,7 @@ class Hero:
         """获取势力中文名"""
         return self.kingdom.chinese_name
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,
@@ -271,7 +246,7 @@ class Hero:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Hero':
+    def from_dict(cls, data: dict[str, Any]) -> Hero:
         """从字典创建武将"""
         skills = [Skill.from_dict(s) for s in data.get("skills", [])]
         return cls(
@@ -293,26 +268,23 @@ class Hero:
 
 
 class HeroRepository:
-    """
-    武将仓库类
+    """武将仓库类
     管理所有武将数据
     """
 
-    def __init__(self, data_path: Optional[str] = None):
-        """
-        初始化武将仓库
+    def __init__(self, data_path: str | None = None):
+        """初始化武将仓库
 
         Args:
             data_path: 武将数据文件路径
         """
-        self._heroes: Dict[str, Hero] = {}
+        self._heroes: dict[str, Hero] = {}
 
         if data_path:
             self.load_heroes(data_path)
 
     def load_heroes(self, data_path: str) -> None:
-        """
-        从JSON文件加载武将数据
+        """从JSON文件加载武将数据
 
         Args:
             data_path: JSON文件路径
@@ -321,7 +293,7 @@ class HeroRepository:
         if not path.exists():
             raise FileNotFoundError(f"武将数据文件不存在: {data_path}")
 
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             data = json.load(f)
 
         self._heroes.clear()
@@ -330,9 +302,8 @@ class HeroRepository:
             hero = Hero.from_dict(hero_data)
             self._heroes[hero.id] = hero
 
-    def get_hero(self, hero_id: str) -> Optional[Hero]:
-        """
-        获取武将
+    def get_hero(self, hero_id: str) -> Hero | None:
+        """获取武将
 
         Args:
             hero_id: 武将ID
@@ -342,9 +313,8 @@ class HeroRepository:
         """
         return self._heroes.get(hero_id)
 
-    def get_hero_by_name(self, name: str) -> Optional[Hero]:
-        """
-        根据名称获取武将
+    def get_hero_by_name(self, name: str) -> Hero | None:
+        """根据名称获取武将
 
         Args:
             name: 武将名称
@@ -357,13 +327,12 @@ class HeroRepository:
                 return hero
         return None
 
-    def get_all_heroes(self) -> List[Hero]:
+    def get_all_heroes(self) -> list[Hero]:
         """获取所有武将列表"""
         return list(self._heroes.values())
 
-    def get_heroes_by_kingdom(self, kingdom: Kingdom) -> List[Hero]:
-        """
-        获取指定势力的所有武将
+    def get_heroes_by_kingdom(self, kingdom: Kingdom) -> list[Hero]:
+        """获取指定势力的所有武将
 
         Args:
             kingdom: 势力
@@ -373,9 +342,8 @@ class HeroRepository:
         """
         return [h for h in self._heroes.values() if h.kingdom == kingdom]
 
-    def get_random_heroes(self, count: int) -> List[Hero]:
-        """
-        随机获取指定数量的武将
+    def get_random_heroes(self, count: int) -> list[Hero]:
+        """随机获取指定数量的武将
 
         Args:
             count: 数量

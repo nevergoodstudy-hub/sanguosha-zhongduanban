@@ -1,0 +1,131 @@
+================================================================================
+         三国杀终端版 (sanguosha) — 测试缺陷报告
+         报告日期: 2026-02-09
+         测试环境: Windows / Python 3.14.2 / pytest 9.0.2
+================================================================================
+
+──────────────────────────────────────────────────────
+ BUG-001  [严重] 神速(shensu)技能测试断言失败
+──────────────────────────────────────────────────────
+文件:     tests/test_skills.py::TestShensu::test_shensu_attack  (line 961-971)
+模块:     game/skills/wei.py::handle_shensu  (line 243-273)
+错误信息: assert 3 < 3  (即 target.hp 未减少)
+分析:
+  - handle_shensu 在造成伤害前调用 engine._request_shan(target, required_shan)
+  - 当 target 是 AI 且手中有闪牌时，AI 会自动出闪闪避，导致伤害为0
+  - 测试用例未控制目标手牌内容，随机种子不同可能导致目标恰好持有闪牌
+  - 断言 target.hp < hp_before 在目标成功出闪时失败
+修复建议:
+  - 测试前清空 target.hand 以确保无闪牌可出
+  - 或将断言改为 assert result is True (只验证技能成功触发)
+严重程度: P2 (测试用例设计缺陷，非游戏逻辑bug)
+
+──────────────────────────────────────────────────────
+ BUG-002  [严重] CSS动画类缺失导致UI测试失败
+──────────────────────────────────────────────────────
+文件:     tests/test_textual_ui.py::TestAnimationCSS::test_css_contains_animation_classes (line 128-135)
+模块:     ui/textual_ui/app.py::SanguoshaApp.CSS
+错误信息: AssertionError: "flash-damage" not found in CSS output
+分析:
+  - 测试期望 SanguoshaApp.CSS 包含 flash-damage, flash-heal, flash-skill 等类
+  - 实际 CSS 仅返回基础 Screen 样式，动画类定义可能在 .tcss 文件中而非内联 CSS
+  - SanguoshaApp.CSS 属性可能仅包含少量内联样式，完整样式在外部 TCSS 文件
+修复建议:
+  - 将动画类添加到 SanguoshaApp.CSS 内联定义中
+  - 或修改测试以读取对应的 .tcss 文件内容进行验证
+严重程度: P2 (UI样式缺失/测试与实现不匹配)
+
+──────────────────────────────────────────────────────
+ BUG-003  [中等] 代码覆盖率低于项目门禁
+──────────────────────────────────────────────────────
+实际覆盖率: 64.66% (分支覆盖)
+项目门禁:   75%  (pyproject.toml [tool.coverage.report] fail_under = 75)
+低覆盖率模块 (< 50%):
+  - ui/textual_ui/bridge.py:              22%
+  - ui/textual_ui/screens/game_play.py:    9%
+  - ui/textual_ui/screens/hero_select.py: 14%
+  - ui/textual_ui/modals/*.py:             0% (7个弹窗组件完全未覆盖)
+  - ui/textual_ui/widgets/card_widget.py:  0%
+  - ui/textual_ui/widgets/player_panel.py: 0%
+  - ui/textual_ui/widgets/equipment_slots.py: 0%
+  - ui/textual_ui/widgets/hand_row.py:     0%
+  - ui/input_safety.py:                    0%
+  - net/client.py:                         40%
+  - game/game_controller.py:               46%
+  - game/skill_interpreter.py:             45%
+修复建议:
+  - 增加 Textual Pilot 自动化 UI 测试覆盖模态框和游戏界面
+  - 增加 GameController 的集成测试
+  - 增加 SkillInterpreter DSL 解释器的单元测试
+
+──────────────────────────────────────────────────────
+ BUG-004  [中等] Ruff 静态分析发现 3631 个问题
+──────────────────────────────────────────────────────
+高优先级问题:
+  - F821 undefined-name:                2 处 (引用未定义的变量)
+  - F841 unused-variable:              28 处 (赋值后未使用的变量)
+  - F401 unused-import:               237 处 (未使用的导入)
+  - E401 multiple-imports-on-one-line:  1 处
+  - F811 redefined-while-unused:        8 处 (重定义了未使用的变量)
+  - B904 raise-without-from-inside-except: 1 处 (缺少异常链)
+  - 3 处 invalid-syntax 错误
+可自动修复: 2314 个 (使用 ruff --fix)
+修复建议:
+  - 立即运行 ruff check --fix . 自动修复2314个问题
+  - 手动处理 F821 未定义名称 和 3个语法错误
+  - 逐步清理 F841 未使用变量
+
+──────────────────────────────────────────────────────
+ BUG-005  [中等] MyPy 类型检查报错
+──────────────────────────────────────────────────────
+主要问题类别:
+  (1) union-attr 错误 (10+处): GameEngine | None 未做 None 检查直接访问属性
+     - game/game_controller.py:153,256 等
+  (2) no-untyped-def 错误: 函数缺少返回类型注解
+     - game/save_system.py:38,45
+     - game/card_handlers.py
+  (3) attr-defined 错误: 访问不存在的属性
+     - ui/textual_ui/screens/game_play.py:111 (_engine 不在 App 上)
+     - ui/textual_ui/screens/game_play.py:710 (CardName 不在 game.constants 中)
+  (4) arg-type 错误: 传参类型不匹配
+     - game/game_controller.py:256 (GameEngine|None 传入期望 GameEngine 的函数)
+修复建议:
+  - game_controller.py 中 self.engine 使用前增加 None 断言
+  - UI 层完善类型注解（已配置 disallow_untyped_defs = false 但仍有明确错误）
+  - 修正 game_play.py 中的错误属性引用
+
+──────────────────────────────────────────────────────
+ BUG-006  [低] requirements.txt 与 pyproject.toml 依赖不一致
+──────────────────────────────────────────────────────
+问题: requirements.txt 中包含 black>=23.0.0 和 isort>=5.12.0
+      而 pyproject.toml 中已迁移至 ruff，不再依赖 black/isort
+      requirements.txt 中 ruff>=0.1.0 版本过旧 (pyproject.toml 要求 >=0.8.0)
+修复建议: 同步 requirements.txt 与 pyproject.toml 的依赖版本
+
+──────────────────────────────────────────────────────
+ BUG-007  [低] 刚烈(ganglie)技能人类玩家分支直接造成伤害
+──────────────────────────────────────────────────────
+文件: game/skills/wei.py::handle_ganglie (line 139-140)
+分析:
+  - 当刚烈触发且来源非AI时，代码直接 engine.deal_damage 而未弹窗让人类玩家选择
+  - 原版规则应让来源选择"弃两张手牌"或"受到1点伤害"，但当前代码在非AI路径
+    直接造成伤害，跳过了弃牌选项
+修复建议:
+  - 增加人类玩家的弃牌选择逻辑，或通过 request_handler 请求输入
+
+──────────────────────────────────────────────────────
+ BUG-008  [低] 鬼才(guicai)技能仅实现 AI 路径
+──────────────────────────────────────────────────────
+文件: game/skills/wei.py::handle_guicai (line 100-114)
+分析:
+  - 鬼才判定只处理 player.is_ai 情况
+  - 当人类玩家触发鬼才时直接 return False，无法使用该技能
+修复建议:
+  - 增加人类玩家通过 UI 选择替换判定牌的逻辑
+
+================================================================================
+ 总结: 共发现 8 个问题
+  严重 (P1-P2): 2 个 (测试失败)
+  中等 (P3):    3 个 (覆盖率/静态分析/类型安全)
+  低 (P4):      3 个 (依赖不一致/技能不完整)
+================================================================================

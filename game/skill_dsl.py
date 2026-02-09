@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-技能 DSL (Domain-Specific Language) 定义模块
+"""技能 DSL (Domain-Specific Language) 定义模块
 
 M2-T01: 定义技能 DSL 的数据结构和 Schema。
 技能逻辑通过 JSON 声明式描述，由 SkillInterpreter 执行。
@@ -31,9 +29,10 @@ DSL 结构:
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 
 class DslTrigger(str, Enum):
@@ -92,21 +91,20 @@ VALID_STEPS = {
 
 @dataclass
 class SkillDsl:
-    """
-    技能 DSL 数据对象
+    """技能 DSL 数据对象
 
     从 heroes.json 中 skill 条目的 "dsl" 字段解析而来。
     """
     trigger: str
-    steps: List[Dict[str, Any]]
-    phase: Optional[str] = None
+    steps: list[dict[str, Any]]
+    phase: str | None = None
     limit: int = 0
-    condition: List[Dict[str, Any]] = field(default_factory=list)
-    cost: List[Dict[str, Any]] = field(default_factory=list)
-    target: Optional[Dict[str, Any]] = None
+    condition: list[dict[str, Any]] = field(default_factory=list)
+    cost: list[dict[str, Any]] = field(default_factory=list)
+    target: dict[str, Any] | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'SkillDsl':
+    def from_dict(cls, data: dict[str, Any]) -> SkillDsl:
         """从字典构建 SkillDsl"""
         return cls(
             trigger=data.get("trigger", "active"),
@@ -118,14 +116,13 @@ class SkillDsl:
             target=data.get("target"),
         )
 
-    def validate(self) -> List[str]:
-        """
-        验证 DSL 合法性
+    def validate(self) -> list[str]:
+        """验证 DSL 合法性
 
         Returns:
             错误信息列表（空 = 合法）
         """
-        errors: List[str] = []
+        errors: list[str] = []
 
         # 触发类型
         valid_triggers = {t.value for t in DslTrigger}

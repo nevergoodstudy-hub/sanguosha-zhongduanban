@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 技能系统单元测试
 覆盖 game/skill.py 中的主要技能处理器
 """
 
 import pytest
+
+from game.card import Card, CardSubtype, CardSuit, CardType
 from game.engine import GameEngine
-from game.card import Card, CardType, CardSubtype, CardSuit
+from game.hero import Skill, SkillType
 from game.skill import SkillSystem
-from game.hero import Skill, SkillType, Kingdom
 
 
 class TestSkillSystem:
@@ -962,6 +962,8 @@ class TestShensu:
         """测试神速攻击"""
         player = engine.players[0]
         target = engine.players[1]
+        # BUG-001 fix: 清空目标手牌，防止AI自动出闪导致伤害为0
+        target.hand.clear()
         hp_before = target.hp
 
         skill_system = engine.skill_system
@@ -1278,8 +1280,20 @@ class TestPassiveSkills:
     def test_guose(self, engine):
         """测试国色技能"""
         player = engine.players[0]
+        target = engine.players[1]
+        # 确保玩家有方块牌且目标判定区无乐不思蜀
+        diamond_card = Card(
+            id="guose_diamond",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.DIAMOND,
+            number=5
+        )
+        player.hand.append(diamond_card)
+        target.judge_area.clear()
         skill_system = engine.skill_system
-        result = skill_system._handle_guose(player, engine)
+        result = skill_system._handle_guose(player, engine, card=diamond_card, target=target)
         assert result is True
 
     def test_jijiu(self, engine):
@@ -1292,15 +1306,47 @@ class TestPassiveSkills:
     def test_qixi(self, engine):
         """测试奇袭技能"""
         player = engine.players[0]
+        target = engine.players[1]
+        # 确保玩家有黑色牌且目标有可拆卡牌
+        black_card = Card(
+            id="qixi_black",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.SPADE,
+            number=7
+        )
+        player.hand.append(black_card)
+        target_card = Card(
+            id="qixi_target",
+            name="闪",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.DODGE,
+            suit=CardSuit.HEART,
+            number=2
+        )
+        target.hand.append(target_card)
         skill_system = engine.skill_system
-        result = skill_system._handle_qixi(player, engine)
+        result = skill_system._handle_qixi(player, engine, card=black_card, target=target)
         assert result is True
 
     def test_duanliang(self, engine):
         """测试断粮技能"""
         player = engine.players[0]
+        target = engine.players[1]
+        # 确保玩家有黑色基本牌且目标判定区无兵粮寸断
+        black_basic = Card(
+            id="duanliang_black",
+            name="杀",
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ATTACK,
+            suit=CardSuit.CLUB,
+            number=4
+        )
+        player.hand.append(black_basic)
+        target.judge_area.clear()
         skill_system = engine.skill_system
-        result = skill_system._handle_duanliang(player, engine)
+        result = skill_system._handle_duanliang(player, engine, card=black_basic, target=target)
         assert result is True
 
 
@@ -1331,7 +1377,6 @@ class TestSkillUsage:
         target = engine.players[1]
 
         # 设置仁德技能
-        from game.hero import Skill, SkillType
         rende_skill = Skill(
             id="rende",
             name="仁德",
@@ -1363,7 +1408,6 @@ class TestSkillUsage:
         """测试技能使用次数限制"""
         player = engine.players[0]
 
-        from game.hero import Skill, SkillType
         test_skill = Skill(
             id="zhiheng",
             name="制衡",
@@ -1385,7 +1429,6 @@ class TestSkillUsage:
         """测试反间需要手牌和目标"""
         player = engine.players[0]
 
-        from game.hero import Skill, SkillType
         fanjian_skill = Skill(
             id="fanjian",
             name="反间",
@@ -1522,13 +1565,14 @@ class TestKurouDetailed:
         return engine
 
     def test_kurou_low_hp(self, engine):
-        """测试苦肉体力不足时返回False"""
+        """测试苦肉体力=1时仍可发动（进入濒死流程）"""
         player = engine.players[0]
         player.hp = 1  # 只有1点体力
 
         skill_system = engine.skill_system
         result = skill_system._handle_kurou(player, engine)
-        assert result is False
+        # 原版规则：允许 hp=1 时发动，进入濒死；技能本身算发动成功
+        assert result is True
 
 
 class TestQingnangDetailed:

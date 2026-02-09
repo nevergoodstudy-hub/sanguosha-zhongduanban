@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-PhaseIndicator — 回合阶段指示器
+"""PhaseIndicator — 回合阶段指示器
 
 6 阶段列表：准备 → 判定 → 摸牌 → 出牌 → 弃牌 → 结束
 当前阶段高亮显示。
@@ -10,7 +8,6 @@ from __future__ import annotations
 
 from textual.reactive import reactive
 from textual.widgets import Static
-
 
 PHASES = [
     ("prepare", "准备"),

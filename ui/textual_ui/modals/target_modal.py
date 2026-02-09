@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-目标选择弹窗 (M-C C5)
+"""目标选择弹窗 (M-C C5)
 
 替代原 info-panel 纯文本编号选择。
 可选目标以按钮网格排列，点击选中后 dismiss(index)。
@@ -11,16 +9,17 @@ dismiss(None) → 取消选择
 
 from __future__ import annotations
 
-from typing import List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical
-from textual.widgets import Static, Button
+from textual.containers import Container
+from textual.widgets import Button, Static
 
+from game.player import Identity
 from ui.textual_ui.modals.base import AnimatedModalScreen
 
 if TYPE_CHECKING:
-    from game.player import Player
+    pass
 
 
 class TargetSelectModal(AnimatedModalScreen[Optional[int]]):
@@ -57,11 +56,10 @@ class TargetSelectModal(AnimatedModalScreen[Optional[int]]):
     }
     """
 
-    def __init__(self, targets: List, prompt: str = "选择目标"):
-        """
-        Args:
-            targets: Player 对象列表
-            prompt: 提示文字
+    def __init__(self, targets: list, prompt: str = "选择目标"):
+        """Args:
+        targets: Player 对象列表
+        prompt: 提示文字
         """
         super().__init__()
         self._targets = targets
@@ -75,7 +73,7 @@ class TargetSelectModal(AnimatedModalScreen[Optional[int]]):
                 hp_bar = "●" * t.hp + "○" * (t.max_hp - t.hp)
                 # 身份信息（主公公开）
                 identity_str = ""
-                if hasattr(t, "identity") and t.identity.value == "lord":
+                if hasattr(t, "identity") and t.identity == Identity.LORD:
                     identity_str = " [主公]"
                 # 装备简要
                 equip_parts = []

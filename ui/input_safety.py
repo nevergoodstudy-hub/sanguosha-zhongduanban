@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-安全输入模块
+"""安全输入模块
 封装 input() 以优雅处理 EOFError 和 KeyboardInterrupt
 """
 

@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
-"""
-玩家系统模块
+"""玩家系统模块
 定义玩家类和身份系统
 """
 
 from __future__ import annotations
-from enum import Enum
+
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, TYPE_CHECKING
-import copy
+from enum import Enum
+from typing import TYPE_CHECKING, Any
 
 from .card import CardName
 from .constants import SkillId
 
 if TYPE_CHECKING:
-    from .card import Card, CardSubtype
+    from .card import Card
     from .hero import Hero, Skill
 
 
@@ -27,14 +25,9 @@ class Identity(Enum):
 
     @property
     def chinese_name(self) -> str:
-        """获取中文名称"""
-        names = {
-            Identity.LORD: "主公",
-            Identity.LOYALIST: "忠臣",
-            Identity.REBEL: "反贼",
-            Identity.SPY: "内奸"
-        }
-        return names.get(self, "?")
+        """获取国际化显示名称"""
+        from i18n import identity_name
+        return identity_name(self.value)
 
     @property
     def color(self) -> str:
@@ -58,14 +51,13 @@ class EquipmentSlot(Enum):
 
 @dataclass
 class Equipment:
-    """
-    装备区类
+    """装备区类
     管理玩家的装备
     """
-    weapon: Optional['Card'] = None
-    armor: Optional['Card'] = None
-    horse_minus: Optional['Card'] = None  # -1马（攻击马，如赤兔）
-    horse_plus: Optional['Card'] = None   # +1马（防御马，如的卢）
+    weapon: Card | None = None
+    armor: Card | None = None
+    horse_minus: Card | None = None  # -1马（攻击马，如赤兔）
+    horse_plus: Card | None = None   # +1马（防御马，如的卢）
 
     def __post_init__(self) -> None:
         """校验预设装备的子类型是否匹配槽位"""
@@ -87,18 +79,17 @@ class Equipment:
 
     # -- 可读性别名 --
     @property
-    def attack_horse(self) -> Optional['Card']:
+    def attack_horse(self) -> Card | None:
         """攻击马（-1马）别名"""
         return self.horse_minus
 
     @property
-    def defense_horse(self) -> Optional['Card']:
+    def defense_horse(self) -> Card | None:
         """防御马（+1马）别名"""
         return self.horse_plus
 
-    def equip(self, card: 'Card') -> Optional['Card']:
-        """
-        装备一张卡牌，返回被替换的旧装备（如果有）
+    def equip(self, card: Card) -> Card | None:
+        """装备一张卡牌，返回被替换的旧装备（如果有）
 
         Args:
             card: 要装备的卡牌
@@ -125,9 +116,8 @@ class Equipment:
 
         return old_card
 
-    def unequip(self, slot: EquipmentSlot) -> Optional['Card']:
-        """
-        卸下指定槽位的装备
+    def unequip(self, slot: EquipmentSlot) -> Card | None:
+        """卸下指定槽位的装备
 
         Args:
             slot: 装备槽位
@@ -152,9 +142,8 @@ class Equipment:
 
         return card
 
-    def unequip_card(self, card: 'Card') -> bool:
-        """
-        根据卡牌移除装备
+    def unequip_card(self, card: Card) -> bool:
+        """根据卡牌移除装备
 
         Args:
             card: 要移除的装备卡牌
@@ -176,7 +165,7 @@ class Equipment:
             return True
         return False
 
-    def get_all_cards(self) -> List['Card']:
+    def get_all_cards(self) -> list[Card]:
         """获取所有装备的卡牌列表"""
         cards = []
         if self.weapon:
@@ -189,7 +178,7 @@ class Equipment:
             cards.append(self.horse_plus)
         return cards
 
-    def get_card_by_slot(self, slot: EquipmentSlot) -> Optional['Card']:
+    def get_card_by_slot(self, slot: EquipmentSlot) -> Card | None:
         """根据槽位获取装备"""
         if slot == EquipmentSlot.WEAPON:
             return self.weapon
@@ -246,8 +235,7 @@ class Equipment:
 
 @dataclass
 class Player:
-    """
-    玩家类
+    """玩家类
 
     Attributes:
         id: 玩家ID
@@ -265,18 +253,18 @@ class Player:
     id: int
     name: str
     is_ai: bool = True
-    hero: Optional['Hero'] = None
+    hero: Hero | None = None
     identity: Identity = Identity.REBEL
     hp: int = 0
     max_hp: int = 0
-    hand: List['Card'] = field(default_factory=list)
+    hand: list[Card] = field(default_factory=list)
     equipment: Equipment = field(default_factory=Equipment)
     is_alive: bool = True
     seat: int = 0
 
     # 回合状态
     sha_count: int = field(default=0, repr=False)  # 本回合已使用的杀数量
-    skill_used: Dict[str, int] = field(default_factory=dict, repr=False)  # 技能使用次数
+    skill_used: dict[str, int] = field(default_factory=dict, repr=False)  # 技能使用次数
 
     # 濒死状态
     is_dying: bool = field(default=False, repr=False)
@@ -288,7 +276,7 @@ class Player:
     flipped: bool = field(default=False, repr=False)  # 武将牌翻面状态
 
     # 判定区（延时锦囊）
-    judge_area: List['Card'] = field(default_factory=list, repr=False)
+    judge_area: list[Card] = field(default_factory=list, repr=False)
 
     # 跳过阶段标记（延时锦囊用）
     skip_play_phase: bool = field(default=False, repr=False)
@@ -299,9 +287,8 @@ class Player:
         if isinstance(self.identity, str):
             self.identity = Identity(self.identity)
 
-    def set_hero(self, hero: 'Hero') -> None:
-        """
-        设置武将
+    def set_hero(self, hero: Hero) -> None:
+        """设置武将
 
         Args:
             hero: 武将对象
@@ -315,18 +302,16 @@ class Player:
             self.max_hp += 1
             self.hp += 1
 
-    def draw_cards(self, cards: List['Card']) -> None:
-        """
-        将卡牌加入手牌
+    def draw_cards(self, cards: list[Card]) -> None:
+        """将卡牌加入手牌
 
         Args:
             cards: 要加入的卡牌列表
         """
         self.hand.extend(cards)
 
-    def remove_card(self, card: 'Card') -> bool:
-        """
-        从手牌中移除一张卡牌
+    def remove_card(self, card: Card) -> bool:
+        """从手牌中移除一张卡牌
 
         Args:
             card: 要移除的卡牌
@@ -339,9 +324,8 @@ class Player:
             return True
         return False
 
-    def remove_cards(self, cards: List['Card']) -> List['Card']:
-        """
-        从手牌中移除多张卡牌
+    def remove_cards(self, cards: list[Card]) -> list[Card]:
+        """从手牌中移除多张卡牌
 
         Args:
             cards: 要移除的卡牌列表
@@ -355,9 +339,8 @@ class Player:
                 removed.append(card)
         return removed
 
-    def get_card_by_index(self, index: int) -> Optional['Card']:
-        """
-        根据索引获取手牌
+    def get_card_by_index(self, index: int) -> Card | None:
+        """根据索引获取手牌
 
         Args:
             index: 索引（0开始）
@@ -370,8 +353,7 @@ class Player:
         return None
 
     def has_card(self, card_name: str) -> bool:
-        """
-        检查手牌中是否有指定名称的牌
+        """检查手牌中是否有指定名称的牌
 
         Args:
             card_name: 卡牌名称
@@ -381,9 +363,8 @@ class Player:
         """
         return any(c.name == card_name for c in self.hand)
 
-    def get_cards_by_name(self, card_name: str) -> List['Card']:
-        """
-        获取手牌中所有指定名称的牌
+    def get_cards_by_name(self, card_name: str) -> list[Card]:
+        """获取手牌中所有指定名称的牌
 
         Args:
             card_name: 卡牌名称
@@ -393,13 +374,12 @@ class Player:
         """
         return [c for c in self.hand if c.name == card_name]
 
-    def get_red_cards(self) -> List['Card']:
+    def get_red_cards(self) -> list[Card]:
         """获取所有红色手牌"""
         return [c for c in self.hand if c.is_red]
 
-    def equip_card(self, card: 'Card') -> Optional['Card']:
-        """
-        装备一张卡牌
+    def equip_card(self, card: Card) -> Card | None:
+        """装备一张卡牌
 
         Args:
             card: 要装备的卡牌
@@ -409,9 +389,8 @@ class Player:
         """
         return self.equipment.equip(card)
 
-    def take_damage(self, damage: int, source: Optional['Player'] = None) -> None:
-        """
-        受到伤害
+    def take_damage(self, damage: int, source: Player | None = None) -> None:
+        """受到伤害
 
         Args:
             damage: 伤害值
@@ -422,8 +401,7 @@ class Player:
             self.is_dying = True
 
     def heal(self, amount: int) -> int:
-        """
-        回复体力
+        """回复体力
 
         Args:
             amount: 回复量
@@ -469,8 +447,7 @@ class Player:
         self.flipped = not self.flipped
 
     def use_alcohol(self) -> bool:
-        """
-        使用酒
+        """使用酒
 
         Returns:
             是否成功使用
@@ -482,8 +459,7 @@ class Player:
         return False
 
     def consume_drunk(self) -> bool:
-        """
-        消耗酒状态（使用杀时调用）
+        """消耗酒状态（使用杀时调用）
 
         Returns:
             是否有酒加成
@@ -538,7 +514,7 @@ class Player:
             return self.identity.chinese_name
         return "?"  # 其他身份不公开
 
-    def get_all_cards(self) -> List['Card']:
+    def get_all_cards(self) -> list[Card]:
         """获取玩家区域内的所有牌（手牌+装备）"""
         all_cards = list(self.hand)
         all_cards.extend(self.equipment.get_all_cards())
@@ -548,7 +524,7 @@ class Player:
         """检查是否有任何牌（手牌或装备）"""
         return len(self.hand) > 0 or self.equipment.has_equipment()
 
-    def get_skill(self, skill_id: str) -> Optional['Skill']:
+    def get_skill(self, skill_id: str) -> Skill | None:
         """获取指定技能"""
         if self.hero:
             return self.hero.get_skill(skill_id)
@@ -567,7 +543,7 @@ class Player:
             return self.hero.gender
         return "male"  # 默认男性
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典（用于调试）"""
         return {
             "id": self.id,

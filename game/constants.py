@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-游戏常量模块
+"""游戏常量模块
 定义游戏中使用的各类常量和枚举
 
 本模块集中管理所有魔法字符串和常量值，
@@ -11,8 +9,7 @@ from enum import Enum
 
 
 class SkillId(str, Enum):
-    """
-    技能ID枚举
+    """技能ID枚举
 
     继承 str 以便直接与字符串比较
     """
@@ -64,18 +61,31 @@ class SkillId(str, Enum):
 
 
 class SkillTiming(str, Enum):
-    """技能触发时机"""
+    """技能触发时机 (单一事实来源 - SSOT)"""
+    # 回合阶段
     PREPARE = "prepare"         # 准备阶段
     JUDGE = "judge"             # 判定阶段
     DRAW = "draw"               # 摸牌阶段
     PLAY = "play"               # 出牌阶段
     DISCARD = "discard"         # 弃牌阶段
     END = "end"                 # 结束阶段
-    DAMAGE_TAKEN = "damage_taken"   # 受到伤害后
-    DAMAGE_DEALT = "damage_dealt"   # 造成伤害后
-    DYING = "dying"             # 濒死时
-    DEATH = "death"             # 死亡时
-    PASSIVE = "passive"         # 被动/锁定技
+    # 攻击相关
+    BEFORE_ATTACK = "before_attack"     # 使用杀前
+    AFTER_ATTACK = "after_attack"       # 使用杀后
+    # 伤害相关
+    BEFORE_DAMAGED = "before_damaged"   # 受到伤害前
+    AFTER_DAMAGED = "after_damaged"     # 受到伤害后
+    DAMAGE_TAKEN = "damage_taken"       # 受到伤害后 (别名)
+    DAMAGE_DEALT = "damage_dealt"       # 造成伤害后
+    # 濒死/死亡
+    BEFORE_DYING = "before_dying"       # 濒死前
+    DYING = "dying"                     # 濒死时
+    ON_DEATH = "on_death"               # 死亡时
+    DEATH = "death"                     # 死亡时 (别名)
+    # 其他
+    RESPOND = "respond"                 # 响应时（需要出闪/杀时）
+    CARD_USED_OUTSIDE_TURN = "card_used_outside_turn"   # 回合外使用牌时
+    PASSIVE = "passive"                 # 被动/锁定技
 
 
 class SkillCategory(str, Enum):
@@ -122,8 +132,7 @@ class GameConfig:
 
 
 class IdentityConfig:
-    """
-    身份配置
+    """身份配置
 
     根据玩家人数分配身份数量
     """
@@ -191,53 +200,13 @@ class CardSuitSymbol:
 
 
 def get_skill_chinese_name(skill_id: str) -> str:
-    """
-    获取技能中文名称
+    """获取技能国际化显示名称
 
     Args:
         skill_id: 技能ID
 
     Returns:
-        技能中文名称
+        技能显示名称（根据当前 locale）
     """
-    names = {
-        SkillId.RENDE: "仁德",
-        SkillId.JIJIANG: "激将",
-        SkillId.WUSHENG: "武圣",
-        SkillId.PAOXIAO: "咆哮",
-        SkillId.GUANXING: "观星",
-        SkillId.KONGCHENG: "空城",
-        SkillId.LONGDAN: "龙胆",
-        SkillId.MASHU: "马术",
-        SkillId.TIEJI: "铁骑",
-        SkillId.JIZHI: "集智",
-        SkillId.QICAI: "奇才",
-        SkillId.LIEGONG: "烈弓",
-        SkillId.KUANGGU: "狂骨",
-        SkillId.JIANXIONG: "奸雄",
-        SkillId.HUJIA: "护驾",
-        SkillId.FANKUI: "反馈",
-        SkillId.GUICAI: "鬼才",
-        SkillId.GANGLIE: "刚烈",
-        SkillId.TUXI: "突袭",
-        SkillId.DUANLIANG: "断粮",
-        SkillId.JUSHOU: "据守",
-        SkillId.SHENSU: "神速",
-        SkillId.ZHIHENG: "制衡",
-        SkillId.JIUYUAN: "救援",
-        SkillId.YINGZI: "英姿",
-        SkillId.FANJIAN: "反间",
-        SkillId.GUOSE: "国色",
-        SkillId.LIULI: "流离",
-        SkillId.QIXI: "奇袭",
-        SkillId.KEJI: "克己",
-        SkillId.KUROU: "苦肉",
-        SkillId.JIEYIN: "结姻",
-        SkillId.XIAOJI: "枭姬",
-        SkillId.WUSHUANG: "无双",
-        SkillId.QINGNANG: "青囊",
-        SkillId.JIJIU: "急救",
-        SkillId.LIJIAN: "离间",
-        SkillId.BIYUE: "闭月",
-    }
-    return names.get(skill_id, skill_id)
+    from i18n import skill_name
+    return skill_name(skill_id)

@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-AnimatedModalScreen — 带淡入动画的 ModalScreen 基类 (P1-2)
+"""AnimatedModalScreen — 带淡入动画的 ModalScreen 基类 (P1-2)
 
 所有游戏弹窗应继承此基类，以获得：
 - 推入时 opacity 0%→100% 的淡入效果 (0.3s, out_cubic)

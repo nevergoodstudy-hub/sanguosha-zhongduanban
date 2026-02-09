@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 全玩家数量综合测试套件 (2-8人)
 =====================================
@@ -11,24 +10,20 @@
 """
 
 import random
-import copy
+
 import pytest
-from typing import List, Dict, Set
 
-from game.engine import GameEngine, GameState, GamePhase
-from game.player import Player, Identity, Equipment
-from game.card import Card, CardType, CardName, Deck
-from game.events import EventBus, EventType, GameEvent
+from game.engine import GameEngine, GameState
+from game.events import EventType
+from game.player import Identity
 from game.win_checker import WinConditionChecker, WinResult
-from game.hero import HeroRepository
-
 
 # ==================== 常量 & 工具 ====================
 
 ALL_PLAYER_COUNTS = [2, 3, 4, 5, 6, 7, 8]
 
 # 每种人数的标准身份分配
-EXPECTED_IDENTITIES: Dict[int, Dict[str, int]] = {
+EXPECTED_IDENTITIES: dict[int, dict[str, int]] = {
     2: {"lord": 1, "rebel": 1, "spy": 0, "loyalist": 0},
     3: {"lord": 1, "rebel": 1, "spy": 1, "loyalist": 0},
     4: {"lord": 1, "rebel": 1, "spy": 1, "loyalist": 1},

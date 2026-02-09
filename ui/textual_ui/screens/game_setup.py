@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """游戏设置界面（选人数 + 难度）"""
 
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.screen import Screen
-from textual.widgets import Static, Button, Select
 from textual.containers import Container
+from textual.screen import Screen
+from textual.widgets import Button, Select, Static
 
 
 class GameSetupScreen(Screen):

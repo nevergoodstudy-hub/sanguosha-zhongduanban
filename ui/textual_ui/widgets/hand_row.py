@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-HandCardRow — 手牌行容器
+"""HandCardRow — 手牌行容器
 
 Horizontal 滚动容器，内含 CardWidget 实例。
 支持刷新手牌和接收 CardClicked 消息。
@@ -8,7 +6,7 @@ Horizontal 滚动容器，内含 CardWidget 实例。
 
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from textual.containers import HorizontalScroll
 from textual.message import Message
@@ -16,7 +14,7 @@ from textual.message import Message
 from ui.textual_ui.widgets.card_widget import CardWidget
 
 if TYPE_CHECKING:
-    from game.card import Card
+    pass
 
 
 class HandCardRow(HorizontalScroll):
@@ -37,7 +35,7 @@ class HandCardRow(HorizontalScroll):
             self.index = index
             self.card = card
 
-    def update_hand(self, cards: List) -> None:
+    def update_hand(self, cards: list) -> None:
         """刷新手牌显示"""
         self.remove_children()
         for i, card in enumerate(cards):

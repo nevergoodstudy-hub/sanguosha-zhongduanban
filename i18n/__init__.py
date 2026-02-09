@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-轻量级 i18n 框架 — 零外部依赖。
+"""轻量级 i18n 框架 — 零外部依赖。
 
 用法::
 
@@ -8,23 +6,44 @@
 
     set_locale("en_US")
     print(t("ui.ask_shan", name="关羽"))
+
+    # 便捷别名
+    from i18n import _
+    print(_("card.sha"))  # → "Strike" (en_US) / "杀" (zh_CN)
+
+    # 领域助手
+    from i18n import card_name, skill_name, kingdom_name, identity_name
+    print(card_name("sha"))        # → "杀" / "Strike"
+    print(skill_name("wusheng"))   # → "武圣" / "Warrior Saint"
 """
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Dict
+
+_LOCALE_DIR = Path(__file__).parent
 
 # 延迟导入翻译表，避免循环
 _locale: str = "zh_CN"
-_tables: Dict[str, Dict[str, str]] = {}
+_tables: dict[str, dict[str, str]] = {}
 
 
-def _load_table(locale: str) -> Dict[str, str]:
-    """按需加载翻译表。"""
+def _load_table(locale: str) -> dict[str, str]:
+    """按需加载翻译表。优先 JSON，回退到旧 .py 模块。"""
+    json_path = _LOCALE_DIR / f"{locale}.json"
+    if json_path.exists():
+        with open(json_path, encoding="utf-8") as f:
+            data = json.load(f)
+        # 过滤掉 __meta__ 等非翻译键
+        return {k: v for k, v in data.items() if not k.startswith("__")}
+
+    # 回退: 兼容旧 .py 格式
     if locale == "zh_CN":
-        from .zh_CN import STRINGS
+        from .zh_CN import STRINGS  # type: ignore[import-untyped]
     elif locale == "en_US":
-        from .en_US import STRINGS
+        from .en_US import STRINGS  # type: ignore[import-untyped]
     else:
         raise ValueError(f"Unsupported locale: {locale}")
     return STRINGS
@@ -81,3 +100,68 @@ def t(key: str, **kwargs: object) -> str:
         except KeyError:
             return template
     return template
+
+
+# ── 便捷别名 ──
+_ = t
+
+
+# ── 领域助手函数 ──
+
+def card_name(card_id: str) -> str:
+    """获取卡牌的国际化显示名。
+
+    Args:
+        card_id: 卡牌标识符，如 ``"sha"``、``"nanman"``。
+                 也接受中文原名（会自动反查）。
+    """
+    key = f"card.{card_id}"
+    result = t(key)
+    if result != key:
+        return result
+
+    # 尝试通过中文名反查 (兼容旧代码用中文名调用)
+    if _locale not in _tables:
+        _tables[_locale] = _load_table(_locale)
+    zh_table = _tables.get("zh_CN")
+    if zh_table is None:
+        zh_table = _load_table("zh_CN")
+        _tables["zh_CN"] = zh_table
+    for k, v in zh_table.items():
+        if k.startswith("card.") and v == card_id:
+            return t(k)
+
+    return card_id  # 未找到则原样返回
+
+
+def skill_name(skill_id: str) -> str:
+    """获取技能的国际化显示名。
+
+    Args:
+        skill_id: 技能标识符，如 ``"wusheng"``、``"rende"``。
+    """
+    key = f"skill.{skill_id}"
+    result = t(key)
+    return result if result != key else skill_id
+
+
+def kingdom_name(value: str) -> str:
+    """获取势力的国际化显示名。
+
+    Args:
+        value: 势力值，如 ``"wei"``、``"shu"``。
+    """
+    key = f"kingdom.{value}"
+    result = t(key)
+    return result if result != key else value
+
+
+def identity_name(value: str) -> str:
+    """获取身份的国际化显示名。
+
+    Args:
+        value: 身份值，如 ``"lord"``、``"rebel"``。
+    """
+    key = f"identity.{value}"
+    result = t(key)
+    return result if result != key else value

@@ -1,36 +1,34 @@
-# -*- coding: utf-8 -*-
-"""
-数据驱动卡牌效果（M2-T04）
+"""数据驱动卡牌效果（M2-T04）
 
 通过 data/card_effects.json 中的声明式配置执行简单卡牌效果，
 与手写 Effect 子类共存（手写优先、数据驱动补充）。
 """
 
 from __future__ import annotations
+
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from i18n import t as _t
 
 from .base import CardEffect
 
 if TYPE_CHECKING:
-    from ..engine import GameEngine
-    from ..player import Player
-    from ..card import Card
+    pass
 
 logger = logging.getLogger(__name__)
 
 
 class DataDrivenCardEffect(CardEffect):
-    """
-    从 JSON 配置驱动的卡牌效果。
+    """从 JSON 配置驱动的卡牌效果。
 
     支持简单卡牌（桃、无中生有、桃园结义等），
     复杂卡牌（杀、决斗、南蛮等）仍使用手写子类。
     """
 
-    def __init__(self, card_name: str, config: Dict[str, Any]):
+    def __init__(self, card_name: str, config: dict[str, Any]):
         self._card_name = card_name
         self._config = config
         self._display_name = config.get("display_name", card_name)
@@ -43,7 +41,7 @@ class DataDrivenCardEffect(CardEffect):
         cond = self._config.get("condition")
         if cond:
             if not self._check_condition(cond, engine, player, targets):
-                msg = self._config.get("condition_fail_msg", "条件不满足")
+                msg = self._config.get("condition_fail_msg", _t("effect.condition_fail"))
                 return False, msg
         return True, ""
 
@@ -56,7 +54,7 @@ class DataDrivenCardEffect(CardEffect):
                 if fail_action == "return_card":
                     engine.log_event(
                         "error",
-                        self._config.get("condition_fail_msg", "条件不满足"),
+                        self._config.get("condition_fail_msg", _t("effect.condition_fail")),
                     )
                     player.draw_cards([card])
                 return False
@@ -67,7 +65,7 @@ class DataDrivenCardEffect(CardEffect):
         # 日志：使用卡牌
         engine.log_event(
             "use_card",
-            f"{player.name} 使用了【{self._display_name}】",
+            _t("effect.use_card", name=player.name, card=self._display_name),
             source=player, card=card,
         )
 
@@ -84,7 +82,7 @@ class DataDrivenCardEffect(CardEffect):
                 if engine._request_wuxie(card, player, wuxie_target):
                     engine.log_event(
                         "effect",
-                        f"【{self._display_name}】被无懈可击抵消",
+                        _t("effect.nullified", card=self._display_name),
                     )
                     engine.deck.discard([card])
                     return True
@@ -113,7 +111,7 @@ class DataDrivenCardEffect(CardEffect):
                 if engine._request_wuxie(card, player, p):
                     engine.log_event(
                         "effect",
-                        f"【{self._display_name}】对 {p.name} 被无懈可击抵消",
+                        _t("effect.nullified_for", card=self._display_name, name=p.name),
                     )
                     continue
 
@@ -192,9 +190,8 @@ class DataDrivenCardEffect(CardEffect):
         return player
 
 
-def load_card_effects_config() -> Dict[str, Dict[str, Any]]:
-    """
-    从 data/card_effects.json 加载卡牌效果配置
+def load_card_effects_config() -> dict[str, dict[str, Any]]:
+    """从 data/card_effects.json 加载卡牌效果配置
 
     Returns:
         card_name -> config 映射
@@ -205,7 +202,7 @@ def load_card_effects_config() -> Dict[str, Dict[str, Any]]:
         return {}
 
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             raw = json.load(f)
         # 过滤注释键
         return {k: v for k, v in raw.items() if not k.startswith("_")}

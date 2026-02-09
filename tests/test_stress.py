@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 压力测试 (M4-T04)
 批量运行随机对局，验证引擎稳定性
@@ -8,9 +7,8 @@
 
 import os
 import random
-import pytest
-from game.engine import GameEngine, GameState
 
+from game.engine import GameEngine
 
 STRESS_COUNT = int(os.environ.get("STRESS_COUNT", "100"))
 

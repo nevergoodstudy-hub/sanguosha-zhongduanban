@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """Tests for replay CLI integration (E-2)."""
 
 import json
+
 import pytest
-from pathlib import Path
 
 from game.save_system import EnhancedReplay, load_game
 

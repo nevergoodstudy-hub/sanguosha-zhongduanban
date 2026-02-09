@@ -1,18 +1,18 @@
-# -*- coding: utf-8 -*-
-"""
-卡牌系统模块
+"""卡牌系统模块
 定义卡牌类型、花色、卡牌类和牌堆
 """
 
 from __future__ import annotations
-from enum import Enum, auto
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, TYPE_CHECKING
+
 import json
 import random
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from .engine import GameEngine
     from .player import Player
 
 
@@ -87,10 +87,9 @@ class CardSuit(Enum):
         return self in (CardSuit.SPADE, CardSuit.CLUB)
 
 
-@dataclass
+@dataclass(slots=True)
 class Card:
-    """
-    卡牌类
+    """卡牌类
 
     Attributes:
         id: 卡牌唯一标识符
@@ -162,9 +161,8 @@ class Card:
         """检查是否为指定子类型"""
         return self.subtype == subtype
 
-    def can_target(self, user: 'Player', target: 'Player', game_engine: Any) -> bool:
-        """
-        检查是否可以对目标使用此牌
+    def can_target(self, user: Player, target: Player, game_engine: GameEngine) -> bool:
+        """检查是否可以对目标使用此牌
 
         Args:
             user: 使用者
@@ -203,7 +201,7 @@ class Card:
     def __repr__(self) -> str:
         return f"Card({self.id}, {self.display_name})"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,
@@ -218,7 +216,7 @@ class Card:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Card':
+    def from_dict(cls, data: dict[str, Any]) -> Card:
         """从字典创建卡牌"""
         return cls(
             id=data["id"],
@@ -234,28 +232,25 @@ class Card:
 
 
 class Deck:
-    """
-    牌堆类
+    """牌堆类
     管理游戏中的牌堆和弃牌堆
     """
 
-    def __init__(self, data_path: Optional[str] = None):
-        """
-        初始化牌堆
+    def __init__(self, data_path: str | None = None):
+        """初始化牌堆
 
         Args:
             data_path: 卡牌数据文件路径
         """
-        self.draw_pile: List[Card] = []      # 摸牌堆
-        self.discard_pile: List[Card] = []   # 弃牌堆
-        self._all_cards: List[Card] = []     # 所有卡牌副本
+        self.draw_pile: list[Card] = []      # 摸牌堆
+        self.discard_pile: list[Card] = []   # 弃牌堆
+        self._all_cards: list[Card] = []     # 所有卡牌副本
 
         if data_path:
             self.load_cards(data_path)
 
     def load_cards(self, data_path: str) -> None:
-        """
-        从JSON文件加载卡牌数据
+        """从JSON文件加载卡牌数据
 
         Args:
             data_path: JSON文件路径
@@ -264,7 +259,7 @@ class Deck:
         if not path.exists():
             raise FileNotFoundError(f"卡牌数据文件不存在: {data_path}")
 
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             data = json.load(f)
 
         self._all_cards.clear()
@@ -329,9 +324,8 @@ class Deck:
         """洗牌"""
         random.shuffle(self.draw_pile)
 
-    def draw(self, count: int = 1) -> List[Card]:
-        """
-        摸牌
+    def draw(self, count: int = 1) -> list[Card]:
+        """摸牌
 
         Args:
             count: 摸牌数量
@@ -356,18 +350,16 @@ class Deck:
             self.discard_pile.clear()
             self.shuffle()
 
-    def discard(self, cards: List[Card]) -> None:
-        """
-        弃牌
+    def discard(self, cards: list[Card]) -> None:
+        """弃牌
 
         Args:
             cards: 要弃置的卡牌列表
         """
         self.discard_pile.extend(cards)
 
-    def peek(self, count: int = 1) -> List[Card]:
-        """
-        查看牌堆顶的牌（不取出）
+    def peek(self, count: int = 1) -> list[Card]:
+        """查看牌堆顶的牌（不取出）
 
         Args:
             count: 查看数量
@@ -381,18 +373,16 @@ class Deck:
 
         return self.draw_pile[-count:] if count <= len(self.draw_pile) else self.draw_pile[:]
 
-    def put_on_top(self, cards: List[Card]) -> None:
-        """
-        将牌放到牌堆顶
+    def put_on_top(self, cards: list[Card]) -> None:
+        """将牌放到牌堆顶
 
         Args:
             cards: 要放置的卡牌列表
         """
         self.draw_pile.extend(cards)
 
-    def put_on_bottom(self, cards: List[Card]) -> None:
-        """
-        将牌放到牌堆底
+    def put_on_bottom(self, cards: list[Card]) -> None:
+        """将牌放到牌堆底
 
         Args:
             cards: 要放置的卡牌列表

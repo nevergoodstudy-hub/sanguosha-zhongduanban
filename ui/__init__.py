@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-UI模块
+"""UI模块
 提供 Textual TUI 终端界面
 """
 

@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-响应类 ModalScreen 弹窗 (M-C C1/C2/C3)
+"""响应类 ModalScreen 弹窗 (M-C C1/C2/C3)
 
 ResponseModalBase — 半透明背景 + 倒计时 + dismiss 模式基类
 ShanResponseModal — "是否出闪"
@@ -17,22 +15,21 @@ ModalScreen[T] 的 T 为 dismiss 返回值类型:
 
 from __future__ import annotations
 
-from typing import Optional, List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
-from textual.widgets import Static, Button, Label
 from textual.timer import Timer
+from textual.widgets import Button, Static
 
 from ui.textual_ui.modals.base import AnimatedModalScreen
 
 if TYPE_CHECKING:
-    from game.card import Card
+    pass
 
 
 class ResponseModalBase(AnimatedModalScreen[bool]):
-    """
-    响应类弹窗基类
+    """响应类弹窗基类
 
     半透明背景覆盖，居中弹窗框，可选倒计时自动拒绝。
     子类只需定义 title_text / body_text / confirm_label / reject_label。
@@ -95,7 +92,7 @@ class ResponseModalBase(AnimatedModalScreen[bool]):
         self,
         title: str = "",
         body: str = "",
-        cards: Optional[List] = None,
+        cards: list | None = None,
         countdown: int = 0,
     ):
         super().__init__()
@@ -106,7 +103,7 @@ class ResponseModalBase(AnimatedModalScreen[bool]):
         if countdown > 0:
             self.countdown_seconds = countdown
         self._remaining = self.countdown_seconds
-        self._countdown_timer: Optional[Timer] = None
+        self._countdown_timer: Timer | None = None
         # 卡牌信息
         if cards:
             info_parts = []

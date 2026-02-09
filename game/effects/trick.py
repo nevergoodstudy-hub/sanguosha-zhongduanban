@@ -1,17 +1,16 @@
-# -*- coding: utf-8 -*-
-"""
-锦囊牌效果处理器（M1-T02）
+"""锦囊牌效果处理器（M1-T02）
 """
 
 from __future__ import annotations
-from typing import List, TYPE_CHECKING
+
+from typing import TYPE_CHECKING
+
+from i18n import t as _t
 
 from .base import CardEffect
 
 if TYPE_CHECKING:
-    from ..engine import GameEngine
-    from ..player import Player
-    from ..card import Card
+    pass
 
 
 class JuedouEffect(CardEffect):
@@ -23,7 +22,7 @@ class JuedouEffect(CardEffect):
 
     def can_use(self, engine, player, card, targets):
         if not targets:
-            return False, "必须指定目标"
+            return False, _t("effect.need_target")
         return True, ""
 
     def resolve(self, engine, player, card, targets):
@@ -69,7 +68,7 @@ class GuoheEffect(CardEffect):
 
     def can_use(self, engine, player, card, targets):
         if not targets:
-            return False, "必须指定目标"
+            return False, _t("effect.need_target")
         return True, ""
 
     def resolve(self, engine, player, card, targets):
@@ -85,7 +84,7 @@ class ShunshouEffect(CardEffect):
 
     def can_use(self, engine, player, card, targets):
         if not targets:
-            return False, "必须指定目标"
+            return False, _t("effect.need_target")
         return True, ""
 
     def resolve(self, engine, player, card, targets):
@@ -111,7 +110,7 @@ class LebusishuEffect(CardEffect):
 
     def can_use(self, engine, player, card, targets):
         if not targets:
-            return False, "必须指定目标"
+            return False, _t("effect.need_target")
         return True, ""
 
     def resolve(self, engine, player, card, targets):
@@ -127,7 +126,7 @@ class BingliangEffect(CardEffect):
 
     def can_use(self, engine, player, card, targets):
         if not targets:
-            return False, "必须指定目标"
+            return False, _t("effect.need_target")
         return True, ""
 
     def resolve(self, engine, player, card, targets):
@@ -153,7 +152,7 @@ class HuogongEffect(CardEffect):
 
     def can_use(self, engine, player, card, targets):
         if not targets:
-            return False, "必须指定目标"
+            return False, _t("effect.need_target")
         return True, ""
 
     def resolve(self, engine, player, card, targets):

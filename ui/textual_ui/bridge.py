@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-TextualUIBridge — 引擎 ↔ Textual 桥接层
+"""TextualUIBridge — 引擎 ↔ Textual 桥接层
 
 实现 GameUI Protocol，将引擎调用转发到 Textual 界面。
 所有需要人类玩家交互的方法通过 ModalScreen + threading.Event 实现
@@ -16,30 +14,25 @@ from __future__ import annotations
 
 import random
 import threading
-from typing import Optional, List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from game.engine import GameEngine
-    from game.player import Player
-    from game.card import Card, CardSuit
-    from game.hero import Hero
+    pass
 
 
 class TextualUIBridge:
-    """
-    引擎 ↔ Textual 桥接层
+    """引擎 ↔ Textual 桥接层
 
     实现 show_log 等方法，将引擎调用转发到 Textual 界面。
     用作 engine.set_ui(bridge) 的对象。
     """
 
     def __init__(self, screen):
-        """
-        Args:
-            screen: GamePlayScreen 实例
+        """Args:
+        screen: GamePlayScreen 实例
         """
         self._screen = screen
-        self.log_messages: List[str] = []
+        self.log_messages: list[str] = []
         self.engine = None
 
     # ------------------------------------------------------------------ #
@@ -47,8 +40,7 @@ class TextualUIBridge:
     # ------------------------------------------------------------------ #
 
     def _push_modal_and_wait(self, modal_factory, *, timeout: float = 300):
-        """
-        通用 modal 调度：在 UI 线程 push ModalScreen 并阻塞 worker 线程等待结果。
+        """通用 modal 调度：在 UI 线程 push ModalScreen 并阻塞 worker 线程等待结果。
 
         Args:
             modal_factory: callable，无参，返回 ModalScreen 实例

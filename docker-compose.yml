@@ -1,0 +1,28 @@
+# ============================================================
+# 三国杀终端版 — Docker Compose 配置
+# ============================================================
+# 用法:
+#   开发模式:  docker compose up
+#   生产模式:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ============================================================
+
+services:
+  game-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sanguosha-server
+    ports:
+      - "8765:8765"
+    environment:
+      - SANGUOSHA_LOG_LEVEL=INFO
+      - SANGUOSHA_MAX_CONNECTIONS=50
+      - SANGUOSHA_MAX_IP_CONNECTIONS=5
+    volumes:
+      - game-logs:/app/logs
+      - game-saves:/app/saves
+    restart: unless-stopped
+
+volumes:
+  game-logs:
+  game-saves:

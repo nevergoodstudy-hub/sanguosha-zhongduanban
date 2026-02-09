@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
 """游戏规则界面"""
 
 from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Static, Button
 from textual.containers import Container, VerticalScroll
+from textual.screen import Screen
+from textual.widgets import Button, Static
 
 
 class RulesScreen(Screen):

@@ -1,5 +1,5 @@
 # GitHub Actions CI 工作流
-# 三国杀项目持续集成配置 (Phase C 测试加固更新)
+# 三国杀项目持续集成配置 (Phase 1 基础设施加固)
 
 name: CI
 
@@ -13,30 +13,32 @@ permissions:
   contents: read
 
 jobs:
-  # 代码质量检查
+  # 代码质量检查: lint + 格式检查
   lint:
-    name: Lint (Ruff)
+    name: Lint & Format (Ruff)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.10'
       - run: pip install ruff
-      - run: ruff check . --config pyproject.toml
+      - name: Ruff lint
+        run: ruff check . --config pyproject.toml --output-format=github
+      - name: Ruff format check
+        run: ruff format --check . --config pyproject.toml
 
   # 类型检查
   typecheck:
     name: Type Check (MyPy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
-      - run: |
-          pip install mypy rich colorama textual websockets
-      - run: mypy game/ ai/ ui/ net/ --config-file pyproject.toml --ignore-missing-imports || true
+          python-version: '3.10'
+      - run: pip install mypy rich colorama textual websockets
+      - run: mypy game/ ai/ ui/ net/ --config-file pyproject.toml
 
   # 单元测试 + 集成测试 + 覆盖率
   test:
@@ -46,10 +48,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: ['3.12', '3.14']
+        python-version: ['3.10', '3.12']
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -73,16 +75,34 @@ jobs:
             coverage.xml
             junit.xml
 
+  # 安全扫描
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pip-audit bandit
+      - name: Dependency vulnerability audit
+        run: pip-audit
+      - name: Static security analysis (Bandit)
+        run: bandit -r game/ ai/ net/ -ll -ii
+
   # 构建检查
   build:
     name: Build Package
     runs-on: ubuntu-latest
     needs: [lint, typecheck, test]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.10'
       - run: pip install build
       - run: python -m build
       - uses: actions/upload-artifact@v4
@@ -97,10 +117,10 @@ jobs:
     runs-on: windows-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.12'
       - run: |
           pip install -r requirements.txt
           pip install textual websockets pyinstaller
@@ -116,9 +136,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.10'
       - run: pip install rich colorama textual websockets
       - run: python -c "import game; import ai; import ui; import net; print('All modules OK')"

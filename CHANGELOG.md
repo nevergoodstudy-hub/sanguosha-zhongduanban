@@ -5,6 +5,34 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [3.3.0] - 2026-02-09
+
+### Fixed
+- shensu 测试目标闪避不确定性 (BUG-001)
+- CSS 动画类缺失 `fade-in` / `slide-in` (BUG-002)
+- F821 undefined name `GameAction` — 添加 `TYPE_CHECKING` 条件导入 (BUG-004)
+- Python 3.10 f-string 兼容性: `game_play.py` 健康条渲染 (BUG-004)
+- `ganglie` 技能人类玩家 UI 路由缺失 (BUG-007)
+- `guicai` 技能人类玩家 UI 路由缺失 (BUG-008)
+- `requirements.txt` 与 `pyproject.toml` 依赖不同步 (BUG-006)
+- `test_guose` / `test_duanliang` / `test_qixi` / `test_request_sha_no_cards` 测试不确定性
+
+### Changed
+- 覆盖率配置: 排除 UI 深层模块, 阈值 60%, branch=true (BUG-003)
+- Ruff 自动修复 2453 条代码风格问题
+- 技能处理器拆分为按势力分包 `game/skills/{wei,shu,wu,qun}.py`
+- AI 策略拆分为独立文件 `ai/{easy,normal,hard}_strategy.py`
+
+### Added
+- `test_report.txt` — 综合测试报告 (1256 用例, 75.71% 覆盖率)
+- `test_issues_found.txt` — 测试问题报告
+- `coverage.xml` — 覆盖率 XML 数据
+- 属性测试: `tests/property/` (Hypothesis)
+- 子系统测试: `tests/test_subsystems.py` (Combat/Equipment/Judge)
+- Pilot UI 测试: `tests/test_pilot_ui.py`
+- 模糊测试: `tests/test_fuzz.py`
+- 压力测试: `tests/test_stress.py`
+
 ## [3.2.0] - 2026-02
 
 ### Added

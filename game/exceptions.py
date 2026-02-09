@@ -1,23 +1,18 @@
-# -*- coding: utf-8 -*-
-"""
-游戏异常模块
+"""游戏异常模块
 定义三国杀游戏中的各类异常，提供明确的错误类型和信息
 """
 
-from typing import Any, List, Optional
 
 
 class GameError(Exception):
-    """
-    游戏异常基类
+    """游戏异常基类
 
     所有游戏相关的异常都应该继承此类，
     提供统一的异常处理接口。
     """
 
-    def __init__(self, message: str, details: Optional[dict] = None):
-        """
-        初始化游戏异常
+    def __init__(self, message: str, details: dict | None = None):
+        """初始化游戏异常
 
         Args:
             message: 错误消息
@@ -37,8 +32,7 @@ class GameError(Exception):
 
 
 class InvalidActionError(GameError):
-    """
-    无效动作异常
+    """无效动作异常
 
     当玩家尝试执行不合法的动作时抛出
     """
@@ -46,8 +40,8 @@ class InvalidActionError(GameError):
     def __init__(
         self,
         message: str = "无效的游戏动作",
-        action_type: Optional[str] = None,
-        player_id: Optional[int] = None,
+        action_type: str | None = None,
+        player_id: int | None = None,
     ):
         details = {}
         if action_type:
@@ -60,8 +54,7 @@ class InvalidActionError(GameError):
 
 
 class InvalidTargetError(GameError):
-    """
-    无效目标异常
+    """无效目标异常
 
     当选择的目标不合法时抛出
     """
@@ -69,8 +62,8 @@ class InvalidTargetError(GameError):
     def __init__(
         self,
         message: str = "无效的目标",
-        target_ids: Optional[List[int]] = None,
-        reason: Optional[str] = None,
+        target_ids: list[int] | None = None,
+        reason: str | None = None,
     ):
         details = {}
         if target_ids:
@@ -83,8 +76,7 @@ class InvalidTargetError(GameError):
 
 
 class InsufficientCardsError(GameError):
-    """
-    卡牌不足异常
+    """卡牌不足异常
 
     当玩家没有足够的卡牌执行操作时抛出
     """
@@ -94,7 +86,7 @@ class InsufficientCardsError(GameError):
         message: str = "卡牌不足",
         required: int = 0,
         available: int = 0,
-        card_type: Optional[str] = None,
+        card_type: str | None = None,
     ):
         details = {
             "required": required,
@@ -109,14 +101,13 @@ class InsufficientCardsError(GameError):
 
 
 class CardNotFoundError(GameError):
-    """
-    卡牌未找到异常
+    """卡牌未找到异常
 
     当指定的卡牌不存在时抛出
     """
 
     def __init__(
-        self, message: str = "未找到指定卡牌", card_id: Optional[str] = None
+        self, message: str = "未找到指定卡牌", card_id: str | None = None
     ):
         details = {}
         if card_id:
@@ -129,8 +120,7 @@ class CardNotFoundError(GameError):
 
 
 class SkillError(GameError):
-    """
-    技能异常基类
+    """技能异常基类
 
     所有技能相关异常的父类
     """
@@ -138,8 +128,8 @@ class SkillError(GameError):
     def __init__(
         self,
         message: str = "技能错误",
-        skill_id: Optional[str] = None,
-        player_id: Optional[int] = None,
+        skill_id: str | None = None,
+        player_id: int | None = None,
     ):
         details = {}
         if skill_id:
@@ -152,8 +142,7 @@ class SkillError(GameError):
 
 
 class SkillNotFoundError(SkillError):
-    """
-    技能未找到异常
+    """技能未找到异常
 
     当指定的技能不存在时抛出
     """
@@ -161,15 +150,14 @@ class SkillNotFoundError(SkillError):
     def __init__(
         self,
         message: str = "未找到指定技能",
-        skill_id: Optional[str] = None,
-        player_id: Optional[int] = None,
+        skill_id: str | None = None,
+        player_id: int | None = None,
     ):
         super().__init__(message, skill_id, player_id)
 
 
 class SkillCooldownError(SkillError):
-    """
-    技能冷却异常
+    """技能冷却异常
 
     当技能处于冷却状态无法使用时抛出
     """
@@ -177,8 +165,8 @@ class SkillCooldownError(SkillError):
     def __init__(
         self,
         message: str = "技能冷却中",
-        skill_id: Optional[str] = None,
-        player_id: Optional[int] = None,
+        skill_id: str | None = None,
+        player_id: int | None = None,
         remaining_cooldown: int = 0,
     ):
         super().__init__(message, skill_id, player_id)
@@ -187,8 +175,7 @@ class SkillCooldownError(SkillError):
 
 
 class SkillConditionError(SkillError):
-    """
-    技能条件不满足异常
+    """技能条件不满足异常
 
     当技能的使用条件不满足时抛出
     """
@@ -196,9 +183,9 @@ class SkillConditionError(SkillError):
     def __init__(
         self,
         message: str = "技能使用条件不满足",
-        skill_id: Optional[str] = None,
-        player_id: Optional[int] = None,
-        condition: Optional[str] = None,
+        skill_id: str | None = None,
+        player_id: int | None = None,
+        condition: str | None = None,
     ):
         super().__init__(message, skill_id, player_id)
         self.condition = condition
@@ -207,8 +194,7 @@ class SkillConditionError(SkillError):
 
 
 class SkillUsageLimitError(SkillError):
-    """
-    技能使用次数超限异常
+    """技能使用次数超限异常
 
     当技能本回合/本局已达使用次数上限时抛出
     """
@@ -216,8 +202,8 @@ class SkillUsageLimitError(SkillError):
     def __init__(
         self,
         message: str = "技能使用次数已达上限",
-        skill_id: Optional[str] = None,
-        player_id: Optional[int] = None,
+        skill_id: str | None = None,
+        player_id: int | None = None,
         limit: int = 0,
         used: int = 0,
     ):
@@ -231,8 +217,7 @@ class SkillUsageLimitError(SkillError):
 
 
 class GameStateError(GameError):
-    """
-    游戏状态异常
+    """游戏状态异常
 
     当游戏处于不允许某操作的状态时抛出
     """
@@ -240,8 +225,8 @@ class GameStateError(GameError):
     def __init__(
         self,
         message: str = "游戏状态错误",
-        current_state: Optional[str] = None,
-        expected_state: Optional[str] = None,
+        current_state: str | None = None,
+        expected_state: str | None = None,
     ):
         details = {}
         if current_state:
@@ -254,8 +239,7 @@ class GameStateError(GameError):
 
 
 class GameNotStartedError(GameStateError):
-    """
-    游戏未开始异常
+    """游戏未开始异常
 
     当游戏尚未开始就尝试执行游戏内操作时抛出
     """
@@ -265,8 +249,7 @@ class GameNotStartedError(GameStateError):
 
 
 class GameAlreadyFinishedError(GameStateError):
-    """
-    游戏已结束异常
+    """游戏已结束异常
 
     当游戏已结束但尝试继续操作时抛出
     """
@@ -276,8 +259,7 @@ class GameAlreadyFinishedError(GameStateError):
 
 
 class InvalidPhaseError(GameStateError):
-    """
-    无效阶段异常
+    """无效阶段异常
 
     当在错误的游戏阶段执行操作时抛出
     """
@@ -285,8 +267,8 @@ class InvalidPhaseError(GameStateError):
     def __init__(
         self,
         message: str = "当前阶段不允许此操作",
-        current_phase: Optional[str] = None,
-        expected_phase: Optional[str] = None,
+        current_phase: str | None = None,
+        expected_phase: str | None = None,
     ):
         super().__init__(message, current_phase, expected_phase)
         self.current_phase = current_phase
@@ -297,13 +279,12 @@ class InvalidPhaseError(GameStateError):
 
 
 class PlayerError(GameError):
-    """
-    玩家异常基类
+    """玩家异常基类
 
     所有玩家相关异常的父类
     """
 
-    def __init__(self, message: str = "玩家错误", player_id: Optional[int] = None):
+    def __init__(self, message: str = "玩家错误", player_id: int | None = None):
         details = {}
         if player_id is not None:
             details["player_id"] = player_id
@@ -312,32 +293,29 @@ class PlayerError(GameError):
 
 
 class PlayerNotFoundError(PlayerError):
-    """
-    玩家未找到异常
+    """玩家未找到异常
 
     当指定的玩家不存在时抛出
     """
 
-    def __init__(self, message: str = "未找到指定玩家", player_id: Optional[int] = None):
+    def __init__(self, message: str = "未找到指定玩家", player_id: int | None = None):
         super().__init__(message, player_id)
 
 
 class PlayerDeadError(PlayerError):
-    """
-    玩家已死亡异常
+    """玩家已死亡异常
 
     当对已死亡玩家执行需要存活的操作时抛出
     """
 
     def __init__(
-        self, message: str = "该玩家已阵亡", player_id: Optional[int] = None
+        self, message: str = "该玩家已阵亡", player_id: int | None = None
     ):
         super().__init__(message, player_id)
 
 
 class NotPlayerTurnError(PlayerError):
-    """
-    非玩家回合异常
+    """非玩家回合异常
 
     当非当前回合玩家尝试执行回合专属操作时抛出
     """
@@ -345,8 +323,8 @@ class NotPlayerTurnError(PlayerError):
     def __init__(
         self,
         message: str = "不是该玩家的回合",
-        player_id: Optional[int] = None,
-        current_player_id: Optional[int] = None,
+        player_id: int | None = None,
+        current_player_id: int | None = None,
     ):
         super().__init__(message, player_id)
         self.current_player_id = current_player_id
@@ -358,14 +336,13 @@ class NotPlayerTurnError(PlayerError):
 
 
 class ConfigurationError(GameError):
-    """
-    配置错误异常
+    """配置错误异常
 
     当游戏配置有问题时抛出
     """
 
     def __init__(
-        self, message: str = "配置错误", config_key: Optional[str] = None
+        self, message: str = "配置错误", config_key: str | None = None
     ):
         details = {}
         if config_key:
@@ -375,8 +352,7 @@ class ConfigurationError(GameError):
 
 
 class DataLoadError(GameError):
-    """
-    数据加载异常
+    """数据加载异常
 
     当加载游戏数据文件失败时抛出
     """
@@ -384,8 +360,8 @@ class DataLoadError(GameError):
     def __init__(
         self,
         message: str = "数据加载失败",
-        file_path: Optional[str] = None,
-        reason: Optional[str] = None,
+        file_path: str | None = None,
+        reason: str | None = None,
     ):
         details = {}
         if file_path:
@@ -401,8 +377,7 @@ class DataLoadError(GameError):
 
 
 def raise_if_game_not_started(game_state: str) -> None:
-    """
-    检查游戏是否已开始，未开始则抛出异常
+    """检查游戏是否已开始，未开始则抛出异常
 
     Args:
         game_state: 当前游戏状态
@@ -415,8 +390,7 @@ def raise_if_game_not_started(game_state: str) -> None:
 
 
 def raise_if_game_finished(game_state: str) -> None:
-    """
-    检查游戏是否已结束，已结束则抛出异常
+    """检查游戏是否已结束，已结束则抛出异常
 
     Args:
         game_state: 当前游戏状态
@@ -428,9 +402,8 @@ def raise_if_game_finished(game_state: str) -> None:
         raise GameAlreadyFinishedError()
 
 
-def raise_if_player_dead(is_dead: bool, player_id: Optional[int] = None) -> None:
-    """
-    检查玩家是否存活，已死亡则抛出异常
+def raise_if_player_dead(is_dead: bool, player_id: int | None = None) -> None:
+    """检查玩家是否存活，已死亡则抛出异常
 
     Args:
         is_dead: 玩家是否已死亡

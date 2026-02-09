@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Deck 牌堆操作的性质测试（Property-based）。
 
 核心不变量：
@@ -17,17 +16,16 @@ _project_root = str(Path(__file__).resolve().parents[2])
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from game.card import (
     Card,
-    CardType,
     CardSubtype,
     CardSuit,
+    CardType,
     Deck,
 )
-
 
 # ---------------------------------------------------------------------------
 # 辅助：构造一个最小的 Deck（不依赖外部 JSON 文件）

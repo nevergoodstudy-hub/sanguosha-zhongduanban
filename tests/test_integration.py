@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 集成测试 (M4-T04)
 验证完整游戏流程: 设置 → 选将 → 对战 → 结束
 """
 
-import random
-import pytest
-from game.engine import GameEngine, GameState, GamePhase
-from game.player import Player, Identity
 from game.card import CardName
+from game.engine import GameEngine, GameState
 from game.events import EventType
-from ai.bot import AIBot, AIDifficulty
+from game.player import Identity
 
 
 class TestFullGameFlow:

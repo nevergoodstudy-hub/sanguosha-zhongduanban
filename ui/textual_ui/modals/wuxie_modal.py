@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-无懈可击响应弹窗 (M-C C4)
+"""无懈可击响应弹窗 (M-C C4)
 
 修复 P0 缺陷: 原 ask_for_wuxie 硬编码 return None。
 弹窗显示锦囊信息 + 5秒倒计时，超时自动放弃。
@@ -11,18 +9,17 @@ dismiss(False) → 放弃 / 超时
 
 from __future__ import annotations
 
-from typing import Optional, List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
-from textual.widgets import Static, Button
 from textual.timer import Timer
+from textual.widgets import Button, Static
 
 from ui.textual_ui.modals.base import AnimatedModalScreen
 
 if TYPE_CHECKING:
-    from game.card import Card
-    from game.player import Player
+    pass
 
 
 class WuxieResponseModal(AnimatedModalScreen[bool]):
@@ -83,7 +80,7 @@ class WuxieResponseModal(AnimatedModalScreen[bool]):
         self._target_name = target_name
         self._currently_cancelled = currently_cancelled
         self._remaining = countdown
-        self._countdown_timer: Optional[Timer] = None
+        self._countdown_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         # 构建锦囊信息描述

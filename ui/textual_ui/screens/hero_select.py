@@ -1,16 +1,15 @@
-# -*- coding: utf-8 -*-
 """武将选择界面"""
 
 from __future__ import annotations
 
 import copy
 import random
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
-from textual.screen import Screen
-from textual.widgets import Static, Button
 from textual.containers import Container
+from textual.screen import Screen
+from textual.widgets import Button, Static
 
 if TYPE_CHECKING:
     from game.hero import Hero
@@ -49,14 +48,14 @@ class HeroSelectScreen(Screen):
         self.player_count = player_count
         self.difficulty = difficulty
         self.role_preference = role_preference
-        self.heroes: List[Hero] = []
+        self.heroes: list[Hero] = []
         self.is_lord = False
 
     def on_mount(self) -> None:
         """初始化引擎并准备武将选项"""
         from game.engine import GameEngine
-        from game.skill import SkillSystem
         from game.player import Identity
+        from game.skill import SkillSystem
 
         engine = GameEngine()
         engine.setup_game(self.player_count, human_player_index=0,
@@ -117,9 +116,8 @@ class HeroSelectScreen(Screen):
 
     def _finish_setup(self, chosen_hero: Hero) -> None:
         """完成选将并进入游戏"""
-        from game.player import Identity
         from ai.bot import AIBot, AIDifficulty
-        from game.hero import SkillType
+        from game.player import Identity
 
         engine = self.app._engine
         hero = copy.deepcopy(chosen_hero)

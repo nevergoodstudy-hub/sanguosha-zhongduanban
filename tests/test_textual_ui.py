@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Textual TUI 测试（M3）
 """
 
-import pytest
-from ui.protocol import GameUI
+from ui.protocol import GameDisplay, GameInput, GameNotify, GameUI
 from ui.textual_ui.app import (
-    SanguoshaApp,
+    GameOverScreen,
+    GameSetupScreen,
     MainMenuScreen,
     RulesScreen,
-    GameSetupScreen,
-    GameOverScreen,
+    SanguoshaApp,
     TextualUIBridge,
 )
 
@@ -32,7 +30,7 @@ class TestTextualAppImport:
 
 
 class TestGameUIProtocol:
-    """测试 GameUI Protocol"""
+    """测试 GameUI Protocol 及子协议"""
 
     def test_bridge_has_protocol_methods(self):
         """TextualUIBridge 拥有 Protocol 所需的方法"""
@@ -47,6 +45,47 @@ class TestGameUIProtocol:
         assert hasattr(bridge, 'ask_for_shan')
         assert hasattr(bridge, 'choose_target')
         assert hasattr(bridge, 'get_player_action')
+
+    def test_sub_protocols_exist(self):
+        """三个子协议存在且可导入"""
+        assert GameDisplay is not None
+        assert GameInput is not None
+        assert GameNotify is not None
+
+    def test_gameui_inherits_sub_protocols(self):
+        """GameUI 组合继承所有子协议"""
+        # Protocol 不支持运行时 issubclass，通过 MRO 检查继承关系
+        mro = GameUI.__mro__
+        assert GameDisplay in mro
+        assert GameInput in mro
+        assert GameNotify in mro
+
+    def test_display_protocol_methods(self):
+        """GameDisplay 子协议包含展示方法"""
+        display_methods = [
+            'show_title', 'show_rules', 'show_game_state',
+            'show_log', 'show_game_over', 'clear_screen', 'show_help',
+        ]
+        for method in display_methods:
+            assert hasattr(GameDisplay, method), f"GameDisplay missing: {method}"
+
+    def test_input_protocol_methods(self):
+        """GameInput 子协议包含输入方法"""
+        input_methods = [
+            'show_main_menu', 'show_player_count_menu', 'show_difficulty_menu',
+            'show_hero_selection', 'get_player_action', 'choose_target',
+            'choose_card_to_play', 'choose_cards_to_discard',
+            'show_skill_menu', 'ask_for_shan', 'ask_for_sha',
+            'ask_for_tao', 'ask_for_wuxie', 'choose_card_from_player',
+            'choose_suit', 'guanxing_selection', 'wait_for_continue',
+            'ask_for_jijiang', 'ask_for_hujia',
+        ]
+        for method in input_methods:
+            assert hasattr(GameInput, method), f"GameInput missing: {method}"
+
+    def test_notify_protocol_methods(self):
+        """GameNotify 子协议包含通知方法"""
+        assert hasattr(GameNotify, 'set_engine')
 
 
 class TestTextualUIBridge:

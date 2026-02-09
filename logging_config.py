@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Project-wide logging setup.
 
 Design goals:
@@ -21,8 +20,6 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Optional
-
 
 _FILE_HANDLER_NAME = "sanguosha_file"
 _CONSOLE_HANDLER_NAME = "sanguosha_console"
@@ -42,7 +39,7 @@ def _parse_level(level: str | int) -> int:
 def setup_logging(
     *,
     level: str | int = "INFO",
-    log_file: Optional[str] = None,
+    log_file: str | None = None,
     enable_file: bool = True,
     enable_console: bool = False,
     console_level: str | int = "WARNING",
@@ -53,7 +50,6 @@ def setup_logging(
 
     Returns the root logger.
     """
-
     env_level = os.environ.get("SANGUOSHA_LOG_LEVEL")
     if env_level:
         level = env_level

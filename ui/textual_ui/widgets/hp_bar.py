@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-HPBar — 体力条组件
+"""HPBar — 体力条组件
 
 reactive HP 显示，颜色随 HP 变化:
   满血: 绿  |  半血: 黄  |  危险: 红

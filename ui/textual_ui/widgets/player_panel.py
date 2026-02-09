@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-PlayerPanel — 可点击玩家面板 (M-B)
+"""PlayerPanel — 可点击玩家面板 (M-B)
 
 国籍色条 + 武将名 + HP条 + 手牌数 + 装备图标 + 身份标记。
 .targetable / .dead / .dying CSS 状态。
@@ -10,7 +8,7 @@ hover tooltip 显示技能描述。
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from textual.message import Message
 from textual.reactive import reactive
@@ -18,7 +16,7 @@ from textual.timer import Timer
 from textual.widgets import Static
 
 if TYPE_CHECKING:
-    from game.player import Player
+    pass
 
 
 # 国籍颜色
@@ -81,7 +79,7 @@ class PlayerPanel(Static, can_focus=True):
         self._distance: int = -1       # 与人类玩家的距离
         self._in_range: bool = False   # 是否在攻击范围内
         self._prev_hp: int = player.hp if hasattr(player, 'hp') else 0  # P2-1
-        self._pulse_timer: Optional[Timer] = None  # P1-3: 呼吸脉冲
+        self._pulse_timer: Timer | None = None  # P1-3: 呼吸脉冲
         self._pulse_dim: bool = False
         self._update_tooltip()
 
@@ -108,7 +106,8 @@ class PlayerPanel(Static, can_focus=True):
         # - 其他存活玩家身份隐藏
         identity_str = ""
         if hasattr(p, "identity"):
-            if p.identity.value == "lord":
+            from game.player import Identity
+            if p.identity == Identity.LORD:
                 identity_str = " [bold red]👑主公[/bold red]"
             elif not p.is_alive:
                 identity_str = f" ({p.identity.chinese_name})"

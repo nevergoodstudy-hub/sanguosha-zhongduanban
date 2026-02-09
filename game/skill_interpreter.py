@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-技能 DSL 解释器
+"""技能 DSL 解释器
 
 M2-T02: 读取技能 DSL 并执行。
 与 SkillSystem 的 Python handler 共存（混合模式），
@@ -8,36 +6,38 @@ DSL 优先、Python fallback。
 """
 
 from __future__ import annotations
+
 import logging
 import random
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from i18n import t as _t
 
 from .skill_dsl import SkillDsl
 
 if TYPE_CHECKING:
+    from .card import Card
     from .engine import GameEngine
     from .player import Player
-    from .card import Card
 
 logger = logging.getLogger(__name__)
 
 
 class DslContext:
-    """
-    DSL 执行上下文
+    """DSL 执行上下文
 
     在一次技能执行过程中携带临时状态。
     """
 
     def __init__(
         self,
-        engine: 'GameEngine',
-        player: 'Player',
+        engine: GameEngine,
+        player: Player,
         skill_name: str,
-        targets: Optional[List['Player']] = None,
-        cards: Optional[List['Card']] = None,
-        source: Optional['Player'] = None,
-        damage_card: Optional['Card'] = None,
+        targets: list[Player] | None = None,
+        cards: list[Card] | None = None,
+        source: Player | None = None,
+        damage_card: Card | None = None,
         **extra: Any,
     ):
         self.engine = engine
@@ -51,12 +51,11 @@ class DslContext:
         self.extra = extra
 
         # 运行时累加器（如仁德的已送牌数）
-        self.counters: Dict[str, int] = {}
+        self.counters: dict[str, int] = {}
 
 
 class SkillInterpreter:
-    """
-    技能 DSL 解释器
+    """技能 DSL 解释器
 
     职责：
     - 解析 SkillDsl 数据
@@ -65,12 +64,12 @@ class SkillInterpreter:
     - 按序执行步骤 (steps)
     """
 
-    def __init__(self, engine: 'GameEngine'):
+    def __init__(self, engine: GameEngine):
         self.engine = engine
 
     # ==================== 公开 API ====================
 
-    def can_execute(self, dsl: SkillDsl, player: 'Player', **kwargs) -> bool:
+    def can_execute(self, dsl: SkillDsl, player: Player, **kwargs) -> bool:
         """检查 DSL 技能是否可执行"""
         ctx = DslContext(self.engine, player, "", **kwargs)
 
@@ -96,14 +95,13 @@ class SkillInterpreter:
     def execute(
         self,
         dsl: SkillDsl,
-        player: 'Player',
+        player: Player,
         skill_name: str,
-        targets: Optional[List['Player']] = None,
-        cards: Optional[List['Card']] = None,
+        targets: list[Player] | None = None,
+        cards: list[Card] | None = None,
         **kwargs,
     ) -> bool:
-        """
-        执行 DSL 技能
+        """执行 DSL 技能
 
         Args:
             dsl: 技能 DSL 定义
@@ -139,7 +137,7 @@ class SkillInterpreter:
 
     # ==================== 条件检查 ====================
 
-    def _eval_condition(self, cond: Dict[str, Any], ctx: DslContext) -> bool:
+    def _eval_condition(self, cond: dict[str, Any], ctx: DslContext) -> bool:
         """评估单个条件"""
         check = cond.get("check", "")
 
@@ -179,7 +177,7 @@ class SkillInterpreter:
 
     # ==================== 代价 ====================
 
-    def _can_pay_cost(self, cost: Dict[str, Any], ctx: DslContext) -> bool:
+    def _can_pay_cost(self, cost: dict[str, Any], ctx: DslContext) -> bool:
         """检查代价是否可支付"""
         if "discard" in cost:
             info = cost["discard"]
@@ -192,7 +190,7 @@ class SkillInterpreter:
 
         return True
 
-    def _pay_cost(self, cost: Dict[str, Any], ctx: DslContext) -> bool:
+    def _pay_cost(self, cost: dict[str, Any], ctx: DslContext) -> bool:
         """支付代价"""
         if "discard" in cost:
             info = cost["discard"]
@@ -218,9 +216,8 @@ class SkillInterpreter:
 
     # ==================== 步骤执行 ====================
 
-    def _exec_step(self, step: Dict[str, Any], ctx: DslContext) -> None:
+    def _exec_step(self, step: dict[str, Any], ctx: DslContext) -> None:
         """执行单个步骤"""
-
         # ---------- draw ----------
         if "draw" in step:
             count = step["draw"]
@@ -318,7 +315,7 @@ class SkillInterpreter:
                 judge_card = judge_cards[0]
                 ctx.engine.log_event(
                     "judge",
-                    f"判定结果: {judge_card.display_name}"
+                    _t("judge.result", card=judge_card.display_name)
                 )
                 ctx.engine.deck.discard([judge_card])
 
@@ -363,7 +360,7 @@ class SkillInterpreter:
 
     # ==================== 辅助 ====================
 
-    def _resolve_player(self, ref: str, ctx: DslContext) -> 'Player':
+    def _resolve_player(self, ref: str, ctx: DslContext) -> Player:
         """解析玩家引用"""
         if ref == "self":
             return ctx.player
@@ -373,7 +370,7 @@ class SkillInterpreter:
             return ctx.source or ctx.player
         return ctx.player
 
-    def _eval_judge(self, card: 'Card', cond: Dict[str, Any]) -> bool:
+    def _eval_judge(self, card: Card, cond: dict[str, Any]) -> bool:
         """评估判定结果"""
         from .card import CardSuit
 

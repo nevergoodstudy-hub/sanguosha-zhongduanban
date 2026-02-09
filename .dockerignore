@@ -1,0 +1,45 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing & coverage
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.snap
+
+# Logs & saves (mounted as volumes)
+logs/
+saves/
+
+# Documentation & dev tools
+docs/
+tests/
+tools/find_zh.py
+tools/fix_skill_keys.py
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore

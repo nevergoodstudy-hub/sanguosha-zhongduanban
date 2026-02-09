@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """距离与座位环的性质测试（Property-based）。
 
 核心不变量：
@@ -18,12 +17,11 @@ _project_root = str(Path(__file__).resolve().parents[2])
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-from hypothesis import given, settings, assume
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
-from game.card import Card, CardType, CardSubtype, CardSuit
-from game.player import Player, Equipment
-
+from game.card import Card, CardSubtype, CardSuit, CardType
+from game.player import Equipment, Player
 
 # ---------------------------------------------------------------------------
 # 辅助

@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
-"""
-EquipmentSlots — 装备槽位组件 (4 槽)
+"""EquipmentSlots — 装备槽位组件 (4 槽)
 
 武器 / 防具 / 进攻马 / 防御马
 """
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from textual.widgets import Static
 
 if TYPE_CHECKING:
-    from game.player import Player
+    pass
 
 
 SLOT_ICONS = {

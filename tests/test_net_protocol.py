@@ -1,13 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 网络协议测试 (M4-T01)
 """
 
 import json
-import pytest
+
 from net.protocol import (
-    MsgType, RoomState, ServerMsg, ClientMsg,
-    parse_message, validate_msg_type,
+    ClientMsg,
+    MsgType,
+    RoomState,
+    ServerMsg,
+    parse_message,
+    validate_msg_type,
 )
 
 

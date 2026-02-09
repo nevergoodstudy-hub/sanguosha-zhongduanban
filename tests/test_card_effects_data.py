@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 数据驱动卡牌效果测试（M2-T04）
 """
 
-import pytest
-from game.effects.registry import CardEffectRegistry, create_default_registry
 from game.effects.data_driven import DataDrivenCardEffect, load_card_effects_config
+from game.effects.registry import create_default_registry
 
 
 class TestCardEffectsConfigLoading:
@@ -80,8 +78,8 @@ class TestRegistryDataDriven:
 
     def test_hand_written_not_overridden(self):
         """手写效果不被数据驱动覆盖"""
-        from game.effects.basic import TaoEffect
         from game.card import CardName
+        from game.effects.basic import TaoEffect
 
         registry = create_default_registry()
         # 手写注册用 CardName.TAO="桃"，JSON 用 "tao"

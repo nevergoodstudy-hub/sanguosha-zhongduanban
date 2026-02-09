@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """English translation table."""
 
 STRINGS: dict[str, str] = {

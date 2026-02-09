@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-CardWidget — 可视化卡牌组件 (M-A)
+"""CardWidget — 可视化卡牌组件 (M-A)
 
 box-drawing 卡面渲染，红/黑花色颜色，
 :hover 高亮，.selected 上移，tooltip 显示效果描述，
@@ -9,14 +7,14 @@ on_click 发布 CardClicked Message。
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widgets import Static
 
 if TYPE_CHECKING:
-    from game.card import Card
+    pass
 
 
 # 花色映射
@@ -113,10 +111,9 @@ class CardWidget(Static, can_focus=True):
             self.card = card
 
     def __init__(self, card, index: int = -1, **kwargs):
-        """
-        Args:
-            card: game.card.Card 对象
-            index: 手牌中的索引
+        """Args:
+        card: game.card.Card 对象
+        index: 手牌中的索引
         """
         super().__init__(**kwargs)
         self._card = card
@@ -140,10 +137,10 @@ class CardWidget(Static, can_focus=True):
         name_str = str(c.name) if hasattr(c, "name") else ""
         effect = CARD_EFFECT_DESC.get(name_str, "")
         if effect:
-            parts.append(f"━━━")
+            parts.append("━━━")
             parts.append(effect)
         elif hasattr(c, "description") and c.description:
-            parts.append(f"━━━")
+            parts.append("━━━")
             parts.append(c.description)
         # 武器攻击范围
         if hasattr(c, "range") and c.range > 1:

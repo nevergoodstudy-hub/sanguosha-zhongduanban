@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """三国杀 - 命令行终端版.
 
 主程序入口
@@ -84,6 +83,7 @@ def main():
     # M4: 服务端模式
     if args.server is not None:
         import asyncio
+
         from net.server import GameServer
         host, _, port = args.server.partition(":")
         host = host or "0.0.0.0"
@@ -95,6 +95,7 @@ def main():
     # M4: 客户端模式
     if args.connect is not None:
         import asyncio
+
         from net.client import cli_client_main
         url = f"ws://{args.connect}"
         name = args.name or "玩家"
@@ -103,9 +104,10 @@ def main():
 
     # 回放模式
     if args.replay is not None:
-        from game.save_system import load_game, EnhancedReplay
-        from ui.input_safety import safe_input
         import time as _time
+
+        from game.save_system import EnhancedReplay, load_game
+        from ui.input_safety import safe_input
 
         data = load_game(args.replay)
         replay = EnhancedReplay(data)

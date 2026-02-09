@@ -15,6 +15,8 @@
   <img src="https://img.shields.io/badge/TUI-Textual-blueviolet" alt="Textual">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-green" alt="Platform">
   <img src="https://img.shields.io/badge/code%20style-ruff-261230.svg" alt="Code style: ruff">
+  <img src="https://img.shields.io/badge/tests-1256%20passed-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-75.71%25-yellowgreen" alt="Coverage">
 </p>
 
 ---
@@ -165,8 +167,17 @@ sanguosha/
 │   ├── player.py                    #   玩家 / 身份 / 装备
 │   ├── card.py                      #   卡牌 / 牌堆 / 枚举
 │   ├── hero.py                      #   武将加载
-│   ├── skill.py                     #   技能系统（全部 handler）
+│   ├── skill.py                     #   技能系统（DSL-first + Python fallback）
+│   ├── skills/                      #   按势力分包的技能处理器
+│   │   ├── wei.py                   #     魏势力技能
+│   │   ├── shu.py                   #     蜀势力技能
+│   │   ├── wu.py                    #      吴势力技能
+│   │   └── qun.py                   #     群势力技能
+│   ├── combat.py                    #   战斗子系统
+│   ├── card_resolver.py             #   卡牌结算
 │   ├── damage_system.py             #   伤害计算 / 濒死 / 死亡
+│   ├── equipment_system.py          #   装备子系统
+│   ├── judge_system.py              #   判定子系统
 │   ├── game_controller.py           #   游戏控制器
 │   ├── request_handler.py           #   UI 请求分发
 │   ├── turn_manager.py              #   回合管理
@@ -184,7 +195,11 @@ sanguosha/
 │   │   ├── widgets/                 #   组件（卡牌/面板/阶段条/血条/装备栏）
 │   │   └── styles/game.tcss         #   全局样式
 │   └── protocol.py                  #   GameUI 抽象接口
-├── ai/bot.py                        # 🤖 三级 AI + 嘲讽值 + 局势评估
+├── ai/                              # 🤖 三级 AI 系统
+│   ├── bot.py                       #   AI 入口 + 嘲讽值 + 局势评估
+│   ├── easy_strategy.py             #   简单策略
+│   ├── normal_strategy.py           #   普通策略（转化技能+借刀）
+│   └── hard_strategy.py             #   困难策略（综合评估+身份推断）
 ├── net/                             # 🌐 WebSocket 网络对战
 ├── i18n/                            # 🌍 国际化（中文 / 英文）
 ├── data/                            # 📦 卡牌 / 武将 / 效果数据 (JSON)
@@ -203,14 +218,16 @@ sanguosha/
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest tests/ -v
+python -m pytest tests/ -v              # 全量测试 (1256 用例)
+python -m pytest --cov=game --cov=ai    # 含覆盖率报告
+python -m ruff check .                  # 静态分析
 ```
 
 ### 扩展武将
 
 1. `data/heroes.json` — 添加武将数据
-2. `game/skill.py` — 实现 `_handle_xxx` 技能方法
-3. `ai/bot.py` — 添加 AI 技能决策
+2. `game/skills/<faction>.py` — 实现对应势力的技能处理器（使用 `@skill_handler` 装饰器注册）
+3. `ai/` — 在对应策略文件中添加 AI 技能决策
 
 ### 扩展卡牌
 
@@ -219,6 +236,22 @@ python -m pytest tests/ -v
 3. `ui/textual_ui/widgets/card_widget.py` — 添加 `CARD_EFFECT_DESC` tooltip
 
 ## 📝 版本历史
+
+### v3.3.0 (2026-02-09) — 质量强化：BUG 修复 + 测试全覆盖
+
+**BUG 修复（8 项）：**
+- 修复 shensu 测试闪避不确定性、CSS 动画类缺失
+- 修复 F821 undefined name 静态分析错误（GameAction 类型导入）
+- 修复 Python 3.10 f-string 兼容性（game_play.py 健康条）
+- 修复 ganglie/guicai 技能人类玩家 UI 路由缺失
+- 同步 requirements.txt 与 pyproject.toml 依赖
+- 优化覆盖率配置（排除 UI 深层模块，阈值 60%）
+
+**测试改进：**
+- 修复 4 个不确定性测试（guose/duanliang/qixi/request_sha）
+- Ruff 自动修复 2453 条代码风格问题
+- 1256 测试用例全部通过，覆盖率 75.71%
+- 属性测试（Hypothesis）、模糊测试、压力测试、Textual Pilot UI 测试
 
 ### v3.2.0 (2026-02) — 深度改进：18 项全量修复
 

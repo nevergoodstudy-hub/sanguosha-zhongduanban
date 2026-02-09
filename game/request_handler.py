@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-请求处理器模块
+"""请求处理器模块
 统一 AI 和人类玩家的输入请求接口
 
 M1-T03: 将 engine.py 中所有 self.ui.ask_for_* 调用
@@ -8,107 +6,106 @@ M1-T03: 将 engine.py 中所有 self.ui.ask_for_* 调用
 """
 
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from typing import Optional, List, Tuple, TYPE_CHECKING
+
 import random
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .player import Player
     from .card import Card, CardSuit
     from .engine import GameEngine
+    from .player import Player
 
 
 class RequestHandler(ABC):
-    """
-    请求处理器抽象基类
+    """请求处理器抽象基类
 
     所有玩家输入场景（出闪、出杀、出桃、无懈可击、选牌、选花色等）
     统一通过此接口路由，实现 UI/AI 解耦。
     """
 
     @abstractmethod
-    def request_shan(self, player: 'Player') -> Optional['Card']:
+    def request_shan(self, player: Player) -> Card | None:
         """请求玩家打出闪，返回打出的闪牌或 None"""
         ...
 
     @abstractmethod
-    def request_sha(self, player: 'Player') -> Optional['Card']:
+    def request_sha(self, player: Player) -> Card | None:
         """请求玩家打出杀，返回打出的杀牌或 None"""
         ...
 
     @abstractmethod
-    def request_tao(self, savior: 'Player', dying: 'Player') -> Optional['Card']:
+    def request_tao(self, savior: Player, dying: Player) -> Card | None:
         """请求玩家使用桃救援，返回打出的桃牌或 None"""
         ...
 
     @abstractmethod
     def request_wuxie(
         self,
-        responder: 'Player',
-        trick_card: 'Card',
-        source: 'Player',
-        target: Optional['Player'],
+        responder: Player,
+        trick_card: Card,
+        source: Player,
+        target: Player | None,
         is_cancelled: bool,
-    ) -> Optional['Card']:
+    ) -> Card | None:
         """请求玩家打出无懈可击，返回打出的无懈牌或 None"""
         ...
 
     @abstractmethod
     def choose_card_from_player(
-        self, chooser: 'Player', target: 'Player'
-    ) -> Optional['Card']:
+        self, chooser: Player, target: Player
+    ) -> Card | None:
         """选择目标角色的一张牌（过河拆桥/顺手牵羊）"""
         ...
 
     @abstractmethod
-    def choose_card_to_show(self, player: 'Player') -> Optional['Card']:
+    def choose_card_to_show(self, player: Player) -> Card | None:
         """选择一张手牌展示（火攻）"""
         ...
 
     @abstractmethod
     def choose_card_to_discard_for_huogong(
-        self, player: 'Player', suit: 'CardSuit'
-    ) -> Optional['Card']:
+        self, player: Player, suit: CardSuit
+    ) -> Card | None:
         """选择一张指定花色的手牌弃置（火攻后续）"""
         ...
 
     @abstractmethod
-    def choose_suit(self, player: 'Player') -> 'CardSuit':
+    def choose_suit(self, player: Player) -> CardSuit:
         """选择一种花色（反间）"""
         ...
 
     @abstractmethod
     def guanxing_selection(
-        self, player: 'Player', cards: List['Card']
-    ) -> Tuple[List['Card'], List['Card']]:
+        self, player: Player, cards: list[Card]
+    ) -> tuple[list[Card], list[Card]]:
         """观星排列：返回 (置顶牌列表, 置底牌列表)"""
         ...
 
     @abstractmethod
-    def ask_zhuque_convert(self, player: 'Player') -> bool:
+    def ask_zhuque_convert(self, player: Player) -> bool:
         """询问是否将普通杀转为火杀（朱雀羽扇）"""
         ...
 
     @abstractmethod
-    def ask_for_jijiang(self, player: 'Player') -> Optional['Card']:
+    def ask_for_jijiang(self, player: Player) -> Card | None:
         """激将：请求蜀国角色代打杀"""
         ...
 
     @abstractmethod
-    def ask_for_hujia(self, player: 'Player') -> Optional['Card']:
+    def ask_for_hujia(self, player: Player) -> Card | None:
         """护驾：请求魏国角色代打闪"""
         ...
 
 
 class DefaultRequestHandler(RequestHandler):
-    """
-    默认请求处理器
+    """默认请求处理器
 
     将现有 AI 自动决策 / UI 回调 / 无 UI 回退 三分支逻辑
     从 engine.py 提取到此处统一管理。
     """
 
-    def __init__(self, engine: 'GameEngine'):
+    def __init__(self, engine: GameEngine):
         self.engine = engine
 
     # ---------- 内部工具 ----------
@@ -118,7 +115,7 @@ class DefaultRequestHandler(RequestHandler):
 
     # ---------- 出闪 ----------
 
-    def request_shan(self, player: 'Player') -> Optional['Card']:
+    def request_shan(self, player: Player) -> Card | None:
         from .card import CardName
         shan_cards = player.get_cards_by_name(CardName.SHAN)
         if not shan_cards:
@@ -136,7 +133,7 @@ class DefaultRequestHandler(RequestHandler):
 
     # ---------- 出杀 ----------
 
-    def request_sha(self, player: 'Player') -> Optional['Card']:
+    def request_sha(self, player: Player) -> Card | None:
         from .card import CardName
         sha_cards = player.get_cards_by_name(CardName.SHA)
         if not sha_cards:
@@ -153,7 +150,7 @@ class DefaultRequestHandler(RequestHandler):
 
     # ---------- 出桃 ----------
 
-    def request_tao(self, savior: 'Player', dying: 'Player') -> Optional['Card']:
+    def request_tao(self, savior: Player, dying: Player) -> Card | None:
         from .card import CardName
         tao_cards = savior.get_cards_by_name(CardName.TAO)
         if not tao_cards:
@@ -173,12 +170,12 @@ class DefaultRequestHandler(RequestHandler):
 
     def request_wuxie(
         self,
-        responder: 'Player',
-        trick_card: 'Card',
-        source: 'Player',
-        target: 'Player | None',
+        responder: Player,
+        trick_card: Card,
+        source: Player,
+        target: Player | None,
         is_cancelled: bool,
-    ) -> Optional['Card']:
+    ) -> Card | None:
         from .card import CardName
         wuxie_cards = responder.get_cards_by_name(CardName.WUXIE)
         if not wuxie_cards:
@@ -199,8 +196,8 @@ class DefaultRequestHandler(RequestHandler):
     # ---------- 选牌 ----------
 
     def choose_card_from_player(
-        self, chooser: 'Player', target: 'Player'
-    ) -> Optional['Card']:
+        self, chooser: Player, target: Player
+    ) -> Card | None:
         all_cards = target.get_all_cards()
         if not all_cards:
             return None
@@ -214,7 +211,7 @@ class DefaultRequestHandler(RequestHandler):
 
         return random.choice(all_cards)
 
-    def choose_card_to_show(self, player: 'Player') -> Optional['Card']:
+    def choose_card_to_show(self, player: Player) -> Card | None:
         if not player.hand:
             return None
 
@@ -228,8 +225,8 @@ class DefaultRequestHandler(RequestHandler):
         return player.hand[0]
 
     def choose_card_to_discard_for_huogong(
-        self, player: 'Player', suit: 'CardSuit'
-    ) -> Optional['Card']:
+        self, player: Player, suit: CardSuit
+    ) -> Card | None:
         matching = [c for c in player.hand if c.suit == suit]
         if not matching:
             return None
@@ -245,7 +242,7 @@ class DefaultRequestHandler(RequestHandler):
 
     # ---------- 选花色 ----------
 
-    def choose_suit(self, player: 'Player') -> 'CardSuit':
+    def choose_suit(self, player: Player) -> CardSuit:
         from .card import CardSuit
 
         if player.is_ai:
@@ -260,8 +257,8 @@ class DefaultRequestHandler(RequestHandler):
     # ---------- 观星 ----------
 
     def guanxing_selection(
-        self, player: 'Player', cards: List['Card']
-    ) -> Tuple[List['Card'], List['Card']]:
+        self, player: Player, cards: list[Card]
+    ) -> tuple[list[Card], list[Card]]:
         from .card import CardName
 
         if player.is_ai:
@@ -290,7 +287,7 @@ class DefaultRequestHandler(RequestHandler):
 
     # ---------- 朱雀羽扇 ----------
 
-    def ask_zhuque_convert(self, player: 'Player') -> bool:
+    def ask_zhuque_convert(self, player: Player) -> bool:
         if player.is_ai:
             return True  # AI 总是转火杀
 
@@ -302,7 +299,7 @@ class DefaultRequestHandler(RequestHandler):
 
     # ---------- 激将 ----------
 
-    def ask_for_jijiang(self, player: 'Player') -> Optional['Card']:
+    def ask_for_jijiang(self, player: Player) -> Card | None:
         from .card import CardName
         sha_cards = player.get_cards_by_name(CardName.SHA)
         if not sha_cards:
@@ -319,7 +316,7 @@ class DefaultRequestHandler(RequestHandler):
 
     # ---------- 护驾 ----------
 
-    def ask_for_hujia(self, player: 'Player') -> Optional['Card']:
+    def ask_for_hujia(self, player: Player) -> Card | None:
         from .card import CardName
         shan_cards = player.get_cards_by_name(CardName.SHAN)
         if not shan_cards:

@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-三国杀游戏核心模块
+"""三国杀游戏核心模块
 包含游戏引擎、玩家、卡牌、武将、技能系统、事件系统和动作系统
 
 重构版本 v1.1.0:
@@ -8,17 +6,26 @@
 - 新增动作/请求系统 (actions.py) 实现 UI/逻辑分离
 """
 
-from .card import Card, CardType, CardSubtype, CardSuit, Deck, DamageType
-from .hero import Hero, Skill, Kingdom
-from .player import Player, Identity
-from .engine import GameEngine, GamePhase, GameState
-from .skill import SkillSystem
-from .events import EventBus, EventType, GameEvent, EventEmitter
 from .actions import (
-    GameAction, PlayCardAction, UseSkillAction, DiscardAction,
-    RespondAction, EndPhaseAction, GameRequest, GameResponse,
-    ActionType, RequestType, ActionValidator, ActionExecutor
+    ActionExecutor,
+    ActionType,
+    ActionValidator,
+    DiscardAction,
+    EndPhaseAction,
+    GameAction,
+    GameRequest,
+    GameResponse,
+    PlayCardAction,
+    RequestType,
+    RespondAction,
+    UseSkillAction,
 )
+from .card import Card, CardSubtype, CardSuit, CardType, DamageType, Deck
+from .engine import GameEngine, GamePhase, GameState
+from .events import EventBus, EventEmitter, EventType, GameEvent
+from .hero import Hero, Kingdom, Skill
+from .player import Identity, Player
+from .skill import SkillSystem
 
 __all__ = [
     # 卡牌系统

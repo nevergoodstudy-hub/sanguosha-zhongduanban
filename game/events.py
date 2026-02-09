@@ -1,19 +1,22 @@
-# -*- coding: utf-8 -*-
-"""
-事件总线系统
+"""事件总线系统
 实现观察者模式，用于解耦游戏各模块
 """
 
 from __future__ import annotations
+
 import bisect
-from enum import Enum, auto
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Callable, TYPE_CHECKING
+import logging
 from collections import defaultdict
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from enum import Enum, auto
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .player import Player
     from .card import Card
+    from .player import Player
+
+logger = logging.getLogger(__name__)
 
 
 class EventType(Enum):
@@ -89,14 +92,13 @@ class EventType(Enum):
     STATE_CHANGED = auto()
 
 
-@dataclass
+@dataclass(slots=True)
 class GameEvent:
-    """
-    游戏事件数据类
+    """游戏事件数据类
     携带事件的所有相关信息
     """
     event_type: EventType
-    data: Dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
 
     # 事件控制
     cancelled: bool = False
@@ -104,19 +106,19 @@ class GameEvent:
 
     # 常用字段的快捷访问
     @property
-    def source(self) -> Optional['Player']:
+    def source(self) -> Player | None:
         return self.data.get('source')
 
     @property
-    def target(self) -> Optional['Player']:
+    def target(self) -> Player | None:
         return self.data.get('target')
 
     @property
-    def targets(self) -> List['Player']:
+    def targets(self) -> list[Player]:
         return self.data.get('targets', [])
 
     @property
-    def card(self) -> Optional['Card']:
+    def card(self) -> Card | None:
         return self.data.get('card')
 
     @property
@@ -145,8 +147,7 @@ EventHandler = Callable[[GameEvent], None]
 
 
 class EventBus:
-    """
-    事件总线
+    """事件总线
     负责事件的发布和订阅
 
     内部存储格式: (-priority, insertion_order, handler)
@@ -156,13 +157,13 @@ class EventBus:
     def __init__(self):
         # 事件处理器映射：事件类型 -> 有序 handler 列表
         # 每个元素为 (-priority, seq, handler)，按自然升序即优先级降序
-        self._handlers: Dict[EventType, List[tuple[int, int, EventHandler]]] = defaultdict(list)
+        self._handlers: dict[EventType, list[tuple[int, int, EventHandler]]] = defaultdict(list)
         # 全局处理器（监听所有事件）
-        self._global_handlers: List[tuple[int, int, EventHandler]] = []
+        self._global_handlers: list[tuple[int, int, EventHandler]] = []
         # 插入序号（用于同优先级 FIFO 稳定排序）
         self._seq: int = 0
         # 事件历史记录
-        self._event_history: List[GameEvent] = []
+        self._event_history: list[GameEvent] = []
         self._max_history: int = 100
 
     def _next_seq(self) -> int:
@@ -172,8 +173,7 @@ class EventBus:
 
     def subscribe(self, event_type: EventType, handler: EventHandler,
                   priority: int = 0) -> None:
-        """
-        订阅事件
+        """订阅事件
 
         Args:
             event_type: 事件类型
@@ -211,8 +211,7 @@ class EventBus:
             self.unsubscribe(event_type, handler)
 
     def publish(self, event: GameEvent) -> GameEvent:
-        """
-        发布事件
+        """发布事件
 
         Args:
             event: 游戏事件
@@ -232,7 +231,7 @@ class EventBus:
             try:
                 handler(event)
             except Exception as e:
-                print(f"[EventBus] 处理器异常: {e}")
+                logger.exception("[EventBus] 全局处理器异常: %s", e)
 
         # 调用特定事件处理器
         if not event.cancelled:
@@ -242,13 +241,12 @@ class EventBus:
                 try:
                     handler(event)
                 except Exception as e:
-                    print(f"[EventBus] 处理器异常: {e}")
+                    logger.exception("[EventBus] 事件处理器异常 (type=%s): %s", event.event_type, e)
 
         return event
 
     def emit(self, event_type: EventType, **kwargs) -> GameEvent:
-        """
-        快捷发布事件
+        """快捷发布事件
 
         Args:
             event_type: 事件类型
@@ -265,25 +263,24 @@ class EventBus:
         self._handlers.clear()
         self._global_handlers.clear()
 
-    def get_history(self, count: int = 10) -> List[GameEvent]:
+    def get_history(self, count: int = 10) -> list[GameEvent]:
         """获取最近的事件历史"""
         return self._event_history[-count:]
 
 
 class EventEmitter:
-    """
-    事件发射器混入类
+    """事件发射器混入类
     可被其他类继承以获得事件发布能力
     """
 
     def __init__(self):
-        self._event_bus: Optional[EventBus] = None
+        self._event_bus: EventBus | None = None
 
     def set_event_bus(self, event_bus: EventBus) -> None:
         """设置事件总线"""
         self._event_bus = event_bus
 
-    def emit(self, event_type: EventType, **kwargs) -> Optional[GameEvent]:
+    def emit(self, event_type: EventType, **kwargs) -> GameEvent | None:
         """发布事件"""
         if self._event_bus:
             return self._event_bus.emit(event_type, **kwargs)
@@ -295,7 +292,7 @@ class EventEmitter:
 
 
 # 单例事件总线（可选使用）
-_global_event_bus: Optional[EventBus] = None
+_global_event_bus: EventBus | None = None
 
 
 def get_event_bus() -> EventBus:

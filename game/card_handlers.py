@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-卡牌处理器模块
+"""卡牌处理器模块
 负责注册和管理各类卡牌的处理逻辑
 
 本模块将卡牌处理逻辑从 GameEngine 中解耦，
@@ -8,14 +6,14 @@
 """
 
 from __future__ import annotations
-from typing import Callable, Dict, List, Optional, TYPE_CHECKING
+
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .engine import GameEngine
-    from .player import Player
-    from .card import Card
 
 
 class CardHandlerType(Enum):
@@ -26,7 +24,7 @@ class CardHandlerType(Enum):
     EQUIPMENT = auto()      # 装备牌
 
 
-@dataclass
+@dataclass(slots=True)
 class CardHandlerInfo:
     """卡牌处理器信息"""
     card_name: str
@@ -37,15 +35,14 @@ class CardHandlerInfo:
 
 
 class CardHandlerRegistry:
-    """
-    卡牌处理器注册表
+    """卡牌处理器注册表
 
     用于注册和查找卡牌的处理函数，
     支持动态注册新的卡牌类型。
     """
 
     def __init__(self):
-        self._handlers: Dict[str, CardHandlerInfo] = {}
+        self._handlers: dict[str, CardHandlerInfo] = {}
 
     def register(
         self,
@@ -55,8 +52,7 @@ class CardHandlerRegistry:
         requires_target: bool = False,
         target_count: int = 1
     ) -> None:
-        """
-        注册卡牌处理器
+        """注册卡牌处理器
 
         Args:
             card_name: 卡牌名称
@@ -73,12 +69,12 @@ class CardHandlerRegistry:
             target_count=target_count
         )
 
-    def get_handler(self, card_name: str) -> Optional[Callable]:
+    def get_handler(self, card_name: str) -> Callable | None:
         """获取卡牌处理器"""
         info = self._handlers.get(card_name)
         return info.handler if info else None
 
-    def get_handler_info(self, card_name: str) -> Optional[CardHandlerInfo]:
+    def get_handler_info(self, card_name: str) -> CardHandlerInfo | None:
         """获取卡牌处理器信息"""
         return self._handlers.get(card_name)
 
@@ -86,9 +82,8 @@ class CardHandlerRegistry:
         """检查是否有对应处理器"""
         return card_name in self._handlers
 
-    def list_handlers(self, handler_type: Optional[CardHandlerType] = None) -> List[str]:
-        """
-        列出所有已注册的卡牌名称
+    def list_handlers(self, handler_type: CardHandlerType | None = None) -> list[str]:
+        """列出所有已注册的卡牌名称
 
         Args:
             handler_type: 筛选特定类型，None 则返回所有
@@ -104,9 +99,8 @@ class CardHandlerRegistry:
         ]
 
 
-def init_default_handlers(registry: CardHandlerRegistry, engine: 'GameEngine') -> None:
-    """
-    初始化默认的卡牌处理器
+def init_default_handlers(registry: CardHandlerRegistry, engine: GameEngine) -> None:
+    """初始化默认的卡牌处理器
 
     将 GameEngine 中的处理方法注册到注册表
 
@@ -178,7 +172,7 @@ def init_default_handlers(registry: CardHandlerRegistry, engine: 'GameEngine') -
 
 
 # 全局单例（可选，用于跨模块共享）
-_global_registry: Optional[CardHandlerRegistry] = None
+_global_registry: CardHandlerRegistry | None = None
 
 
 def get_global_registry() -> CardHandlerRegistry:

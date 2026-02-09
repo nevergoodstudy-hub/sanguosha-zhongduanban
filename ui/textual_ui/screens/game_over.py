@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """游戏结束界面"""
 
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.screen import Screen
-from textual.widgets import Static, Button
 from textual.containers import Container
+from textual.screen import Screen
+from textual.widgets import Button, Static
 
 
 class GameOverScreen(Screen):

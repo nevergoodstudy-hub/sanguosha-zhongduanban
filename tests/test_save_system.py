@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 存档系统测试 (M4-T06)
 """
@@ -6,13 +5,23 @@
 import json
 import os
 import tempfile
+
 import pytest
-from game.engine import GameEngine, GameState
+
+from game.engine import GameEngine
 from game.save_system import (
-    serialize_card, serialize_player, serialize_engine,
-    save_game, load_game, list_saves, delete_save,
-    EnhancedReplay, SAVE_VERSION, SCHEMA_VERSION,
-    apply_migrations, _MIGRATIONS,
+    _MIGRATIONS,
+    SAVE_VERSION,
+    SCHEMA_VERSION,
+    EnhancedReplay,
+    apply_migrations,
+    delete_save,
+    list_saves,
+    load_game,
+    save_game,
+    serialize_card,
+    serialize_engine,
+    serialize_player,
 )
 
 

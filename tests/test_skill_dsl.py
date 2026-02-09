@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 技能 DSL 解释器测试
 
@@ -9,11 +8,11 @@
 """
 
 import pytest
+
 from game.engine import GameEngine
-from game.card import Card, CardType, CardSubtype, CardSuit
 from game.skill import SkillSystem
 from game.skill_dsl import SkillDsl
-from game.skill_interpreter import SkillInterpreter, DslContext
+from game.skill_interpreter import SkillInterpreter
 
 
 class TestSkillDslLoading:

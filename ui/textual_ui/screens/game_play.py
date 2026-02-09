@@ -1,18 +1,19 @@
-# -*- coding: utf-8 -*-
 """游戏主界面 (M3-T02)"""
 
 from __future__ import annotations
 
+import asyncio
 import threading
 import time
-from typing import Optional, List, TYPE_CHECKING
+from concurrent.futures import TimeoutError as FutureTimeoutError
+from typing import TYPE_CHECKING
 
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Static, Button, RichLog
 from textual.containers import Container, Horizontal, VerticalScroll
-from textual import work
+from textual.screen import Screen
+from textual.widgets import Button, RichLog, Static
 
 if TYPE_CHECKING:
     from game.engine import GameEngine
@@ -97,9 +98,10 @@ class GamePlayScreen(Screen):
 
     def __init__(self):
         super().__init__()
-        self._pending_response = None
-        self._response_event = threading.Event()
-        self._game_thread: Optional[threading.Thread] = None
+        # 线程间通信：使用 asyncio.Queue 与 UI 事件循环桥接
+        self._action_queue: asyncio.Queue[str] | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._game_thread: threading.Thread | None = None
         self._countdown_remaining: int = 0
         self._countdown_timer = None  # Timer handle
 
@@ -108,8 +110,8 @@ class GamePlayScreen(Screen):
         return self.app._engine
 
     def compose(self) -> ComposeResult:
-        from ui.textual_ui.widgets.phase_indicator import PhaseIndicator
         from ui.textual_ui.widgets.equipment_slots import EquipmentSlots
+        from ui.textual_ui.widgets.phase_indicator import PhaseIndicator
         yield PhaseIndicator(id="phase-bar")
         yield VerticalScroll(id="opponents")
         yield RichLog(id="battle-log", highlight=True, markup=True, wrap=True)
@@ -132,6 +134,9 @@ class GamePlayScreen(Screen):
     def on_mount(self) -> None:
         """挂载后设置 UI 桥接，开始游戏循环"""
         engine = self.engine
+        # 记录当前 Textual 事件循环并创建动作队列（仅在 UI 线程使用）
+        self._loop = asyncio.get_running_loop()
+        self._action_queue = asyncio.Queue()
 
         # 设置 TextualBridge 作为 UI
         from ui.textual_ui.bridge import TextualUIBridge
@@ -213,14 +218,15 @@ class GamePlayScreen(Screen):
         engine.phase_discard(player)
         engine.phase_end(player)
         self._post_refresh()
-        from game.game_controller import AI_TURN_DELAY
-        if AI_TURN_DELAY > 0:
-            time.sleep(AI_TURN_DELAY)
+        from game.config import get_config
+        cfg = get_config()
+        if cfg.ai_turn_delay > 0:
+            time.sleep(cfg.ai_turn_delay)
 
     def _run_human_turn(self, player: Player) -> None:
         """人类玩家回合"""
         engine = self.engine
-        self._post_log(f"\n══ 你的回合 ══")
+        self._post_log("\n══ 你的回合 ══")
         player.reset_turn()
 
         engine.phase_prepare(player)
@@ -269,11 +275,10 @@ class GamePlayScreen(Screen):
                 return
 
     def _human_discard(self, player: Player, count: int) -> None:
-        """人类玩家弃牌交互（在 worker 线程中）"""
-        import threading
+        """人类玩家弃牌交互（worker 线程阻塞，通过 call_from_thread 调度 UI modal）"""
         from ui.textual_ui.modals.discard_modal import DiscardModal
 
-        result_holder = [None]
+        result_holder: list[list[int] | None] = [None]
         event = threading.Event()
 
         def _on_dismiss(result):
@@ -287,21 +292,19 @@ class GamePlayScreen(Screen):
             self.app.push_screen(modal, callback=_on_dismiss)
 
         self.app.call_from_thread(_push)
-        event.wait(timeout=35)
-
+        event.wait(timeout=35.0)
         indices = result_holder[0]
+
         if indices and len(indices) == count:
-            # 按索引倒序移除，避免索引偏移
             cards_to_discard = [player.hand[i] for i in indices]
             self.engine.discard_cards(player, cards_to_discard)
         elif player.need_discard > 0:
-            # 超时/异常兜底：自动弃末尾的牌
             auto_discard = player.hand[-player.need_discard:]
             self.engine.discard_cards(player, list(auto_discard))
 
     def _handle_card_play(self, player: Player, card) -> None:
         """处理出牌"""
-        from game.card import CardType, CardName
+        from game.card import CardName, CardType
 
         engine = self.engine
 
@@ -356,18 +359,29 @@ class GamePlayScreen(Screen):
 
     # ==================== 线程间通信 ====================
 
-    def _wait_for_response(self, request_type: str) -> Optional[str]:
-        """等待 UI 线程的响应"""
-        self._pending_response = None
-        self._response_event.clear()
+    def _wait_for_response(self, request_type: str) -> str | None:
+        """等待 UI 线程的响应（worker 线程阻塞等待 UI 事件循环中的 asyncio.Queue）"""
+        assert self._loop is not None and self._action_queue is not None
+        # 在 UI 线程启动等待状态（倒计时等）
         self.app.call_from_thread(self._set_waiting, request_type)
-        self._response_event.wait(timeout=300)
-        return self._pending_response
 
-    def _wait_for_target(self, player, targets, prompt: str) -> Optional[Player]:
-        """等待目标选择 — 弹出 TargetSelectModal，同时高亮合法目标面板"""
+        async def _await_action(timeout: float) -> str | None:
+            try:
+                return await asyncio.wait_for(self._action_queue.get(), timeout=timeout)
+            except asyncio.TimeoutError:
+                return "end"  # 超时自动结束出牌
+
+        fut = asyncio.run_coroutine_threadsafe(_await_action(300.0), self._loop)
+        try:
+            return fut.result(timeout=305.0)
+        except FutureTimeoutError:
+            return "end"
+
+    def _wait_for_target(self, player, targets, prompt: str) -> Player | None:
+        """等待目标选择（worker 线程阻塞，通过 call_from_thread 调度 UI modal）"""
         from ui.textual_ui.modals.target_modal import TargetSelectModal
-        result_holder = [None]
+
+        result_holder: list[int | None] = [None]
         event = threading.Event()
 
         def _on_dismiss(result):
@@ -380,12 +394,12 @@ class GamePlayScreen(Screen):
             self.app.push_screen(modal, callback=_on_dismiss)
 
         self.app.call_from_thread(_push)
-        event.wait(timeout=60)
-        # 清除高亮
+        event.wait(timeout=65.0)
         self.app.call_from_thread(self._clear_target_highlights)
-        result = result_holder[0]
-        if result is not None and 0 <= result < len(targets):
-            return targets[result]
+
+        idx = result_holder[0]
+        if idx is not None and 0 <= idx < len(targets):
+            return targets[idx]
         return None
 
     def _highlight_targets(self, targets: list) -> None:
@@ -511,10 +525,11 @@ class GamePlayScreen(Screen):
             self._countdown_timer = None
 
     def _respond(self, response: str) -> None:
-        """发送响应给 worker 线程，并取消倒计时"""
+        """发送响应给 worker 线程，并取消倒计时（通过 asyncio.Queue）"""
         self._cancel_countdown()
-        self._pending_response = response
-        self._response_event.set()
+        if self._action_queue is not None:
+            # UI 线程直接 put_nowait 是安全的
+            self._action_queue.put_nowait(response)
 
     # ==================== UI 更新 ====================
 
@@ -654,12 +669,14 @@ class GamePlayScreen(Screen):
         # 更新信息面板
         try:
             hp_bar = "●" * human.hp + "○" * (human.max_hp - human.hp)
+            hp_full = '●' * human.hp
+            hp_empty = '[dim]○[/dim]' * (human.max_hp - human.hp)
             if human.hp <= 1:
-                hp_bar = f"[red]{"●" * human.hp}[/red]" + "[dim]○[/dim]" * (human.max_hp - human.hp)
+                hp_bar = f"[red]{hp_full}[/red]" + hp_empty
             elif human.hp <= human.max_hp // 2:
-                hp_bar = f"[yellow]{"●" * human.hp}[/yellow]" + "[dim]○[/dim]" * (human.max_hp - human.hp)
+                hp_bar = f"[yellow]{hp_full}[/yellow]" + hp_empty
             else:
-                hp_bar = f"[green]{"●" * human.hp}[/green]" + "[dim]○[/dim]" * (human.max_hp - human.hp)
+                hp_bar = f"[green]{hp_full}[/green]" + hp_empty
             skills_lines = ""
             if human.hero:
                 for s in human.hero.skills:
@@ -691,7 +708,7 @@ class GamePlayScreen(Screen):
                           has_targets: bool) -> bool:
         """判断卡牌是否可在出牌阶段主动使用 (P0-3b)"""
         try:
-            from game.constants import CardName
+            from game.card import CardName
             name = card.name if hasattr(card, 'name') else None
             if name == CardName.SHAN:
                 return False

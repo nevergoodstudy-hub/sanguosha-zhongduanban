@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 模糊测试 (M4-T04)
 对引擎执行随机操作序列，检测是否崩溃
@@ -10,10 +9,9 @@
 """
 
 import random
-import pytest
-from game.engine import GameEngine, GameState, GamePhase
-from game.card import Card, CardName
-from game.player import Player
+
+from game.card import CardName
+from game.engine import GameEngine
 
 
 class TestFuzz:

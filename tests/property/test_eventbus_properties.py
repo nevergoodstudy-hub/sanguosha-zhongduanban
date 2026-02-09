@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """EventBus 事件总线的性质测试（Property-based）。
 
 核心不变量：
@@ -17,11 +16,10 @@ _project_root = str(Path(__file__).resolve().parents[2])
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from game.events import EventBus, EventType, GameEvent
-
 
 # ---------------------------------------------------------------------------
 # 性质 1: 高优先级 handler 先调用

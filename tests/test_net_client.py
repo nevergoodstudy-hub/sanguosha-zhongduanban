@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 客户端测试 (M4-T03)
 """
 
-import asyncio
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from net.protocol import MsgType, ServerMsg, ClientMsg
+import pytest
+
 from net.client import GameClient
+from net.protocol import ClientMsg, MsgType, ServerMsg
 
 
 class TestGameClientInit:

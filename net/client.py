@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-WebSocket 游戏客户端 (M4-T03)
+"""WebSocket 游戏客户端 (M4-T03)
 
 功能:
 - 连接服务端
@@ -11,20 +9,22 @@ WebSocket 游戏客户端 (M4-T03)
 """
 
 from __future__ import annotations
-import asyncio
-import json
-import logging
-import time
-from typing import Optional, Dict, Any, Callable, List
 
-from .protocol import MsgType, ServerMsg, ClientMsg, parse_message
+import asyncio
+import logging
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from websockets.asyncio.client import ClientConnection
+
+from .protocol import ClientMsg, MsgType, ServerMsg
 
 logger = logging.getLogger(__name__)
 
 
 class GameClient:
-    """
-    三国杀 WebSocket 客户端
+    """三国杀 WebSocket 客户端
 
     职责:
     1. 维护与服务端的 WebSocket 连接
@@ -37,18 +37,19 @@ class GameClient:
         self.server_url = server_url
         self.player_id: int = 0
         self.player_name: str = ""
-        self.room_id: Optional[str] = None
+        self.room_id: str | None = None
         self.last_seq: int = 0  # 最后收到的事件序号
+        self.auth_token: str = ""  # 服务端签发的连接令牌
 
         # WebSocket 连接
-        self._ws: Any = None
+        self._ws: ClientConnection | None = None
         self._connected: bool = False
         self._running: bool = False
 
         # 事件回调
-        self._handlers: Dict[MsgType, Callable] = {}
-        self._on_connect: Optional[Callable] = None
-        self._on_disconnect: Optional[Callable] = None
+        self._handlers: dict[MsgType, Callable] = {}
+        self._on_connect: Callable | None = None
+        self._on_disconnect: Callable | None = None
 
         # 重连配置
         self.auto_reconnect: bool = True
@@ -143,6 +144,13 @@ class GameClient:
             if msg.seq > 0:
                 self.last_seq = msg.seq
 
+            # 提取服务端签发的令牌 (欢迎消息)
+            if msg.type == MsgType.HEARTBEAT_ACK and "token" in msg.data:
+                self.auth_token = msg.data["token"]
+                pid = msg.data.get("player_id", 0)
+                if pid:
+                    self.player_id = pid
+
             # 调用注册的回调
             handler = self._handlers.get(msg.type)
             if handler:
@@ -168,13 +176,13 @@ class GameClient:
     # ==================== 重连 ====================
 
     async def _reconnect(self) -> bool:
-        """尝试重连"""
+        """尝试重连 (携带令牌用于身份验证)"""
         for attempt in range(1, self.max_reconnect_attempts + 1):
             logger.info(f"重连尝试 {attempt}/{self.max_reconnect_attempts}...")
             await asyncio.sleep(self.reconnect_delay * attempt)
 
             if await self.connect():
-                # 重连后请求重放缺失的事件
+                # 重连后请求重放缺失的事件 (携带令牌)
                 if self.room_id:
                     await self.send(ClientMsg(
                         type=MsgType.ROOM_JOIN,
@@ -183,6 +191,7 @@ class GameClient:
                             "room_id": self.room_id,
                             "reconnect": True,
                             "last_seq": self.last_seq,
+                            "token": self.auth_token,
                         },
                     ))
                 return True
@@ -248,14 +257,14 @@ class GameClient:
         """获取房间列表"""
         await self.send(ClientMsg.room_list())
 
-    async def play_card(self, card_id: int, target_ids: List[int] = None) -> None:
+    async def play_card(self, card_id: int, target_ids: list[int] = None) -> None:
         """出牌"""
         await self.send(ClientMsg.game_action(
             self.player_id, "play_card",
             {"card_id": card_id, "target_ids": target_ids or []},
         ))
 
-    async def use_skill(self, skill_id: str, target_ids: List[int] = None) -> None:
+    async def use_skill(self, skill_id: str, target_ids: list[int] = None) -> None:
         """使用技能"""
         await self.send(ClientMsg.game_action(
             self.player_id, "use_skill",

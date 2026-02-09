@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-弃牌阶段弹窗 (P0-3)
+"""弃牌阶段弹窗 (P0-3)
 
 让人类玩家在弃牌阶段选择要弃掉的手牌。
 支持多选，必须恰好弃掉 need_count 张牌才能确认。
@@ -11,12 +9,12 @@ dismiss(None)      → 超时/异常（自动弃末尾的牌）
 
 from __future__ import annotations
 
-from typing import List, Optional, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Static, Button
+from textual.containers import Container, Horizontal
 from textual.timer import Timer
+from textual.widgets import Button, Static
 
 from ui.textual_ui.modals.base import AnimatedModalScreen
 
@@ -24,7 +22,7 @@ if TYPE_CHECKING:
     from game.card import Card
 
 
-class DiscardModal(AnimatedModalScreen[Optional[List[int]]]):
+class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
     """弃牌阶段弹窗"""
 
     DEFAULT_CSS = """
@@ -77,21 +75,20 @@ class DiscardModal(AnimatedModalScreen[Optional[List[int]]]):
     }
     """
 
-    def __init__(self, cards: List['Card'], need_count: int,
+    def __init__(self, cards: list[Card], need_count: int,
                  countdown: int = 30):
-        """
-        Args:
-            cards: 玩家当前手牌列表
-            need_count: 需要弃掉的张数
-            countdown: 倒计时秒数，0 表示不倒计时
+        """Args:
+        cards: 玩家当前手牌列表
+        need_count: 需要弃掉的张数
+        countdown: 倒计时秒数，0 表示不倒计时
         """
         super().__init__()
         self._cards = cards
         self._need_count = need_count
-        self._selected: Set[int] = set()
+        self._selected: set[int] = set()
         self._remaining = countdown
         self._countdown = countdown
-        self._timer: Optional[Timer] = None
+        self._timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         with Container(id="discard-container"):

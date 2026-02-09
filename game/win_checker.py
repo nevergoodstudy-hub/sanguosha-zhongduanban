@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-胜利条件检查器模块
+"""胜利条件检查器模块
 负责判定游戏结束条件和确定获胜方
 
 本模块将胜利判定逻辑从 GameEngine 中解耦，
@@ -8,13 +6,16 @@
 """
 
 from __future__ import annotations
-from typing import List, Optional, Tuple, TYPE_CHECKING
+
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
+
+from i18n import t as _t
 
 if TYPE_CHECKING:
-    from .player import Player
     from .engine import GameEngine
+    from .player import Player
 
 
 class WinResult(Enum):
@@ -25,27 +26,25 @@ class WinResult(Enum):
     SPY_WIN = "spy_win"         # 内奸获胜
 
 
-@dataclass
+@dataclass(slots=True)
 class GameOverInfo:
     """游戏结束信息"""
     is_over: bool
     result: WinResult
-    winner_identity: Optional[str]
+    winner_identity: str | None
     message: str
 
 
 class WinConditionChecker:
-    """
-    胜利条件检查器
+    """胜利条件检查器
 
     负责检查各种胜利条件：
     - 主公死亡 → 反贼或内奸获胜
     - 反贼和内奸全灭 → 主公获胜
     """
 
-    def __init__(self, engine: 'GameEngine'):
-        """
-        初始化胜利条件检查器
+    def __init__(self, engine: GameEngine):
+        """初始化胜利条件检查器
 
         Args:
             engine: 游戏引擎引用
@@ -53,8 +52,7 @@ class WinConditionChecker:
         self.engine = engine
 
     def check_game_over(self) -> GameOverInfo:
-        """
-        检查游戏是否结束
+        """检查游戏是否结束
 
         Returns:
             GameOverInfo: 游戏结束信息
@@ -86,7 +84,7 @@ class WinConditionChecker:
                 is_over=True,
                 result=WinResult.LORD_WIN,
                 winner_identity=Identity.LORD.value,
-                message="主公和忠臣获胜！"
+                message=_t("game.over_lord_wins")
             )
 
         # 游戏继续
@@ -97,7 +95,7 @@ class WinConditionChecker:
             message=""
         )
 
-    def _find_lord(self, players: List['Player']) -> Optional['Player']:
+    def _find_lord(self, players: list[Player]) -> Player | None:
         """查找主公"""
         from .player import Identity
 
@@ -106,9 +104,8 @@ class WinConditionChecker:
                 return p
         return None
 
-    def _check_lord_dead(self, alive_players: List['Player']) -> GameOverInfo:
-        """
-        检查主公死亡时的胜利条件
+    def _check_lord_dead(self, alive_players: list[Player]) -> GameOverInfo:
+        """检查主公死亡时的胜利条件
 
         Args:
             alive_players: 存活玩家列表
@@ -130,7 +127,7 @@ class WinConditionChecker:
                 is_over=True,
                 result=WinResult.SPY_WIN,
                 winner_identity=Identity.SPY.value,
-                message="内奸获胜！"
+                message=_t("game.over_spy_wins")
             )
         else:
             # 反贼获胜
@@ -138,13 +135,13 @@ class WinConditionChecker:
                 is_over=True,
                 result=WinResult.REBEL_WIN,
                 winner_identity=Identity.REBEL.value,
-                message="反贼获胜！"
+                message=_t("game.over_rebel_wins")
             )
 
     def get_winner_message(self) -> str:
         """获取胜利消息"""
         info = self.check_game_over()
-        return info.message if info.is_over else "游戏进行中"
+        return info.message if info.is_over else _t("game.in_progress")
 
     def is_game_over(self) -> bool:
         """检查游戏是否结束"""
@@ -155,8 +152,7 @@ class WinConditionChecker:
 
 
 def get_identity_win_condition(identity_value: str) -> str:
-    """
-    获取身份的胜利条件描述
+    """获取身份的胜利条件描述
 
     Args:
         identity_value: 身份值
@@ -165,20 +161,19 @@ def get_identity_win_condition(identity_value: str) -> str:
         胜利条件描述
     """
     conditions = {
-        "lord": "消灭所有反贼和内奸",
-        "loyalist": "保护主公，消灭所有反贼和内奸",
-        "rebel": "消灭主公",
-        "spy": "成为最后的幸存者（先帮主公消灭反贼，再单挑主公）"
+        "lord": _t("win.lord"),
+        "loyalist": _t("win.loyalist"),
+        "rebel": _t("win.rebel"),
+        "spy": _t("win.spy"),
     }
-    return conditions.get(identity_value, "未知")
+    return conditions.get(identity_value, _t("win.unknown"))
 
 
 def check_team_win(
-    alive_players: List['Player'],
-    team_identities: List[str]
+    alive_players: list[Player],
+    team_identities: list[str]
 ) -> bool:
-    """
-    检查某一阵营是否获胜
+    """检查某一阵营是否获胜
 
     Args:
         alive_players: 存活玩家列表

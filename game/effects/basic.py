@@ -1,18 +1,17 @@
-# -*- coding: utf-8 -*-
-"""
-基本牌效果处理器（M1-T02）
+"""基本牌效果处理器（M1-T02）
 杀、桃、酒
 """
 
 from __future__ import annotations
-from typing import List, TYPE_CHECKING
+
+from typing import TYPE_CHECKING
+
+from i18n import t as _t
 
 from .base import CardEffect
 
 if TYPE_CHECKING:
-    from ..engine import GameEngine
-    from ..player import Player
-    from ..card import Card
+    pass
 
 
 class ShaEffect(CardEffect):
@@ -24,11 +23,11 @@ class ShaEffect(CardEffect):
 
     def can_use(self, engine, player, card, targets):
         if not targets:
-            return False, "必须指定目标"
+            return False, _t("effect.need_target")
         if not player.can_use_sha():
-            return False, "本回合已经使用过杀了"
+            return False, _t("effect.sha_used")
         if not engine.is_in_attack_range(player, targets[0]):
-            return False, "目标不在攻击范围内"
+            return False, _t("effect.out_of_range")
         return True, ""
 
     def resolve(self, engine, player, card, targets):
@@ -40,7 +39,7 @@ class TaoEffect(CardEffect):
 
     def can_use(self, engine, player, card, targets):
         if player.hp >= player.max_hp:
-            return False, "体力已满"
+            return False, _t("error.hp_full")
         return True, ""
 
     def resolve(self, engine, player, card, targets):
@@ -54,7 +53,7 @@ class JiuEffect(CardEffect):
         if player.is_dying:
             return True, ""
         if player.alcohol_used:
-            return False, "本回合已经使用过酒了"
+            return False, _t("effect.jiu_used")
         return True, ""
 
     def resolve(self, engine, player, card, targets):
