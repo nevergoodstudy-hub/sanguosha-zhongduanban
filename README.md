@@ -75,23 +75,29 @@
 
 ## 📥 安装与运行
 
-### 系统要求
-- Python 3.10+
-- Windows / macOS / Linux
-- 支持 UTF-8 的终端（Windows Terminal / iTerm2 / 任意现代终端）
+### 方式一：直接下载（Windows）
 
-### 安装
+无需安装 Python，双击即可运行：
+
+👉 [下载最新版 sanguosha.exe](https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban/releases/latest)
+
+### 方式二：源码运行
+
+**系统要求：** Python 3.10+ / Windows / macOS / Linux / 支持 UTF-8 的终端
 
 ```bash
 git clone https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban.git
 cd sanguosha-zhongduanban
 pip install -e .
+python main.py
 ```
 
-### 启动游戏
+### 方式三：自行构建
 
 ```bash
-python main.py
+pip install pyinstaller
+python build.py            # 生成 dist/sanguosha.exe (单文件)
+python build.py --onedir   # 目录模式
 ```
 
 ### 其他模式
@@ -236,6 +242,12 @@ python -m ruff check .                  # 静态分析
 3. `ui/textual_ui/widgets/card_widget.py` — 添加 `CARD_EFFECT_DESC` tooltip
 
 ## 📝 版本历史
+
+### v3.3.1 (2026-02-10) — PyInstaller 打包支持
+
+- 新增 `build.py` 自动化构建脚本（PyInstaller 6.18 + Python 3.14）
+- 支持单文件 exe 双击运行，无需安装 Python
+- 发布 GitHub Release 附带可执行文件
 
 ### v3.3.0 (2026-02-09) — 质量强化：BUG 修复 + 测试全覆盖
 
