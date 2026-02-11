@@ -1,6 +1,6 @@
 {
   "_comment": "卡牌效果 DSL 定义 — 简单卡牌通过数据配置",
-  "tao": {
+  "桃": {
     "display_name": "桃",
     "needs_target": false,
     "condition": {"check": "hp_below_max"},
@@ -13,7 +13,7 @@
     ],
     "discard_after": true
   },
-  "wuzhongshengyou": {
+  "无中生有": {
     "display_name": "无中生有",
     "needs_target": false,
     "wuxie": true,
@@ -24,7 +24,7 @@
     ],
     "discard_after": true
   },
-  "taoyuanjieyi": {
+  "桃园结义": {
     "display_name": "桃园结义",
     "needs_target": false,
     "scope": "all_alive_from_player",

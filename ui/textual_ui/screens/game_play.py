@@ -304,7 +304,7 @@ class GamePlayScreen(Screen):
 
     def _handle_card_play(self, player: Player, card) -> None:
         """处理出牌"""
-        from game.card import CardName, CardType
+        from game.card import CardName, CardSubtype, CardType
 
         engine = self.engine
 
@@ -331,6 +331,9 @@ class GamePlayScreen(Screen):
         elif card.name == CardName.SHAN:
             self._post_log("⚠ 闪不能主动使用")
             return
+        elif card.name == CardName.WUXIE:
+            self._post_log("⚠ 无懈可击不能主动使用")
+            return
         elif card.name == CardName.JUEDOU:
             others = engine.get_other_players(player)
             target = self._wait_for_target(player, others, "选择决斗目标")
@@ -347,8 +350,78 @@ class GamePlayScreen(Screen):
             target = self._wait_for_target(player, valid, f"选择{card.name}目标")
             if target:
                 engine.use_card(player, card, [target])
+        elif card.name == CardName.LEBUSISHU:
+            # 乐不思蜀: 选择一个非自己的目标（无距离限制）
+            others = engine.get_other_players(player)
+            # 排除已有乐不思蜀的目标
+            valid = [t for t in others if not any(
+                c.name == CardName.LEBUSISHU for c in t.judge_area
+            )]
+            if not valid:
+                self._post_log("⚠ 没有有效目标")
+                return
+            target = self._wait_for_target(player, valid, "选择乐不思蜀目标")
+            if target:
+                engine.use_card(player, card, [target])
+        elif card.name == CardName.BINGLIANG:
+            # 兵粮寸断: 选择距离≤1的非自己目标
+            others = engine.get_other_players(player)
+            valid = [t for t in others
+                     if engine.calculate_distance(player, t) <= 1
+                     and not any(c.name == CardName.BINGLIANG for c in t.judge_area)]
+            if not valid:
+                self._post_log("⚠ 没有有效目标（需距离≤1）")
+                return
+            target = self._wait_for_target(player, valid, "选择兵粮寸断目标")
+            if target:
+                engine.use_card(player, card, [target])
+        elif card.name == CardName.HUOGONG:
+            # 火攻: 选择一个有手牌的目标（可选自己）
+            alive = [p for p in engine.players if p.is_alive and p.hand_count > 0]
+            if not alive:
+                self._post_log("⚠ 没有有手牌的目标")
+                return
+            target = self._wait_for_target(player, alive, "选择火攻目标")
+            if target:
+                engine.use_card(player, card, [target])
+        elif card.name == CardName.JIEDAO:
+            # 借刀杀人: 先选有武器的其他玩家(wielder)，再选 wielder 攻击范围内的目标
+            others = engine.get_other_players(player)
+            with_weapon = [t for t in others if t.equipment.weapon and t.is_alive]
+            if not with_weapon:
+                self._post_log("⚠ 没有装备武器的目标")
+                return
+            wielder = self._wait_for_target(player, with_weapon, "选择持武器者（被借刀的人）")
+            if not wielder:
+                return
+            # 找 wielder 攻击范围内的目标（不含 wielder 自身和 player）
+            sha_targets = [t for t in engine.players
+                           if t.is_alive and t != wielder and t != player
+                           and engine.is_in_attack_range(wielder, t)]
+            if not sha_targets:
+                self._post_log(f"⚠ {wielder.name} 攻击范围内没有有效目标")
+                return
+            sha_target = self._wait_for_target(player, sha_targets, f"选择 {wielder.name} 杀的目标")
+            if sha_target:
+                engine.use_card(player, card, [wielder, sha_target])
+        elif card.name == CardName.TIESUO:
+            # 铁索连环: 选择0-2个目标（0=重铸）
+            others = [p for p in engine.players if p.is_alive]
+            targets = self._wait_for_multi_targets(
+                player, others, "铁索连环 — 选择0-2个目标（0个=重铸）",
+                min_count=0, max_count=2
+            )
+            if targets is None:
+                return  # 取消
+            engine.use_card(player, card, targets)
+        elif card.subtype == CardSubtype.ALCOHOL:
+            # 酒: 检查本回合是否已使用
+            if player.alcohol_used:
+                self._post_log("⚠ 本回合已使用过酒")
+                return
+            engine.use_card(player, card)
         else:
-            # 群体锦囊/其他
+            # 群体锦囊(南蛮/万箭/桃园/闪电)/其他
             engine.use_card(player, card)
 
     def _handle_skill_use(self, player: Player, skill_id: str) -> None:
@@ -401,6 +474,37 @@ class GamePlayScreen(Screen):
         if idx is not None and 0 <= idx < len(targets):
             return targets[idx]
         return None
+
+    def _wait_for_multi_targets(
+        self, player, targets, prompt: str,
+        min_count: int = 0, max_count: int = 2
+    ) -> list[Player] | None:
+        """等待多目标选择（worker 线程阻塞）。返回 Player 列表或 None(取消)"""
+        from ui.textual_ui.modals.multi_target_modal import MultiTargetModal
+
+        result_holder: list[list[int] | None] = [None]
+        event = threading.Event()
+
+        def _on_dismiss(result):
+            result_holder[0] = result
+            event.set()
+
+        def _push():
+            self._highlight_targets(targets)
+            modal = MultiTargetModal(
+                targets=targets, prompt=prompt,
+                min_count=min_count, max_count=max_count
+            )
+            self.app.push_screen(modal, callback=_on_dismiss)
+
+        self.app.call_from_thread(_push)
+        event.wait(timeout=65.0)
+        self.app.call_from_thread(self._clear_target_highlights)
+
+        indices = result_holder[0]
+        if indices is None:
+            return None  # 用户取消
+        return [targets[i] for i in indices if 0 <= i < len(targets)]
 
     def _highlight_targets(self, targets: list) -> None:
         """为合法目标的 PlayerPanel 添加 .targetable 高亮 + 呼吸脉冲 (P1-3)"""

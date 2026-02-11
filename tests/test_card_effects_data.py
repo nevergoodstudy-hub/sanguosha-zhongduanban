@@ -16,18 +16,18 @@ class TestCardEffectsConfigLoading:
 
     def test_tao_config(self):
         configs = load_card_effects_config()
-        assert "tao" in configs
-        assert configs["tao"]["display_name"] == "桃"
+        assert "桃" in configs
+        assert configs["桃"]["display_name"] == "桃"
 
     def test_wuzhong_config(self):
         configs = load_card_effects_config()
-        assert "wuzhongshengyou" in configs
-        assert configs["wuzhongshengyou"]["wuxie"] is True
+        assert "无中生有" in configs
+        assert configs["无中生有"]["wuxie"] is True
 
     def test_taoyuan_config(self):
         configs = load_card_effects_config()
-        assert "taoyuanjieyi" in configs
-        assert configs["taoyuanjieyi"]["scope"] == "all_alive_from_player"
+        assert "桃园结义" in configs
+        assert configs["桃园结义"]["scope"] == "all_alive_from_player"
 
 
 class TestDataDrivenCardEffect:
@@ -43,8 +43,8 @@ class TestDataDrivenCardEffect:
 
     def test_tao_can_use_hp_full(self):
         """桃：体力满时不可用"""
-        config = load_card_effects_config()["tao"]
-        effect = DataDrivenCardEffect("tao", config)
+        config = load_card_effects_config()["桃"]
+        effect = DataDrivenCardEffect("桃", config)
 
         class FakePlayer:
             hp = 4
@@ -56,8 +56,8 @@ class TestDataDrivenCardEffect:
 
     def test_tao_can_use_hp_not_full(self):
         """桃：体力未满时可用"""
-        config = load_card_effects_config()["tao"]
-        effect = DataDrivenCardEffect("tao", config)
+        config = load_card_effects_config()["桃"]
+        effect = DataDrivenCardEffect("桃", config)
 
         class FakePlayer:
             hp = 2
@@ -72,9 +72,9 @@ class TestRegistryDataDriven:
 
     def test_registry_loads_data_driven(self):
         registry = create_default_registry()
-        # JSON key "tao"/"wuzhongshengyou"/"taoyuanjieyi" 与手写 key
-        # "桃"/"无中生有"/"桃园结义" 不同，所以全部载入为数据驱动
-        assert registry._data_driven_count == 3
+        # JSON key 现在是中文（"桃"/"无中生有"/"桃园结义"），与手写 key 一致，
+        # 所以 load_data_driven 跳过所有已注册的卡牌，数据驱动数量为 0
+        assert registry._data_driven_count == 0
 
     def test_hand_written_not_overridden(self):
         """手写效果不被数据驱动覆盖"""
@@ -82,16 +82,19 @@ class TestRegistryDataDriven:
         from game.effects.basic import TaoEffect
 
         registry = create_default_registry()
-        # 手写注册用 CardName.TAO="桃"，JSON 用 "tao"
-        # 两者不冲突，手写效果仍然完好
+        # 手写注册用 CardName.TAO="桃"，JSON 也用 "桃"
+        # load_data_driven 检测到已注册，跳过，手写效果仍然完好
         tao = registry.get(CardName.TAO)
         assert isinstance(tao, TaoEffect)
 
     def test_data_driven_effect_accessible(self):
-        """数据驱动效果可通过 JSON key 访问"""
+        """JSON 键名与手写一致时，手写效果优先"""
+        from game.effects.basic import TaoEffect
+
         registry = create_default_registry()
-        effect = registry.get("tao")
-        assert isinstance(effect, DataDrivenCardEffect)
+        # "桃" 已有手写 TaoEffect，数据驱动不覆盖
+        effect = registry.get("桃")
+        assert isinstance(effect, TaoEffect)
 
     def test_new_card_via_data_only(self):
         """全新卡牌可仅通过数据配置添加"""

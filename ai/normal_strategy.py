@@ -101,9 +101,37 @@ class NormalStrategy:
                             break
 
                 elif card.name == CardName.JIEDAO:
-                    target = self._choose_jiedao_target(player, engine)
+                    targets = self._choose_jiedao_targets(player, engine)
+                    if targets:
+                        if engine.use_card(player, card, targets):
+                            played = True
+                            break
+
+                elif card.name == CardName.LEBUSISHU:
+                    target = self._choose_lebusishu_target(player, engine)
                     if target:
                         if engine.use_card(player, card, [target]):
+                            played = True
+                            break
+
+                elif card.name == CardName.BINGLIANG:
+                    target = self._choose_bingliang_target(player, engine)
+                    if target:
+                        if engine.use_card(player, card, [target]):
+                            played = True
+                            break
+
+                elif card.name == CardName.HUOGONG:
+                    target = self._choose_huogong_target(player, engine)
+                    if target:
+                        if engine.use_card(player, card, [target]):
+                            played = True
+                            break
+
+                elif card.name == CardName.TIESUO:
+                    targets = self._choose_tiesuo_targets(player, engine)
+                    if targets is not None:
+                        if engine.use_card(player, card, targets):
                             played = True
                             break
 
@@ -120,6 +148,31 @@ class NormalStrategy:
 
             if played:
                 continue
+
+            # 6.5 使用闪电（放在自己判定区）
+            for card in list(player.hand):
+                if card.name == CardName.SHANDIAN:
+                    # 如果判定区没有闪电，尝试使用
+                    has_shandian = any(c.name == CardName.SHANDIAN for c in player.judge_area)
+                    if not has_shandian:
+                        if engine.use_card(player, card):
+                            played = True
+                            break
+
+            if played:
+                continue
+
+            # 6.6 使用酒（配合杀使用）
+            if player.can_use_sha() and not player.alcohol_used:
+                from game.card import CardSubtype
+                jiu_cards = [c for c in player.hand if c.subtype == CardSubtype.ALCOHOL]
+                sha_cards = player.get_cards_by_name(CardName.SHA)
+                if jiu_cards and sha_cards:
+                    targets = self._get_attack_targets(player, engine)
+                    if targets:
+                        if engine.use_card(player, jiu_cards[0]):
+                            played = True
+                            continue
 
             # 7. 使用主动技能
             if engine.skill_system:
@@ -202,20 +255,78 @@ class NormalStrategy:
             return enemies[0]
         return None
 
-    def _choose_jiedao_target(self, player: Player,
-                              engine: GameEngine) -> Player | None:
-        """选择借刀杀人的目标——有武器的他人（优先敌人）"""
+    def _choose_jiedao_targets(self, player: Player,
+                               engine: GameEngine) -> list[Player] | None:
+        """选择借刀杀人的目标 — 返回 [wielder, sha_target]"""
         others = engine.get_other_players(player)
         with_weapon = [t for t in others if t.equipment.weapon and t.is_alive]
         if not with_weapon:
             return None
-        enemies_w = [t for t in with_weapon if is_enemy(player, t)]
-        if enemies_w:
-            return random.choice(enemies_w)
-        friends_w = [t for t in with_weapon if not is_enemy(player, t)]
-        if friends_w:
-            return random.choice(friends_w)
-        return None
+        # 优先让友方持武器者去杀敌人，其次让敌方持武器者去杀敌人
+        best_pair = None
+        for wielder in with_weapon:
+            sha_targets = [
+                t for t in engine.players
+                if t.is_alive and t != wielder and t != player
+                and engine.is_in_attack_range(wielder, t)
+            ]
+            enemy_targets = [t for t in sha_targets if is_enemy(player, t)]
+            if enemy_targets:
+                target = min(enemy_targets, key=lambda t: t.hp)
+                if not is_enemy(player, wielder):
+                    return [wielder, target]  # 友方借刀杀敌人，最优
+                if best_pair is None:
+                    best_pair = [wielder, target]
+        return best_pair
+
+    def _choose_lebusishu_target(self, player: Player,
+                                 engine: GameEngine) -> Player | None:
+        """选择乐不思蜀的目标 — 优先手牌多的敌人"""
+        others = engine.get_other_players(player)
+        enemies = [t for t in others
+                   if is_enemy(player, t) and t.is_alive
+                   and not any(c.name == CardName.LEBUSISHU for c in t.judge_area)]
+        if not enemies:
+            return None
+        # 优先乐手牌多、体力高的敌人
+        enemies.sort(key=lambda t: (t.hand_count + t.hp), reverse=True)
+        return enemies[0]
+
+    def _choose_bingliang_target(self, player: Player,
+                                  engine: GameEngine) -> Player | None:
+        """选择兵粮寸断的目标 — 距离≤1的敌人"""
+        others = engine.get_other_players(player)
+        enemies = [t for t in others
+                   if is_enemy(player, t) and t.is_alive
+                   and engine.calculate_distance(player, t) <= 1
+                   and not any(c.name == CardName.BINGLIANG for c in t.judge_area)]
+        if not enemies:
+            return None
+        enemies.sort(key=lambda t: (t.hand_count + t.hp), reverse=True)
+        return enemies[0]
+
+    def _choose_huogong_target(self, player: Player,
+                                engine: GameEngine) -> Player | None:
+        """选择火攻的目标 — 有手牌的敌人"""
+        others = engine.get_other_players(player)
+        enemies = [t for t in others
+                   if is_enemy(player, t) and t.is_alive and t.hand_count > 0]
+        if not enemies:
+            return None
+        enemies.sort(key=lambda t: t.hp)
+        return enemies[0]
+
+    def _choose_tiesuo_targets(self, player: Player,
+                                engine: GameEngine) -> list[Player] | None:
+        """选择铁索连环的目标 — 1-2个敌人，无合适敌人则重铸"""
+        others = engine.get_other_players(player)
+        enemies = [t for t in others
+                   if is_enemy(player, t) and t.is_alive and not t.is_chained]
+        if not enemies:
+            return []  # 重铸
+        # 选择1-2个敌人
+        targets = enemies[:min(2, len(enemies))]
+        return targets
 
     def _should_use_aoe(self, player: Player, engine: GameEngine) -> bool:
         """判断是否应该使用AOE"""

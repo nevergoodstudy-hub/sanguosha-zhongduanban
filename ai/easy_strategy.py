@@ -8,7 +8,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-from game.card import CardName, CardType
+from game.card import CardName, CardSubtype, CardType
 from game.config import get_config
 
 from .strategy import is_enemy
@@ -106,5 +106,56 @@ class EasyStrategy:
 
         elif card.name in [CardName.NANMAN, CardName.WANJIAN]:
             return engine.use_card(player, card)
+
+        elif card.name == CardName.LEBUSISHU:
+            others = engine.get_other_players(player)
+            valid = [t for t in others if not any(
+                c.name == CardName.LEBUSISHU for c in t.judge_area)]
+            if valid:
+                return engine.use_card(player, card, [random.choice(valid)])
+
+        elif card.name == CardName.BINGLIANG:
+            others = engine.get_other_players(player)
+            valid = [t for t in others
+                     if engine.calculate_distance(player, t) <= 1
+                     and not any(c.name == CardName.BINGLIANG for c in t.judge_area)]
+            if valid:
+                return engine.use_card(player, card, [random.choice(valid)])
+
+        elif card.name == CardName.HUOGONG:
+            others = engine.get_other_players(player)
+            valid = [t for t in others if t.hand_count > 0]
+            if valid:
+                return engine.use_card(player, card, [random.choice(valid)])
+
+        elif card.name == CardName.JIEDAO:
+            others = engine.get_other_players(player)
+            with_weapon = [t for t in others if t.equipment.weapon and t.is_alive]
+            for wielder in with_weapon:
+                sha_targets = [t for t in engine.players
+                               if t.is_alive and t != wielder and t != player
+                               and engine.is_in_attack_range(wielder, t)]
+                if sha_targets:
+                    return engine.use_card(player, card,
+                                          [wielder, random.choice(sha_targets)])
+
+        elif card.name == CardName.TIESUO:
+            others = [p for p in engine.get_other_players(player) if p.is_alive]
+            if others and random.random() < 0.5:
+                targets = random.sample(others, min(2, len(others)))
+                return engine.use_card(player, card, targets)
+            else:
+                return engine.use_card(player, card)  # 重铸
+
+        elif card.name == CardName.SHANDIAN:
+            has_shandian = any(c.name == CardName.SHANDIAN for c in player.judge_area)
+            if not has_shandian:
+                return engine.use_card(player, card)
+
+        elif card.subtype == CardSubtype.ALCOHOL:
+            if not player.alcohol_used and player.can_use_sha():
+                sha = player.get_cards_by_name(CardName.SHA)
+                if sha:
+                    return engine.use_card(player, card)
 
         return False
