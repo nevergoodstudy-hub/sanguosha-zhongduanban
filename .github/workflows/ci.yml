@@ -1,5 +1,5 @@
 # GitHub Actions CI 工作流
-# 三国杀项目持续集成配置 (Phase 1 基础设施加固)
+# 三国杀项目持续集成配置
 
 name: CI
 
@@ -18,10 +18,10 @@ jobs:
     name: Lint & Format (Ruff)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.10'
+          python-version: '3.14'
       - run: pip install ruff
       - name: Ruff lint
         run: ruff check . --config pyproject.toml --output-format=github
@@ -33,25 +33,25 @@ jobs:
     name: Type Check (MyPy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.10'
+          python-version: '3.14'
       - run: pip install mypy rich colorama textual websockets
       - run: mypy game/ ai/ ui/ net/ --config-file pyproject.toml
 
-  # 单元测试 + 集成测试 + 覆盖率
+  # 单元测试 + 集成测试 + 覆盖率 (三平台)
   test:
     name: Test (Python ${{ matrix.python-version }} / ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ['3.10', '3.12']
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.10', '3.14']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -80,10 +80,10 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.10'
+          python-version: '3.14'
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -99,10 +99,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, typecheck, test]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.10'
+          python-version: '3.14'
       - run: pip install build
       - run: python -m build
       - uses: actions/upload-artifact@v4
@@ -110,25 +110,36 @@ jobs:
           name: dist
           path: dist/
 
-  # Windows EXE 构建 (仅 main 分支)
+  # 多平台 EXE 构建 (仅 main 分支)
   build-exe:
-    name: Build Windows EXE
+    name: Build ${{ matrix.platform.name }}
     needs: [lint, typecheck, test]
-    runs-on: windows-latest
+    runs-on: ${{ matrix.platform.os }}
     if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Windows EXE
+            os: windows-latest
+            build_name: sanguosha-windows-amd64
+          - name: Linux Binary
+            os: ubuntu-latest
+            build_name: sanguosha-linux-amd64
+          - name: macOS Binary
+            os: macos-latest
+            build_name: sanguosha-macos-amd64
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
-      - run: |
-          pip install -r requirements.txt
-          pip install textual websockets pyinstaller
-      - run: pyinstaller --onefile --name sanguosha main.py
+          python-version: '3.14'
+      - run: pip install rich textual websockets pyinstaller
+      - run: python build.py --name ${{ matrix.platform.build_name }}
       - uses: actions/upload-artifact@v4
         with:
-          name: sanguosha-exe
-          path: dist/sanguosha.exe
+          name: ${{ matrix.platform.build_name }}
+          path: dist/${{ matrix.platform.build_name }}*
 
   # 导入检查
   import-check:
@@ -136,9 +147,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.10'
+          python-version: '3.14'
       - run: pip install rich colorama textual websockets
       - run: python -c "import game; import ai; import ui; import net; print('All modules OK')"

@@ -18,7 +18,7 @@ PROJECT_ROOT = Path(__file__).parent.resolve()
 SEP = ";" if sys.platform == "win32" else ":"
 
 
-def build(*, onedir: bool = False, debug: bool = False) -> int:
+def build(*, onedir: bool = False, debug: bool = False, name: str = "sanguosha") -> int:
     # 清理
     for d in ("dist", "build"):
         p = PROJECT_ROOT / d
@@ -28,7 +28,7 @@ def build(*, onedir: bool = False, debug: bool = False) -> int:
     args = [
         sys.executable, "-m", "PyInstaller",
         str(PROJECT_ROOT / "main.py"),
-        "--name=sanguosha",
+        f"--name={name}",
         f"--distpath={PROJECT_ROOT / 'dist'}",
         f"--workpath={PROJECT_ROOT / 'build'}",
         f"--specpath={PROJECT_ROOT}",
@@ -93,5 +93,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--onedir", action="store_true")
     p.add_argument("--debug", action="store_true")
+    p.add_argument("--name", default="sanguosha", help="输出文件名 (默认: sanguosha)")
     a = p.parse_args()
-    sys.exit(build(onedir=a.onedir, debug=a.debug))
+    sys.exit(build(onedir=a.onedir, debug=a.debug, name=a.name))

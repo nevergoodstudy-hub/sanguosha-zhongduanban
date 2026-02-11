@@ -1,0 +1,108 @@
+# 多平台构建 + 自动 Release 工作流
+# 触发条件: push tag v* (如 v3.4.0)
+# 构建: Windows (.exe) + macOS (binary) + Linux (binary)
+# 发布: 自动创建 GitHub Release 并上传三平台产物
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build - ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Windows
+            os: windows-latest
+            build_name: sanguosha-windows-amd64
+            artifact: sanguosha-windows-amd64.exe
+          - name: Linux
+            os: ubuntu-latest
+            build_name: sanguosha-linux-amd64
+            artifact: sanguosha-linux-amd64
+          - name: macOS
+            os: macos-latest
+            build_name: sanguosha-macos-amd64
+            artifact: sanguosha-macos-amd64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python 3.14
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install rich textual websockets pyinstaller
+
+      - name: Build with PyInstaller
+        run: |
+          python build.py --name ${{ matrix.platform.build_name }}
+
+      - name: Verify build output
+        shell: bash
+        run: |
+          echo "=== dist/ contents ==="
+          ls -la dist/
+          echo "=== Build OK ==="
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform.artifact }}
+          path: dist/${{ matrix.platform.build_name }}*
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets/
+
+      - name: List release assets
+        run: |
+          echo "=== Release assets ==="
+          find release-assets/ -type f
+          echo "===================="
+
+      - name: Create Release & Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: 三国杀终端版 ${{ github.ref_name }}
+          body: |
+            ## 三国杀终端版 ${{ github.ref_name }}
+
+            ### 📥 下载
+            | 平台 | 文件 |
+            |------|------|
+            | Windows (x64) | `sanguosha-windows-amd64.exe` |
+            | Linux (x64) | `sanguosha-linux-amd64` |
+            | macOS (x64) | `sanguosha-macos-amd64` |
+
+            ### 🚀 使用方法
+            - **Windows**: 双击 `.exe` 运行
+            - **Linux/macOS**: `chmod +x sanguosha-*-amd64 && ./sanguosha-*-amd64`
+
+            ### ⚙️ 构建信息
+            - Python 3.14 + PyInstaller 6.18
+            - Textual TUI 跨平台终端界面
+          files: |
+            release-assets/**/*
+          fail_on_unmatched_files: false
+          generate_release_notes: true
