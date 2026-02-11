@@ -68,9 +68,10 @@ def build(*, onedir: bool = False, debug: bool = False, name: str = "sanguosha")
     if debug:
         args.append("--debug=all")
 
-    print(f"构建模式: {'目录' if onedir else '单文件'}")
+    mode_str = "onedir" if onedir else "onefile"
+    print(f"Build mode: {mode_str}")
     print(f"Python: {sys.version.split()[0]}")
-    print(f"执行 PyInstaller...")
+    print(f"Running PyInstaller...")
 
     result = subprocess.run(args, cwd=PROJECT_ROOT)
 
@@ -80,10 +81,10 @@ def build(*, onedir: bool = False, debug: bool = False, name: str = "sanguosha")
         for item in sorted(dist.iterdir()):
             if item.is_file():
                 mb = item.stat().st_size / (1024 * 1024)
-                print(f"  产物: {item.name} ({mb:.1f} MB)")
+                print(f"  Output: {item.name} ({mb:.1f} MB)")
             elif item.is_dir():
                 total = sum(f.stat().st_size for f in item.rglob("*") if f.is_file())
-                print(f"  产物: {item.name}/ ({total / (1024 * 1024):.1f} MB)")
+                print(f"  Output: {item.name}/ ({total / (1024 * 1024):.1f} MB)")
 
     return result.returncode
 
