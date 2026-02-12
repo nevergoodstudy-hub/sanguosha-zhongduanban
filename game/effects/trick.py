@@ -26,7 +26,7 @@ class JuedouEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_juedou(player, card, targets)
+        return engine.combat.use_juedou(player, card, targets)
 
 
 class NanmanEffect(CardEffect):
@@ -36,7 +36,7 @@ class NanmanEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_nanman(player, card)
+        return engine.card_resolver.use_nanman(player, card)
 
 
 class WanjianEffect(CardEffect):
@@ -46,7 +46,7 @@ class WanjianEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_wanjian(player, card)
+        return engine.card_resolver.use_wanjian(player, card)
 
 
 class WuzhongEffect(CardEffect):
@@ -56,7 +56,7 @@ class WuzhongEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_wuzhong(player, card)
+        return engine.card_resolver.use_wuzhong(player, card)
 
 
 class GuoheEffect(CardEffect):
@@ -72,7 +72,7 @@ class GuoheEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_guohe(player, card, targets)
+        return engine.card_resolver.use_guohe(player, card, targets)
 
 
 class ShunshouEffect(CardEffect):
@@ -88,7 +88,7 @@ class ShunshouEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_shunshou(player, card, targets)
+        return engine.card_resolver.use_shunshou(player, card, targets)
 
 
 class TaoyuanEffect(CardEffect):
@@ -98,7 +98,7 @@ class TaoyuanEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_taoyuan(player, card)
+        return engine.card_resolver.use_taoyuan(player, card)
 
 
 class LebusishuEffect(CardEffect):
@@ -114,7 +114,7 @@ class LebusishuEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_lebusishu(player, card, targets)
+        return engine.card_resolver.use_lebusishu(player, card, targets)
 
 
 class BingliangEffect(CardEffect):
@@ -130,7 +130,7 @@ class BingliangEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_bingliang(player, card, targets)
+        return engine.card_resolver.use_bingliang(player, card, targets)
 
 
 class ShandianEffect(CardEffect):
@@ -140,7 +140,7 @@ class ShandianEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_shandian(player, card, targets)
+        return engine.card_resolver.use_shandian(player, card, targets)
 
 
 class HuogongEffect(CardEffect):
@@ -156,7 +156,7 @@ class HuogongEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_huogong(player, card, targets)
+        return engine.card_resolver.use_huogong(player, card, targets)
 
 
 class TiesuoEffect(CardEffect):
@@ -166,4 +166,4 @@ class TiesuoEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_tiesuo(player, card, targets)
+        return engine.card_resolver.use_tiesuo(player, card, targets)

@@ -31,7 +31,7 @@ class ShaEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_sha(player, card, targets)
+        return engine.combat.use_sha(player, card, targets)
 
 
 class TaoEffect(CardEffect):
@@ -43,7 +43,7 @@ class TaoEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_tao(player, card)
+        return engine.card_resolver.use_tao(player, card)
 
 
 class JiuEffect(CardEffect):
@@ -57,4 +57,4 @@ class JiuEffect(CardEffect):
         return True, ""
 
     def resolve(self, engine, player, card, targets):
-        return engine._use_jiu(player, card)
+        return engine.card_resolver.use_jiu(player, card)

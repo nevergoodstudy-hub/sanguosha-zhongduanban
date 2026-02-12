@@ -429,5 +429,25 @@
     "server.not_in_room": "Not in a room",
     "server.not_in_game": "Not in a game",
     "server.game_error": "Game error: {error}",
-    "server.heartbeat_timeout": "Heartbeat timeout"
+    "server.heartbeat_timeout": "Heartbeat timeout",
+
+    "exc.invalid_action": "Invalid game action",
+    "exc.invalid_target": "Invalid target",
+    "exc.insufficient_cards": "Insufficient cards",
+    "exc.card_not_found": "Card not found",
+    "exc.skill_error": "Skill error",
+    "exc.skill_not_found": "Skill not found",
+    "exc.skill_cooldown": "Skill on cooldown",
+    "exc.skill_condition": "Skill condition not met",
+    "exc.skill_usage_limit": "Skill usage limit reached",
+    "exc.game_state": "Invalid game state",
+    "exc.game_not_started": "Game has not started",
+    "exc.game_finished": "Game already finished",
+    "exc.invalid_phase": "Action not allowed in current phase",
+    "exc.player_error": "Player error",
+    "exc.player_not_found": "Player not found",
+    "exc.player_dead": "Player is dead",
+    "exc.not_player_turn": "Not this player's turn",
+    "exc.config_error": "Configuration error",
+    "exc.data_load_error": "Failed to load data"
 }

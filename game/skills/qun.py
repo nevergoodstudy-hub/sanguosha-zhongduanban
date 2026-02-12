@@ -72,7 +72,7 @@ def handle_lijian(player: Player, engine: GameEngine,
     target1, target2 = targets[0], targets[1]
     engine.log_event("skill", _t("skill_msg.lijian", name=player.name, target1=target1.name, target2=target2.name))
 
-    engine._use_juedou_forced(target1, target2)
+    engine.combat.use_juedou_forced(target1, target2)
     return True
 
 

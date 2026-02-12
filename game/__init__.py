@@ -46,5 +46,9 @@ __all__ = [
     'ActionType', 'RequestType', 'ActionValidator', 'ActionExecutor'
 ]
 
-__version__ = "3.0.0"
+try:
+    from importlib.metadata import version as _get_version
+    __version__ = _get_version("sanguosha")
+except Exception:
+    __version__ = "3.0.0"  # fallback, keep in sync with pyproject.toml
 __author__ = "Sanguosha Dev Team"

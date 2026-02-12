@@ -111,6 +111,19 @@ class GameConfig:
         default_factory=lambda: _get_env_int("SANGUOSHA_WS_RATE_MAX", 30)
     )
 
+    # TLS 配置
+    ws_ssl_cert: str = field(
+        default_factory=lambda: os.environ.get("SANGUOSHA_WS_SSL_CERT", "")
+    )
+    ws_ssl_key: str = field(
+        default_factory=lambda: os.environ.get("SANGUOSHA_WS_SSL_KEY", "")
+    )
+
+    # Origin 白名单 (逗号分隔，空表示允许所有)
+    ws_allowed_origins: str = field(
+        default_factory=lambda: os.environ.get("SANGUOSHA_WS_ALLOWED_ORIGINS", "")
+    )
+
     # ==================== 日志与调试 ====================
     log_level: str = field(
         default_factory=lambda: os.environ.get("SANGUOSHA_LOG_LEVEL", "INFO")

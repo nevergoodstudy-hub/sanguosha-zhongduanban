@@ -58,13 +58,12 @@ class TestShaEffect:
 
     def test_resolve_delegates(self):
         engine = MagicMock()
-        engine._use_sha.return_value = True
         player = MagicMock()
         card = MagicMock()
         targets = [MagicMock()]
 
         ShaEffect().resolve(engine, player, card, targets)
-        engine._use_sha.assert_called_once_with(player, card, targets)
+        engine.combat.use_sha.assert_called_once_with(player, card, targets)
 
 
 class TestTaoEffect:
@@ -91,7 +90,7 @@ class TestTaoEffect:
         player = MagicMock()
         card = MagicMock()
         TaoEffect().resolve(engine, player, card, [])
-        engine._use_tao.assert_called_once_with(player, card)
+        engine.card_resolver.use_tao.assert_called_once_with(player, card)
 
 
 class TestJiuEffect:
@@ -121,7 +120,7 @@ class TestJiuEffect:
         player = MagicMock()
         card = MagicMock()
         JiuEffect().resolve(engine, player, card, [])
-        engine._use_jiu.assert_called_once_with(player, card)
+        engine.card_resolver.use_jiu.assert_called_once_with(player, card)
 
 
 # ==================== Trick effects ====================
@@ -223,68 +222,72 @@ class TestTrickEffectsCanUse:
 class TestTrickEffectsResolve:
     def test_nanman_resolve(self):
         engine = MagicMock()
-        NanmanEffect().resolve(engine, MagicMock(), MagicMock(), [])
-        engine._use_nanman.assert_called_once()
+        player, card = MagicMock(), MagicMock()
+        NanmanEffect().resolve(engine, player, card, [])
+        engine.card_resolver.use_nanman.assert_called_once_with(player, card)
 
     def test_wanjian_resolve(self):
         engine = MagicMock()
-        WanjianEffect().resolve(engine, MagicMock(), MagicMock(), [])
-        engine._use_wanjian.assert_called_once()
+        player, card = MagicMock(), MagicMock()
+        WanjianEffect().resolve(engine, player, card, [])
+        engine.card_resolver.use_wanjian.assert_called_once_with(player, card)
 
     def test_wuzhong_resolve(self):
         engine = MagicMock()
-        WuzhongEffect().resolve(engine, MagicMock(), MagicMock(), [])
-        engine._use_wuzhong.assert_called_once()
+        player, card = MagicMock(), MagicMock()
+        WuzhongEffect().resolve(engine, player, card, [])
+        engine.card_resolver.use_wuzhong.assert_called_once_with(player, card)
 
     def test_guohe_resolve(self):
         engine = MagicMock()
-        targets = [MagicMock()]
-        GuoheEffect().resolve(engine, MagicMock(), MagicMock(), targets)
-        engine._use_guohe.assert_called_once()
+        player, card, targets = MagicMock(), MagicMock(), [MagicMock()]
+        GuoheEffect().resolve(engine, player, card, targets)
+        engine.card_resolver.use_guohe.assert_called_once_with(player, card, targets)
 
     def test_shunshou_resolve(self):
         engine = MagicMock()
-        targets = [MagicMock()]
-        ShunshouEffect().resolve(engine, MagicMock(), MagicMock(), targets)
-        engine._use_shunshou.assert_called_once()
+        player, card, targets = MagicMock(), MagicMock(), [MagicMock()]
+        ShunshouEffect().resolve(engine, player, card, targets)
+        engine.card_resolver.use_shunshou.assert_called_once_with(player, card, targets)
 
     def test_taoyuan_resolve(self):
         engine = MagicMock()
-        TaoyuanEffect().resolve(engine, MagicMock(), MagicMock(), [])
-        engine._use_taoyuan.assert_called_once()
+        player, card = MagicMock(), MagicMock()
+        TaoyuanEffect().resolve(engine, player, card, [])
+        engine.card_resolver.use_taoyuan.assert_called_once_with(player, card)
 
     def test_juedou_resolve(self):
         engine = MagicMock()
-        targets = [MagicMock()]
-        JuedouEffect().resolve(engine, MagicMock(), MagicMock(), targets)
-        engine._use_juedou.assert_called_once()
+        player, card, targets = MagicMock(), MagicMock(), [MagicMock()]
+        JuedouEffect().resolve(engine, player, card, targets)
+        engine.combat.use_juedou.assert_called_once_with(player, card, targets)
 
     def test_lebusishu_resolve(self):
         engine = MagicMock()
-        targets = [MagicMock()]
-        LebusishuEffect().resolve(engine, MagicMock(), MagicMock(), targets)
-        engine._use_lebusishu.assert_called_once()
+        player, card, targets = MagicMock(), MagicMock(), [MagicMock()]
+        LebusishuEffect().resolve(engine, player, card, targets)
+        engine.card_resolver.use_lebusishu.assert_called_once_with(player, card, targets)
 
     def test_bingliang_resolve(self):
         engine = MagicMock()
-        targets = [MagicMock()]
-        BingliangEffect().resolve(engine, MagicMock(), MagicMock(), targets)
-        engine._use_bingliang.assert_called_once()
+        player, card, targets = MagicMock(), MagicMock(), [MagicMock()]
+        BingliangEffect().resolve(engine, player, card, targets)
+        engine.card_resolver.use_bingliang.assert_called_once_with(player, card, targets)
 
     def test_shandian_resolve(self):
         engine = MagicMock()
-        targets = [MagicMock()]
-        ShandianEffect().resolve(engine, MagicMock(), MagicMock(), targets)
-        engine._use_shandian.assert_called_once()
+        player, card, targets = MagicMock(), MagicMock(), [MagicMock()]
+        ShandianEffect().resolve(engine, player, card, targets)
+        engine.card_resolver.use_shandian.assert_called_once_with(player, card, targets)
 
     def test_huogong_resolve(self):
         engine = MagicMock()
-        targets = [MagicMock()]
-        HuogongEffect().resolve(engine, MagicMock(), MagicMock(), targets)
-        engine._use_huogong.assert_called_once()
+        player, card, targets = MagicMock(), MagicMock(), [MagicMock()]
+        HuogongEffect().resolve(engine, player, card, targets)
+        engine.card_resolver.use_huogong.assert_called_once_with(player, card, targets)
 
     def test_tiesuo_resolve(self):
         engine = MagicMock()
-        targets = [MagicMock()]
-        TiesuoEffect().resolve(engine, MagicMock(), MagicMock(), targets)
-        engine._use_tiesuo.assert_called_once()
+        player, card, targets = MagicMock(), MagicMock(), [MagicMock()]
+        TiesuoEffect().resolve(engine, player, card, targets)
+        engine.card_resolver.use_tiesuo.assert_called_once_with(player, card, targets)

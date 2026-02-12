@@ -83,7 +83,7 @@ class TestBaiyinshizi:
         hp_before = player.hp
 
         # 移除装备
-        engine._remove_equipment(player, baiyinshizi_card)
+        engine.equipment_sys.remove(player, baiyinshizi_card)
 
         # 应该回复1点体力
         assert player.hp == hp_before + 1
@@ -100,7 +100,7 @@ class TestBaiyinshizi:
         hp_before = player.hp
 
         # 移除装备
-        engine._remove_equipment(player, baiyinshizi_card)
+        engine.equipment_sys.remove(player, baiyinshizi_card)
 
         # 不应该回复（因为已满血）
         assert player.hp == hp_before

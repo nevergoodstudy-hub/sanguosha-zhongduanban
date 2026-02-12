@@ -2,6 +2,7 @@
 定义三国杀游戏中的各类异常，提供明确的错误类型和信息
 """
 
+from i18n import t as _t
 
 
 class GameError(Exception):
@@ -39,10 +40,12 @@ class InvalidActionError(GameError):
 
     def __init__(
         self,
-        message: str = "无效的游戏动作",
+        message: str | None = None,
         action_type: str | None = None,
         player_id: int | None = None,
     ):
+        if message is None:
+            message = _t("exc.invalid_action")
         details = {}
         if action_type:
             details["action_type"] = action_type
@@ -61,10 +64,12 @@ class InvalidTargetError(GameError):
 
     def __init__(
         self,
-        message: str = "无效的目标",
+        message: str | None = None,
         target_ids: list[int] | None = None,
         reason: str | None = None,
     ):
+        if message is None:
+            message = _t("exc.invalid_target")
         details = {}
         if target_ids:
             details["target_ids"] = target_ids
@@ -83,11 +88,13 @@ class InsufficientCardsError(GameError):
 
     def __init__(
         self,
-        message: str = "卡牌不足",
+        message: str | None = None,
         required: int = 0,
         available: int = 0,
         card_type: str | None = None,
     ):
+        if message is None:
+            message = _t("exc.insufficient_cards")
         details = {
             "required": required,
             "available": available,
@@ -107,8 +114,10 @@ class CardNotFoundError(GameError):
     """
 
     def __init__(
-        self, message: str = "未找到指定卡牌", card_id: str | None = None
+        self, message: str | None = None, card_id: str | None = None
     ):
+        if message is None:
+            message = _t("exc.card_not_found")
         details = {}
         if card_id:
             details["card_id"] = card_id
@@ -127,10 +136,12 @@ class SkillError(GameError):
 
     def __init__(
         self,
-        message: str = "技能错误",
+        message: str | None = None,
         skill_id: str | None = None,
         player_id: int | None = None,
     ):
+        if message is None:
+            message = _t("exc.skill_error")
         details = {}
         if skill_id:
             details["skill_id"] = skill_id
@@ -149,10 +160,12 @@ class SkillNotFoundError(SkillError):
 
     def __init__(
         self,
-        message: str = "未找到指定技能",
+        message: str | None = None,
         skill_id: str | None = None,
         player_id: int | None = None,
     ):
+        if message is None:
+            message = _t("exc.skill_not_found")
         super().__init__(message, skill_id, player_id)
 
 
@@ -164,11 +177,13 @@ class SkillCooldownError(SkillError):
 
     def __init__(
         self,
-        message: str = "技能冷却中",
+        message: str | None = None,
         skill_id: str | None = None,
         player_id: int | None = None,
         remaining_cooldown: int = 0,
     ):
+        if message is None:
+            message = _t("exc.skill_cooldown")
         super().__init__(message, skill_id, player_id)
         self.remaining_cooldown = remaining_cooldown
         self.details["remaining_cooldown"] = remaining_cooldown
@@ -182,11 +197,13 @@ class SkillConditionError(SkillError):
 
     def __init__(
         self,
-        message: str = "技能使用条件不满足",
+        message: str | None = None,
         skill_id: str | None = None,
         player_id: int | None = None,
         condition: str | None = None,
     ):
+        if message is None:
+            message = _t("exc.skill_condition")
         super().__init__(message, skill_id, player_id)
         self.condition = condition
         if condition:
@@ -201,12 +218,14 @@ class SkillUsageLimitError(SkillError):
 
     def __init__(
         self,
-        message: str = "技能使用次数已达上限",
+        message: str | None = None,
         skill_id: str | None = None,
         player_id: int | None = None,
         limit: int = 0,
         used: int = 0,
     ):
+        if message is None:
+            message = _t("exc.skill_usage_limit")
         super().__init__(message, skill_id, player_id)
         self.limit = limit
         self.used = used
@@ -224,10 +243,12 @@ class GameStateError(GameError):
 
     def __init__(
         self,
-        message: str = "游戏状态错误",
+        message: str | None = None,
         current_state: str | None = None,
         expected_state: str | None = None,
     ):
+        if message is None:
+            message = _t("exc.game_state")
         details = {}
         if current_state:
             details["current_state"] = current_state
@@ -244,7 +265,9 @@ class GameNotStartedError(GameStateError):
     当游戏尚未开始就尝试执行游戏内操作时抛出
     """
 
-    def __init__(self, message: str = "游戏尚未开始"):
+    def __init__(self, message: str | None = None):
+        if message is None:
+            message = _t("exc.game_not_started")
         super().__init__(message, current_state="not_started")
 
 
@@ -254,7 +277,9 @@ class GameAlreadyFinishedError(GameStateError):
     当游戏已结束但尝试继续操作时抛出
     """
 
-    def __init__(self, message: str = "游戏已结束"):
+    def __init__(self, message: str | None = None):
+        if message is None:
+            message = _t("exc.game_finished")
         super().__init__(message, current_state="finished")
 
 
@@ -266,10 +291,12 @@ class InvalidPhaseError(GameStateError):
 
     def __init__(
         self,
-        message: str = "当前阶段不允许此操作",
+        message: str | None = None,
         current_phase: str | None = None,
         expected_phase: str | None = None,
     ):
+        if message is None:
+            message = _t("exc.invalid_phase")
         super().__init__(message, current_phase, expected_phase)
         self.current_phase = current_phase
         self.expected_phase = expected_phase
@@ -284,7 +311,9 @@ class PlayerError(GameError):
     所有玩家相关异常的父类
     """
 
-    def __init__(self, message: str = "玩家错误", player_id: int | None = None):
+    def __init__(self, message: str | None = None, player_id: int | None = None):
+        if message is None:
+            message = _t("exc.player_error")
         details = {}
         if player_id is not None:
             details["player_id"] = player_id
@@ -298,7 +327,9 @@ class PlayerNotFoundError(PlayerError):
     当指定的玩家不存在时抛出
     """
 
-    def __init__(self, message: str = "未找到指定玩家", player_id: int | None = None):
+    def __init__(self, message: str | None = None, player_id: int | None = None):
+        if message is None:
+            message = _t("exc.player_not_found")
         super().__init__(message, player_id)
 
 
@@ -309,8 +340,10 @@ class PlayerDeadError(PlayerError):
     """
 
     def __init__(
-        self, message: str = "该玩家已阵亡", player_id: int | None = None
+        self, message: str | None = None, player_id: int | None = None
     ):
+        if message is None:
+            message = _t("exc.player_dead")
         super().__init__(message, player_id)
 
 
@@ -322,10 +355,12 @@ class NotPlayerTurnError(PlayerError):
 
     def __init__(
         self,
-        message: str = "不是该玩家的回合",
+        message: str | None = None,
         player_id: int | None = None,
         current_player_id: int | None = None,
     ):
+        if message is None:
+            message = _t("exc.not_player_turn")
         super().__init__(message, player_id)
         self.current_player_id = current_player_id
         if current_player_id is not None:
@@ -342,8 +377,10 @@ class ConfigurationError(GameError):
     """
 
     def __init__(
-        self, message: str = "配置错误", config_key: str | None = None
+        self, message: str | None = None, config_key: str | None = None
     ):
+        if message is None:
+            message = _t("exc.config_error")
         details = {}
         if config_key:
             details["config_key"] = config_key
@@ -359,10 +396,12 @@ class DataLoadError(GameError):
 
     def __init__(
         self,
-        message: str = "数据加载失败",
+        message: str | None = None,
         file_path: str | None = None,
         reason: str | None = None,
     ):
+        if message is None:
+            message = _t("exc.data_load_error")
         details = {}
         if file_path:
             details["file_path"] = file_path

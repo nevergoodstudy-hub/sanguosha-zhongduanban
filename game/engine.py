@@ -23,7 +23,6 @@ from __future__ import annotations
 import logging
 import random
 from dataclasses import dataclass, field
-from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -70,22 +69,8 @@ _LOG_CATEGORY_MAP: dict[str, EventType] = {
 }
 
 
-class GamePhase(Enum):
-    """游戏阶段枚举"""
-    PREPARE = "prepare"       # 准备阶段
-    JUDGE = "judge"           # 判定阶段
-    DRAW = "draw"             # 摸牌阶段
-    PLAY = "play"             # 出牌阶段
-    DISCARD = "discard"       # 弃牌阶段
-    END = "end"               # 结束阶段
-
-
-class GameState(Enum):
-    """游戏状态枚举"""
-    NOT_STARTED = "not_started"   # 未开始
-    CHOOSING_HEROES = "choosing_heroes"  # 选将阶段
-    IN_PROGRESS = "in_progress"   # 进行中
-    FINISHED = "finished"         # 已结束
+# 枚举已提取到 enums.py，此处 re-export 保持向后兼容
+from .enums import GamePhase, GameState  # noqa: F401  — 公共 API re-export
 
 
 # M1-T01: 导入 TurnManager（GamePhase 已在上方定义，不会循环导入）
@@ -628,7 +613,7 @@ class GameEngine:
 
         # 杀类卡牌（普通杀/火杀/雷杀）特殊处理（含 subtype 变体）
         if card.name == CardName.SHA or card.subtype in [CardSubtype.ATTACK, CardSubtype.FIRE_ATTACK, CardSubtype.THUNDER_ATTACK]:
-            return self._use_sha(player, card, targets)
+            return self.combat.use_sha(player, card, targets)
 
         # M1-T02: 优先通过效果注册表路由
         effect = self.effect_registry.get(card.name)
@@ -637,31 +622,21 @@ class GameEngine:
 
         # 借刀杀人单独路由
         if card.name == CardName.JIEDAO:
-            return self._use_jiedao(player, card, targets)
+            return self.card_resolver.use_jiedao(player, card, targets)
 
         # 按子类型 fallback
         if card.subtype == CardSubtype.ALCOHOL:
-            return self._use_jiu(player, card)
+            return self.card_resolver.use_jiu(player, card)
         elif card.subtype == CardSubtype.CHAIN:
-            return self._use_tiesuo(player, card, targets)
+            return self.card_resolver.use_tiesuo(player, card, targets)
         elif card.is_type(CardType.EQUIPMENT):
-            return self._use_equipment(player, card)
+            return self.equipment_sys.equip(player, card)
 
         # 将使用的牌放入弃牌堆
         self.deck.discard([card])
         return True
 
-    def _use_sha(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用杀 — 委托给 CombatSystem (Phase 2.2)"""
-        return self.combat.use_sha(player, card, targets)
-
-    def _request_shan(self, player: Player, count: int = 1) -> int:
-        """请求玩家出闪 — 委托给 CombatSystem (Phase 2.2)"""
-        return self.combat.request_shan(player, count)
-
-    def _request_sha(self, player: Player, count: int = 1) -> int:
-        """请求玩家出杀 — 委托给 CombatSystem (Phase 2.2)"""
-        return self.combat.request_sha(player, count)
+    # ==================== GameContext 协议方法 ====================
 
     def _request_wuxie(self, trick_card: Card, source: Player,
                        target: Player | None = None,
@@ -717,95 +692,6 @@ class GameEngine:
                         pass
 
         return False
-
-    def _trigger_bagua(self, player: Player) -> bool:
-        """触发八卦阵判定 — 委托给 CombatSystem (Phase 2.2)"""
-        return self.combat._trigger_bagua(player)
-
-    def _trigger_qinglong(self, player: Player, target: Player) -> None:
-        """触发青龙偃月刀效果 — 委托给 CombatSystem (Phase 2.2)"""
-        self.combat._trigger_qinglong(player, target)
-
-    def _use_tao(self, player: Player, card: Card) -> bool:
-        """使用桃 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_tao(player, card)
-
-    def _use_juedou(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用决斗 — 委托给 CombatSystem (Phase 2.2)"""
-        return self.combat.use_juedou(player, card, targets)
-
-    def _use_juedou_forced(self, source: Player, target: Player) -> None:
-        """强制决斗 — 委托给 CombatSystem (Phase 2.2)"""
-        self.combat.use_juedou_forced(source, target)
-
-    def _use_nanman(self, player: Player, card: Card) -> bool:
-        """使用南蛮入侵 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_nanman(player, card)
-
-    def _use_wanjian(self, player: Player, card: Card) -> bool:
-        """使用万箭齐发 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_wanjian(player, card)
-
-    def _use_wuzhong(self, player: Player, card: Card) -> bool:
-        """使用无中生有 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_wuzhong(player, card)
-
-    def _use_guohe(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用过河拆桥 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_guohe(player, card, targets)
-
-    def _use_shunshou(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用顺手牵羊 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_shunshou(player, card, targets)
-
-    def _use_jiedao(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用借刀杀人 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_jiedao(player, card, targets)
-
-    def _use_taoyuan(self, player: Player, card: Card) -> bool:
-        """使用桃园结义 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_taoyuan(player, card)
-
-    def _use_lebusishu(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用乐不思蜀 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_lebusishu(player, card, targets)
-
-    def _use_bingliang(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用兵粮寸断 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_bingliang(player, card, targets)
-
-    def _use_shandian(self, player: Player, card: Card, targets: list[Player] = None) -> bool:
-        """使用闪电 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_shandian(player, card, targets)
-
-    def _use_jiu(self, player: Player, card: Card) -> bool:
-        """使用酒 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_jiu(player, card)
-
-    def _use_tiesuo(self, player: Player, card: Card,
-                    targets: list[Player] | None = None) -> bool:
-        """使用铁索连环 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_tiesuo(player, card, targets)
-
-    def _use_huogong(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用火攻 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.use_huogong(player, card, targets)
-
-    def _use_equipment(self, player: Player, card: Card) -> bool:
-        """使用装备牌 — 委托给 EquipmentSystem (Phase 2.3)"""
-        return self.equipment_sys.equip(player, card)
-
-    def _remove_equipment(self, player: Player, card: Card) -> None:
-        """移除装备 — 委托给 EquipmentSystem (Phase 2.3)"""
-        self.equipment_sys.remove(player, card)
-
-    def _choose_and_discard_card(self, player: Player, target: Player) -> Card | None:
-        """选择并弃置目标的一张牌 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.choose_and_discard_card(player, target)
-
-    def _choose_and_steal_card(self, player: Player, target: Player) -> Card | None:
-        """选择并获得目标的一张牌 — 委托给 CardResolver (Phase 2.5)"""
-        return self.card_resolver.choose_and_steal_card(player, target)
 
     def discard_cards(self, player: Player, cards: list[Card]) -> None:
         """弃置卡牌"""
@@ -1100,6 +986,7 @@ class GameEngine:
         }
         difficulty = difficulty_map.get(ai_difficulty, AIDifficulty.NORMAL)
 
+        # 先创建玩家并分配身份，再分配武将（确保 set_hero 能正确识别主公 +1 HP）
         for i in range(player_count):
             player = Player(
                 id=i,
@@ -1109,6 +996,10 @@ class GameEngine:
             )
             self.players.append(player)
 
+        # BUG-FIX: 先分配身份，再分配武将——否则 set_hero 无法识别主公身份，导致主公缺少 +1 HP
+        self._assign_identities()
+
+        for i, player in enumerate(self.players):
             # 分配武将
             if i < len(all_heroes):
                 import copy
@@ -1117,16 +1008,6 @@ class GameEngine:
 
             # 创建 AI
             self.ai_bots[player.id] = AIBot(player, difficulty)
-
-        # 分配身份
-        self._assign_identities()
-
-        # 主公额外 +1 体力（set_hero 已处理，但需要确保身份先分配）
-        for p in self.players:
-            if p.identity == Identity.LORD and p.hero:
-                # 重新应用主公加成
-                if p.hp == p.max_hp:  # 还没受伤
-                    pass  # set_hero 已经处理了
 
         # 重置牌堆
         self.deck.reset()

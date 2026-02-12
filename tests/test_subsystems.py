@@ -403,28 +403,28 @@ class TestCardResolver:
 class TestEngineDelegation:
     """验证 engine 方法正确委托给子系统"""
 
-    def test_engine_use_sha_delegates(self, engine):
-        """engine._use_sha 委托给 combat.use_sha"""
+    def test_engine_combat_use_sha(self, engine):
+        """通过 combat.use_sha 直接调用"""
         player = engine.players[0]
         sha = make_card(CardName.SHA)
         with patch.object(engine.combat, 'use_sha', return_value=True) as mock:
-            engine._use_sha(player, sha, [])
+            engine.combat.use_sha(player, sha, [])
             mock.assert_called_once_with(player, sha, [])
 
-    def test_engine_use_tao_delegates(self, engine):
-        """engine._use_tao 委托给 card_resolver.use_tao"""
+    def test_engine_card_resolver_use_tao(self, engine):
+        """通过 card_resolver.use_tao 直接调用"""
         player = engine.players[0]
         tao = make_card(CardName.TAO, subtype=CardSubtype.HEAL)
         with patch.object(engine.card_resolver, 'use_tao', return_value=True) as mock:
-            engine._use_tao(player, tao)
+            engine.card_resolver.use_tao(player, tao)
             mock.assert_called_once_with(player, tao)
 
-    def test_engine_use_equipment_delegates(self, engine):
-        """engine._use_equipment 委托给 equipment_sys.equip"""
+    def test_engine_equipment_sys_equip(self, engine):
+        """通过 equipment_sys.equip 直接调用"""
         player = engine.players[0]
         weapon = make_card(CardName.ZHUGENU, card_type=CardType.EQUIPMENT, subtype=CardSubtype.WEAPON)
         with patch.object(engine.equipment_sys, 'equip', return_value=True) as mock:
-            engine._use_equipment(player, weapon)
+            engine.equipment_sys.equip(player, weapon)
             mock.assert_called_once_with(player, weapon)
 
     def test_engine_phase_judge_delegates(self, engine):

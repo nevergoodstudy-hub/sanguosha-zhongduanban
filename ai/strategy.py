@@ -13,7 +13,7 @@ from game.player import Identity
 
 if TYPE_CHECKING:
     from game.card import Card
-    from game.engine import GameEngine
+    from game.engine import GameEngine  # 也用于 is_enemy() 的 engine 参数类型
     from game.player import Player
 
 
@@ -37,8 +37,15 @@ class AIStrategy(Protocol):
 
 # ==================== 共享工具函数 ====================
 
-def is_enemy(player: Player, target: Player) -> bool:
-    """判断目标是否为敌人"""
+def is_enemy(player: Player, target: Player,
+             *, engine: GameEngine | None = None) -> bool:
+    """判断目标是否为敌人
+
+    Args:
+        player: 判断主体
+        target: 目标玩家
+        engine: 可选，提供后可获取精确的存活人数（影响间谍策略）
+    """
     my_identity = player.identity
     target_identity = target.identity
 
@@ -47,11 +54,16 @@ def is_enemy(player: Player, target: Player) -> bool:
     elif my_identity == Identity.REBEL:
         return target_identity in [Identity.LORD, Identity.LOYALIST]
     elif my_identity == Identity.SPY:
-        # 内奸策略：前期帮助主公，后期杀主公
-        alive_count = len([p for p in [player, target] if p.is_alive])
+        # BUG-FIX: 之前只计算 player+target 两人，永远为 2，导致间谍始终视所有人为敌
+        if engine is not None:
+            alive_count = len(engine.get_alive_players())
+        else:
+            # 无 engine 时保守估计：假设非最终对决阶段
+            alive_count = 3
         if alive_count <= 2:
-            return True  # 最后单挑阶段
-        return target_identity == Identity.REBEL  # 先帮助清理反贼
+            return True  # 最后单挑阶段，所有人都是敌人
+        # 前期帮主公清反贼，中期帮反贼削弱主公阵营
+        return target_identity == Identity.REBEL
 
     return False
 

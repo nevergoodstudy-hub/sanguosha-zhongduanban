@@ -104,7 +104,7 @@ class ThreatEvaluator:
             power += 10
 
         # 特殊卡牌加成
-        tao_count = len(player.get_cards_by_name("桃"))
+        tao_count = len(player.get_cards_by_name(CardName.TAO))
         power += tao_count * 15
 
         # 武将技能加成
@@ -126,11 +126,11 @@ class ThreatEvaluator:
             danger += 30
 
         # 无闪危险
-        if not player.get_cards_by_name("闪"):
+        if not player.get_cards_by_name(CardName.SHAN):
             danger += 20
 
         # 无桃危险
-        if not player.get_cards_by_name("桃"):
+        if not player.get_cards_by_name(CardName.TAO):
             danger += 15
 
         # 敌人数量和威胁

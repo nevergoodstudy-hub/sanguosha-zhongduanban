@@ -18,6 +18,7 @@ dist/
 # IDE 配置
 .idea/
 .vscode/
+.warp/
 *.swp
 *.swo
 *~

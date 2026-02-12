@@ -2,6 +2,7 @@
 
 提供:
 - ConnectionTokenManager: 基于 secrets 的连接令牌管理
+- OriginValidator: WebSocket Origin 白名单验证
 - sanitize_chat_message: 聊天内容净化 (防 XSS / 注入)
 - 安全相关常量
 """
@@ -13,6 +14,8 @@ import logging
 import re
 import secrets
 import time
+from collections import deque
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +114,84 @@ class ConnectionTokenManager:
     @property
     def active_count(self) -> int:
         return len(self._tokens)
+
+
+# ==================== Origin 验证 ====================
+
+class OriginValidator:
+    """WebSocket Origin 白名单验证器。
+
+    验证 WebSocket 握手请求的 Origin 头，防止跨站 WebSocket 劫持 (CSWSH)。
+    """
+
+    def __init__(self, allowed_origins: str = ""):
+        """初始化 Origin 验证器。
+
+        Args:
+            allowed_origins: 逗号分隔的允许 Origin 列表，空字符串表示允许所有。
+        """
+        self._allowed: set[str] = set()
+        if allowed_origins.strip():
+            for origin in allowed_origins.split(","):
+                origin = origin.strip().rstrip("/")
+                if origin:
+                    self._allowed.add(origin.lower())
+
+    @property
+    def is_enabled(self) -> bool:
+        """是否启用了 Origin 验证。"""
+        return len(self._allowed) > 0
+
+    def is_allowed(self, origin: str | None) -> bool:
+        """检查 Origin 是否在白名单中。
+
+        Args:
+            origin: 请求的 Origin 头值。
+
+        Returns:
+            True 表示允许，False 表示拒绝。
+        """
+        if not self._allowed:
+            return True  # 未配置白名单，允许所有
+        if not origin:
+            return False  # 有白名单但无 Origin 头，拒绝
+        normalized = origin.strip().rstrip("/").lower()
+        return normalized in self._allowed
+
+
+# ==================== 速率限制器 ====================
+
+class RateLimiter:
+    """基于滑动窗口的速率限制器 (O(1) 操作)。"""
+
+    def __init__(self, window: float = 1.0, max_msgs: int = 30):
+        self._window = window
+        self._max_msgs = max_msgs
+        self._timestamps: dict[int, deque[float]] = {}  # player_id → timestamps
+
+    def check(self, player_id: int) -> bool:
+        """检查是否允许处理消息。返回 True 表示允许。"""
+        now = time.time()
+        cutoff = now - self._window
+
+        if player_id not in self._timestamps:
+            self._timestamps[player_id] = deque()
+
+        ts = self._timestamps[player_id]
+
+        # O(1) 清除过期时间戳 (deque 左端弹出)
+        while ts and ts[0] < cutoff:
+            ts.popleft()
+
+        if len(ts) >= self._max_msgs:
+            return False
+
+        ts.append(now)
+        return True
+
+    def remove_player(self, player_id: int) -> None:
+        """清理玩家的速率限制数据。"""
+        self._timestamps.pop(player_id, None)
 
 
 # ==================== 输入净化 ====================

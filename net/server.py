@@ -35,6 +35,8 @@ from .security import (
     DEFAULT_MAX_MESSAGE_SIZE,
     ConnectionTokenManager,
     IPConnectionTracker,
+    OriginValidator,
+    RateLimiter,
     sanitize_chat_message,
 )
 
@@ -119,16 +121,19 @@ class GameServer:
                  max_connections: int = DEFAULT_MAX_CONNECTIONS,
                  max_connections_per_ip: int = DEFAULT_MAX_CONNECTIONS_PER_IP,
                  max_message_size: int = DEFAULT_MAX_MESSAGE_SIZE,
-                 heartbeat_timeout: float = DEFAULT_HEARTBEAT_TIMEOUT):
+                 heartbeat_timeout: float = DEFAULT_HEARTBEAT_TIMEOUT,
+                 allowed_origins: str = "",
+                 ssl_cert: str = "",
+                 ssl_key: str = ""):
         self.host = host
         self.port = port
-        # 速率限制参数
-        self._rate_window = rate_limit_window
-        self._rate_max = rate_limit_max_msgs
         # 安全参数
         self._max_connections = max_connections
         self._max_message_size = max_message_size
         self._heartbeat_timeout = heartbeat_timeout
+        # TLS
+        self._ssl_cert = ssl_cert
+        self._ssl_key = ssl_key
         # 连接管理
         self.connections: dict[int, ConnectedPlayer] = {}  # player_id → player
         self.ws_to_player: dict[ServerConnection, int] = {}  # websocket → player_id
@@ -136,6 +141,8 @@ class GameServer:
         # 安全组件
         self._token_manager = ConnectionTokenManager()
         self._ip_tracker = IPConnectionTracker(max_per_ip=max_connections_per_ip)
+        self._origin_validator = OriginValidator(allowed_origins)
+        self._rate_limiter = RateLimiter(rate_limit_window, rate_limit_max_msgs)
         # 房间管理
         self.rooms: dict[str, Room] = {}  # room_id → room
         # 消息路由表
@@ -221,6 +228,7 @@ class GameServer:
         if player:
             self._ip_tracker.remove(player.remote_ip)
             self._token_manager.revoke(player_id=pid)
+            self._rate_limiter.remove_player(pid)
             if player.room_id:
                 room = self.rooms.get(player.room_id)
                 if room:
@@ -270,16 +278,7 @@ class GameServer:
         Returns:
             True 表示允许处理, False 表示应丢弃
         """
-        now = time.time()
-        cutoff = now - self._rate_window
-        # 清除过期时间戳
-        ts = player._msg_timestamps
-        while ts and ts[0] < cutoff:
-            ts.pop(0)
-        if len(ts) >= self._rate_max:
-            return False
-        ts.append(now)
-        return True
+        return self._rate_limiter.check(player.player_id)
 
     async def _handle_message(self, websocket: ServerConnection, raw: str) -> None:
         """路由消息到对应处理器（含 Pydantic 校验）"""
@@ -554,17 +553,25 @@ class GameServer:
     # ==================== 断线重连 ====================
 
     async def reconnect_player(self, player: ConnectedPlayer,
-                               room_id: str, last_seq: int) -> bool:
-        """断线重连: 重放玩家缺失的事件
+                               room_id: str, last_seq: int,
+                               token: str = "") -> bool:
+        """断线重连: 验证令牌并重放玩家缺失的事件
 
         Args:
             player: 重连的玩家
             room_id: 房间 ID
             last_seq: 玩家最后收到的事件序号
+            token: 重连令牌
 
         Returns:
             是否成功重连
         """
+        # 令牌验证
+        if token and not self._token_manager.verify(token, player.player_id):
+            logger.warning(f"重连令牌验证失败: 玩家 {player.player_id}")
+            await self._send(player, ServerMsg.error(_t("server.invalid_token")))
+            return False
+
         room = self.rooms.get(room_id)
         if not room:
             await self._send(player, ServerMsg.error(_t("server.room_not_found")))
@@ -609,6 +616,11 @@ class GameServer:
 
     async def _connection_handler(self, websocket: ServerConnection) -> None:
         """处理单个 WebSocket 连接"""
+        # Origin 验证
+        if not self._check_origin(websocket):
+            await websocket.close(1008, "Origin not allowed")
+            return
+
         player = await self._register(websocket)
         if player is None:
             return  # 连接被拒绝
@@ -620,6 +632,30 @@ class GameServer:
         finally:
             await self._unregister(websocket)
 
+    def _build_ssl_context(self):
+        """构建 SSL 上下文 (如果配置了证书)。"""
+        if not self._ssl_cert or not self._ssl_key:
+            return None
+        import ssl
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(self._ssl_cert, self._ssl_key)
+        logger.info("已加载 TLS 证书")
+        return ctx
+
+    def _check_origin(self, websocket: ServerConnection) -> bool:
+        """检查 WebSocket 握手中的 Origin 头。"""
+        if not self._origin_validator.is_enabled:
+            return True
+        origin = None
+        try:
+            origin = websocket.request.headers.get("Origin")
+        except Exception:
+            pass
+        if not self._origin_validator.is_allowed(origin):
+            logger.warning(f"Origin 验证失败: {origin}")
+            return False
+        return True
+
     async def start(self) -> None:
         """启动服务端"""
         try:
@@ -629,7 +665,9 @@ class GameServer:
             return
 
         self._running = True
-        logger.info(f"三国杀服务端启动: ws://{self.host}:{self.port}")
+        ssl_ctx = self._build_ssl_context()
+        protocol = "wss" if ssl_ctx else "ws"
+        logger.info(f"三国杀服务端启动: {protocol}://{self.host}:{self.port}")
 
         # 启动心跳超时检测后台任务
         self._heartbeat_task = asyncio.create_task(self._heartbeat_checker())
@@ -639,6 +677,7 @@ class GameServer:
             self.host,
             self.port,
             max_size=self._max_message_size,
+            ssl=ssl_ctx,
         ):
             while self._running:
                 await asyncio.sleep(1)

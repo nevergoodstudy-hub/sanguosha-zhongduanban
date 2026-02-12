@@ -73,7 +73,7 @@ class TestHuogong:
         target_hp_before = target.hp
 
         # 使用火攻
-        result = engine._use_huogong(player, huogong_card, [target])
+        result = engine.card_resolver.use_huogong(player, huogong_card, [target])
 
         assert result is True
         # 如果有同花色牌，应该造成1点火焰伤害
@@ -114,7 +114,7 @@ class TestHuogong:
         target_hp_before = target.hp
 
         # 目标展示梅花，使用者只有红桃和黑桃，无梅花牌
-        result = engine._use_huogong(player, huogong_card, [target])
+        result = engine.card_resolver.use_huogong(player, huogong_card, [target])
         assert result is True
         # 没有梅花牌，不造成伤害
         assert target.hp == target_hp_before
@@ -131,7 +131,7 @@ class TestHuogong:
 
         target_hp_before = target.hp
 
-        result = engine._use_huogong(player, huogong_card, [target])
+        result = engine.card_resolver.use_huogong(player, huogong_card, [target])
 
         assert result is False
         assert target.hp == target_hp_before
@@ -169,7 +169,7 @@ class TestHuogong:
         # 记录事件日志来验证伤害类型
         engine.event_log.clear()
 
-        engine._use_huogong(player, huogong_card, [target])
+        engine.card_resolver.use_huogong(player, huogong_card, [target])
 
         # 检查日志中是否有火焰伤害相关记录
         damage_logs = [e for e in engine.event_log if 'damage' in e.event_type.lower() or '伤害' in e.message]

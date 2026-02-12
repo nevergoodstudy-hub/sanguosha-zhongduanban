@@ -134,7 +134,7 @@ def handle_guose(player: Player, engine: GameEngine,
     if card in player.hand:
         player.remove_card(card)
     else:
-        engine._remove_equipment(player, card)
+        engine.equipment_sys.remove(player, card)
     engine.deck.discard([card])
 
     virtual_lebu = Card(
@@ -204,7 +204,7 @@ def handle_qixi(player: Player, engine: GameEngine,
     if card in player.hand:
         player.remove_card(card)
     else:
-        engine._remove_equipment(player, card)
+        engine.equipment_sys.remove(player, card)
     engine.deck.discard([card])
 
     engine.log_event("skill",
@@ -219,11 +219,11 @@ def handle_qixi(player: Player, engine: GameEngine,
         number=card.number,
     )
 
-    if engine._request_wuxie(virtual_guohe, player, target):
+    if engine.combat.request_wuxie(virtual_guohe, player, target):
         engine.log_event("effect", _t("skill_msg.qixi_nullified"))
         return True
 
-    discarded = engine._choose_and_discard_card(player, target)
+    discarded = engine.card_resolver.choose_and_discard_card(player, target)
     if discarded:
         engine.log_event("effect", _t("resolver.card_discarded", name=target.name, card=discarded.display_name))
     return True

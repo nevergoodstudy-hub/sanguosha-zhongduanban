@@ -14,8 +14,8 @@ from i18n import t as _t
 
 from .constants import SkillId
 
-# GamePhase 从 engine 导入，避免重复定义（engine 先于本模块定义该枚举）
-from .engine import GamePhase
+# GamePhase 已提取到 enums.py，直接导入避免 engine → turn_manager → engine 循环
+from .enums import GamePhase
 from .events import EventType
 from .hero import SkillTiming
 
@@ -175,6 +175,8 @@ class TurnManager:
     def _try_trigger_tuxi(self, player: Player, draw_count: int) -> bool:
         """尝试触发突袭技能
 
+        突袭规则：摸牌阶段，可以少摸牌，然后获取等量其他角色各一张手牌（最多2人）
+
         Args:
             player: 当前玩家
             draw_count: 原本要摸的牌数
@@ -182,17 +184,35 @@ class TurnManager:
         Returns:
             是否成功触发突袭
         """
+        from .skills.registry import get_registry
+
         # AI 决策是否使用突袭
         if player.is_ai and player.id in self.engine.ai_bots:
-            bot = self.engine.ai_bots[player.id]
-            # 简化处理：如果有其他玩家有手牌，可能使用突袭
             targets = [
                 p for p in self.engine.get_other_players(player)
                 if p.hand_count > 0
             ]
-            if targets and len(targets) >= draw_count:
-                # 这里可以扩展为更复杂的突袭逻辑
-                pass
+            if not targets:
+                return False
+
+            # 最多选择 min(draw_count, 2) 个目标
+            steal_count = min(draw_count, 2, len(targets))
+            chosen_targets = targets[:steal_count]
+
+            # 通过技能注册表调用突袭 handler
+            registry = get_registry()
+            tuxi_handler = registry.get("tuxi")
+            if tuxi_handler:
+                result = tuxi_handler(player, self.engine, targets=chosen_targets)
+                if result:
+                    # 突袭成功，补摸剩余牌数
+                    remaining = draw_count - steal_count
+                    if remaining > 0:
+                        cards = self.engine.deck.draw(remaining)
+                        player.draw_cards(cards)
+                        self.engine.log_event("draw_cards",
+                            _t("resolver.drew_cards", name=player.name, count=len(cards)))
+                    return True
         return False
 
     def _execute_play_phase(self, player: Player) -> None:

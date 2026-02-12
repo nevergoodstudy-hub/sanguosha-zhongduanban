@@ -429,5 +429,25 @@
     "server.not_in_room": "不在房间中",
     "server.not_in_game": "不在游戏中",
     "server.game_error": "游戏异常: {error}",
-    "server.heartbeat_timeout": "心跳超时"
+    "server.heartbeat_timeout": "心跳超时",
+
+    "exc.invalid_action": "无效的游戏动作",
+    "exc.invalid_target": "无效的目标",
+    "exc.insufficient_cards": "卡牌不足",
+    "exc.card_not_found": "未找到指定卡牌",
+    "exc.skill_error": "技能错误",
+    "exc.skill_not_found": "未找到指定技能",
+    "exc.skill_cooldown": "技能冷却中",
+    "exc.skill_condition": "技能使用条件不满足",
+    "exc.skill_usage_limit": "技能使用次数已达上限",
+    "exc.game_state": "游戏状态错误",
+    "exc.game_not_started": "游戏尚未开始",
+    "exc.game_finished": "游戏已结束",
+    "exc.invalid_phase": "当前阶段不允许此操作",
+    "exc.player_error": "玩家错误",
+    "exc.player_not_found": "未找到指定玩家",
+    "exc.player_dead": "该玩家已阵亡",
+    "exc.not_player_turn": "不是该玩家的回合",
+    "exc.config_error": "配置错误",
+    "exc.data_load_error": "数据加载失败"
 }

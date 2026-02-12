@@ -238,7 +238,7 @@ def handle_duanliang(player: Player, engine: GameEngine,
     if card in player.hand:
         player.remove_card(card)
     else:
-        engine._remove_equipment(player, card)
+        engine.equipment_sys.remove(player, card)
     engine.deck.discard([card])
 
     virtual_bl = Card(
@@ -291,7 +291,7 @@ def handle_shensu(player: Player, engine: GameEngine,
 
     from ..constants import SkillId
     required_shan = 2 if player.has_skill(SkillId.WUSHUANG) else 1
-    shan_count = engine._request_shan(target, required_shan)
+    shan_count = engine.combat.request_shan(target, required_shan)
 
     if shan_count >= required_shan:
         engine.log_event("dodge", _t("combat.dodge_success", name=target.name))
