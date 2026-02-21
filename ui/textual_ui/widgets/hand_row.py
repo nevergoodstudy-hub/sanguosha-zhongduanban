@@ -30,6 +30,7 @@ class HandCardRow(HorizontalScroll):
 
     class HandCardClicked(Message):
         """手牌区卡牌被点击"""
+
         def __init__(self, index: int, card=None) -> None:
             super().__init__()
             self.index = index

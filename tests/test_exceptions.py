@@ -30,6 +30,7 @@ from game.exceptions import (
 
 # ==================== GameError base ====================
 
+
 class TestGameError:
     def test_basic(self):
         e = GameError("test")
@@ -48,6 +49,7 @@ class TestGameError:
 
 
 # ==================== Action errors ====================
+
 
 class TestInvalidActionError:
     def test_defaults(self):
@@ -114,6 +116,7 @@ class TestCardNotFoundError:
 
 # ==================== Skill errors ====================
 
+
 class TestSkillError:
     def test_defaults(self):
         e = SkillError()
@@ -177,6 +180,7 @@ class TestSkillUsageLimitError:
 
 # ==================== Game state errors ====================
 
+
 class TestGameStateError:
     def test_defaults(self):
         e = GameStateError()
@@ -221,6 +225,7 @@ class TestInvalidPhaseError:
 
 
 # ==================== Player errors ====================
+
 
 class TestPlayerError:
     def test_defaults(self):
@@ -267,6 +272,7 @@ class TestNotPlayerTurnError:
 
 # ==================== Config/Data errors ====================
 
+
 class TestConfigurationError:
     def test_defaults(self):
         e = ConfigurationError()
@@ -293,6 +299,7 @@ class TestDataLoadError:
 
 
 # ==================== Helper functions ====================
+
 
 class TestHelperFunctions:
     def test_raise_if_game_not_started_raises(self):

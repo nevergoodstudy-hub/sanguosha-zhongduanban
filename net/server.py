@@ -45,9 +45,11 @@ logger = logging.getLogger(__name__)
 
 # ==================== 数据模型 ====================
 
+
 @dataclass
 class ConnectedPlayer:
     """已连接的玩家"""
+
     player_id: int
     name: str
     websocket: ServerConnection
@@ -56,7 +58,7 @@ class ConnectedPlayer:
     last_heartbeat: float = field(default_factory=time.time)
     last_seq: int = 0  # 最后收到的事件序号 (用于断线重连)
     auth_token: str = ""  # 连接令牌 (用于重连验证)
-    remote_ip: str = ""   # 客户端 IP
+    remote_ip: str = ""  # 客户端 IP
     # 速率限制: 滑动窗口内的消息时间戳
     _msg_timestamps: list[float] = field(default_factory=list)
 
@@ -64,10 +66,11 @@ class ConnectedPlayer:
 @dataclass
 class Room:
     """游戏房间"""
+
     room_id: str
-    host_id: int               # 房主 player_id
+    host_id: int  # 房主 player_id
     max_players: int = 4
-    ai_fill: bool = True       # 不足时 AI 填充
+    ai_fill: bool = True  # 不足时 AI 填充
     state: RoomState = RoomState.WAITING
     players: dict[int, ConnectedPlayer] = field(default_factory=dict)
     # 游戏事件日志 (用于断线重连)
@@ -76,6 +79,8 @@ class Room:
     # 引擎引用 (游戏进行中)
     engine: GameEngine | None = None
     game_seed: int | None = None
+    # 当前等待人类玩家操作的 Future (player_id, future)
+    _pending_action: tuple[int, asyncio.Future] | None = None
 
     @property
     def player_count(self) -> int:
@@ -101,8 +106,8 @@ class Room:
 # ==================== 服务端核心 ====================
 
 # 速率限制默认值
-RATE_LIMIT_WINDOW: float = 1.0   # 滑动窗口 (秒)
-RATE_LIMIT_MAX_MSGS: int = 30    # 窗口内最大消息数
+RATE_LIMIT_WINDOW: float = 1.0  # 滑动窗口 (秒)
+RATE_LIMIT_MAX_MSGS: int = 30  # 窗口内最大消息数
 
 
 class GameServer:
@@ -115,16 +120,20 @@ class GameServer:
     4. 路由客户端消息到对应处理器
     """
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 8765,
-                 rate_limit_window: float = RATE_LIMIT_WINDOW,
-                 rate_limit_max_msgs: int = RATE_LIMIT_MAX_MSGS,
-                 max_connections: int = DEFAULT_MAX_CONNECTIONS,
-                 max_connections_per_ip: int = DEFAULT_MAX_CONNECTIONS_PER_IP,
-                 max_message_size: int = DEFAULT_MAX_MESSAGE_SIZE,
-                 heartbeat_timeout: float = DEFAULT_HEARTBEAT_TIMEOUT,
-                 allowed_origins: str = "",
-                 ssl_cert: str = "",
-                 ssl_key: str = ""):
+    def __init__(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 8765,
+        rate_limit_window: float = RATE_LIMIT_WINDOW,
+        rate_limit_max_msgs: int = RATE_LIMIT_MAX_MSGS,
+        max_connections: int = DEFAULT_MAX_CONNECTIONS,
+        max_connections_per_ip: int = DEFAULT_MAX_CONNECTIONS_PER_IP,
+        max_message_size: int = DEFAULT_MAX_MESSAGE_SIZE,
+        heartbeat_timeout: float = DEFAULT_HEARTBEAT_TIMEOUT,
+        allowed_origins: str = "",
+        ssl_cert: str = "",
+        ssl_key: str = "",
+    ):
         self.host = host
         self.port = port
         # 安全参数
@@ -142,6 +151,11 @@ class GameServer:
         self._token_manager = ConnectionTokenManager()
         self._ip_tracker = IPConnectionTracker(max_per_ip=max_connections_per_ip)
         self._origin_validator = OriginValidator(allowed_origins)
+        if not allowed_origins.strip():
+            logger.warning(
+                "No allowed_origins configured. All WebSocket connections "
+                "will be rejected. Set ALLOWED_ORIGINS env var or --origins flag."
+            )
         self._rate_limiter = RateLimiter(rate_limit_window, rate_limit_max_msgs)
         # 房间管理
         self.rooms: dict[str, Room] = {}  # room_id → room
@@ -211,10 +225,13 @@ class GameServer:
         self._ip_tracker.add(remote_ip)
 
         # 发送欢迎消息 (包含令牌)
-        welcome = ServerMsg(type=MsgType.HEARTBEAT_ACK, data={
-            "player_id": pid,
-            "token": token,
-        })
+        welcome = ServerMsg(
+            type=MsgType.HEARTBEAT_ACK,
+            data={
+                "player_id": pid,
+                "token": token,
+            },
+        )
         await self._send(player, welcome)
         logger.info(f"玩家 {pid} 已连接 (IP: {remote_ip})")
         return player
@@ -250,8 +267,7 @@ class GameServer:
         except Exception as e:
             logger.warning(f"发送消息失败 (玩家{player.player_id}): {e}")
 
-    async def _broadcast_room(self, room: Room, msg: ServerMsg,
-                              exclude: int | None = None) -> None:
+    async def _broadcast_room(self, room: Room, msg: ServerMsg, exclude: int | None = None) -> None:
         """广播消息给房间内所有玩家"""
         for pid, player in room.players.items():
             if pid != exclude:
@@ -262,8 +278,9 @@ class GameServer:
         msg = ServerMsg.room_update(room.room_id, room.player_list_data(), room.state)
         await self._broadcast_room(room, msg)
 
-    async def _broadcast_game_event(self, room: Room, event_type: str,
-                                    event_data: dict[str, Any]) -> None:
+    async def _broadcast_game_event(
+        self, room: Room, event_type: str, event_data: dict[str, Any]
+    ) -> None:
         """广播游戏事件并记录到事件日志"""
         seq = room.next_seq()
         msg = ServerMsg.game_event(event_type, event_data, seq=seq)
@@ -328,13 +345,11 @@ class GameServer:
 
     # ==================== 房间管理处理器 ====================
 
-    async def _handle_heartbeat(self, player: ConnectedPlayer,
-                                msg: ClientMsg) -> None:
+    async def _handle_heartbeat(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         player.last_heartbeat = time.time()
         await self._send(player, ServerMsg.heartbeat_ack())
 
-    async def _handle_room_create(self, player: ConnectedPlayer,
-                                  msg: ClientMsg) -> None:
+    async def _handle_room_create(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         if player.room_id:
             await self._send(player, ServerMsg.error(_t("server.already_in_room")))
             return
@@ -356,14 +371,19 @@ class GameServer:
         self.rooms[room_id] = room
 
         logger.info(f"房间 {room_id} 已创建 (房主: {player.name})")
-        await self._send(player, ServerMsg.room_created(room_id, {
-            "max_players": max_players,
-            "ai_fill": ai_fill,
-            "host_id": player.player_id,
-        }))
+        await self._send(
+            player,
+            ServerMsg.room_created(
+                room_id,
+                {
+                    "max_players": max_players,
+                    "ai_fill": ai_fill,
+                    "host_id": player.player_id,
+                },
+            ),
+        )
 
-    async def _handle_room_join(self, player: ConnectedPlayer,
-                                msg: ClientMsg) -> None:
+    async def _handle_room_join(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         if player.room_id:
             await self._send(player, ServerMsg.error(_t("server.already_in_room")))
             return
@@ -386,13 +406,13 @@ class GameServer:
         player.room_id = room_id
 
         logger.info(f"玩家 {player.name} 加入房间 {room_id}")
-        await self._send(player, ServerMsg.room_joined(
-            room_id, player.player_id, player.name, room.player_list_data()
-        ))
+        await self._send(
+            player,
+            ServerMsg.room_joined(room_id, player.player_id, player.name, room.player_list_data()),
+        )
         await self._broadcast_room_update(room)
 
-    async def _handle_room_leave(self, player: ConnectedPlayer,
-                                 msg: ClientMsg) -> None:
+    async def _handle_room_leave(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         if not player.room_id:
             return
         room = self.rooms.get(player.room_id)
@@ -405,8 +425,7 @@ class GameServer:
         player.ready = False
         await self._send(player, ServerMsg(type=MsgType.ROOM_LEFT))
 
-    async def _handle_room_list(self, player: ConnectedPlayer,
-                                msg: ClientMsg) -> None:
+    async def _handle_room_list(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         rooms_data = [
             {
                 "room_id": r.room_id,
@@ -419,15 +438,13 @@ class GameServer:
         ]
         await self._send(player, ServerMsg.room_listing(rooms_data))
 
-    async def _handle_room_ready(self, player: ConnectedPlayer,
-                                 msg: ClientMsg) -> None:
+    async def _handle_room_ready(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         player.ready = msg.data.get("ready", True)
         room = self.rooms.get(player.room_id or "")
         if room:
             await self._broadcast_room_update(room)
 
-    async def _handle_room_start(self, player: ConnectedPlayer,
-                                 msg: ClientMsg) -> None:
+    async def _handle_room_start(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         """房主开始游戏"""
         room = self.rooms.get(player.room_id or "")
         if not room:
@@ -449,16 +466,23 @@ class GameServer:
 
     # ==================== 游戏逻辑 ====================
 
-    async def _run_game(self, room: Room) -> None:
-        """在房间中启动游戏引擎
+    # 人类玩家操作超时（秒）
+    _ACTION_TIMEOUT: float = 60.0
 
-        当前实现: 创建 headless 引擎，通过事件广播同步状态
-        引擎运行在 executor 中 (避免阻塞事件循环)
+    async def _run_game(self, room: Room) -> None:
+        """在房间中启动交互式异步游戏循环
+
+        替代旧的即时 headless 模式，提供真正的回合制服务端游戏循环：
+        - AI 回合由服务端自动执行
+        - 人类玩家回合通过 asyncio.Future 等待客户端操作
+        - 人类玩家超时自动跳过
+        - 每次状态变化后广播给所有客户端
         """
         try:
             import random
 
             from game.engine import GameEngine
+            from game.enums import GameState
 
             seed = random.randint(0, 2**32 - 1)
             room.game_seed = seed
@@ -466,7 +490,7 @@ class GameServer:
             engine = GameEngine()
             room.engine = engine
 
-            # 初始化 headless 游戏
+            # 初始化游戏
             player_count = room.max_players if room.ai_fill else room.player_count
             engine.setup_headless_game(player_count, seed=seed)
 
@@ -477,17 +501,47 @@ class GameServer:
                 "players": [
                     {"id": p.id, "name": p.name, "identity": p.identity.value}
                     for p in engine.players
-                ] if engine.players else [],
+                ]
+                if engine.players
+                else [],
             }
             await self._broadcast_room(room, ServerMsg.game_state(state_data))
 
-            # 通知游戏结束 (headless 模式立即结束)
+            # 交互式游戏循环
+            while engine.state == GameState.IN_PROGRESS:
+                current = engine.current_player
+                player_conn = room.players.get(current.id)
+
+                if player_conn and not current.is_ai:
+                    # 人类玩家回合：等待客户端操作
+                    action_future: asyncio.Future = asyncio.get_event_loop().create_future()
+                    room._pending_action = (current.id, action_future)
+                    try:
+                        await asyncio.wait_for(action_future, timeout=self._ACTION_TIMEOUT)
+                    except asyncio.TimeoutError:
+                        logger.info("Player %d action timeout, auto-skipping", current.id)
+                    finally:
+                        room._pending_action = None
+                else:
+                    # AI 回合
+                    engine.run_headless_turn()
+
+                await self._broadcast_game_state(room, engine)
+
+                if engine.is_game_over():
+                    break
+                engine.next_turn()
+
+            # 游戏结束
             winner = engine.winner_identity.value if engine.winner_identity else "unknown"
-            await self._broadcast_room(room, ServerMsg.game_over(
-                winner=winner,
-                reason=_t("game.over_generic"),
-                stats={"rounds": engine.round_count, "seed": seed},
-            ))
+            await self._broadcast_room(
+                room,
+                ServerMsg.game_over(
+                    winner=winner,
+                    reason=_t("game.over_generic"),
+                    stats={"rounds": engine.round_count, "seed": seed},
+                ),
+            )
             room.state = RoomState.FINISHED
 
         except Exception as e:
@@ -495,47 +549,86 @@ class GameServer:
             await self._broadcast_room(room, ServerMsg.error(_t("server.game_error", error=str(e))))
             room.state = RoomState.FINISHED
 
-    async def _handle_game_action(self, player: ConnectedPlayer,
-                                  msg: ClientMsg) -> None:
-        """处理玩家游戏操作"""
+    async def _broadcast_game_state(self, room: Room, engine: GameEngine) -> None:
+        """广播当前游戏状态给房间内所有玩家"""
+        state_data = {
+            "current_player": engine.current_player.id if engine.current_player else None,
+            "round": engine.round_count,
+            "players": [
+                {
+                    "id": p.id,
+                    "name": p.name,
+                    "hp": p.hp,
+                    "max_hp": p.max_hp,
+                    "alive": p.alive,
+                }
+                for p in engine.players
+            ]
+            if engine.players
+            else [],
+        }
+        await self._broadcast_room(room, ServerMsg.game_state(state_data))
+
+    async def _handle_game_action(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
+        """处理玩家游戏操作
+
+        当有 pending action future 且玩家 ID 匹配时，resolve 该 future
+        以推进异步游戏循环。
+        """
         room = self.rooms.get(player.room_id or "")
         if not room or room.state != RoomState.PLAYING:
             await self._send(player, ServerMsg.error(_t("server.not_in_game")))
             return
 
-        # 广播玩家操作给其他人
-        await self._broadcast_game_event(room, "player_action", {
-            "player_id": player.player_id,
-            "action": msg.data,
-        })
+        # 解析 pending future（如果当前玩家操作匹配）
+        pending = room._pending_action
+        if pending is not None:
+            expected_pid, future = pending
+            if expected_pid == player.player_id and not future.done():
+                future.set_result(msg.data)
 
-    async def _handle_game_response(self, player: ConnectedPlayer,
-                                    msg: ClientMsg) -> None:
+        # 广播玩家操作给其他人
+        await self._broadcast_game_event(
+            room,
+            "player_action",
+            {
+                "player_id": player.player_id,
+                "action": msg.data,
+            },
+        )
+
+    async def _handle_game_response(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         """处理玩家响应"""
         room = self.rooms.get(player.room_id or "")
         if not room or room.state != RoomState.PLAYING:
             return
 
-        await self._broadcast_game_event(room, "player_response", {
-            "player_id": player.player_id,
-            "response": msg.data,
-        })
+        await self._broadcast_game_event(
+            room,
+            "player_response",
+            {
+                "player_id": player.player_id,
+                "response": msg.data,
+            },
+        )
 
-    async def _handle_hero_chosen(self, player: ConnectedPlayer,
-                                  msg: ClientMsg) -> None:
+    async def _handle_hero_chosen(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         """处理选将"""
         room = self.rooms.get(player.room_id or "")
         if not room:
             return
 
         hero_id = msg.data.get("hero_id", "")
-        await self._broadcast_game_event(room, "hero_chosen", {
-            "player_id": player.player_id,
-            "hero_id": hero_id,
-        })
+        await self._broadcast_game_event(
+            room,
+            "hero_chosen",
+            {
+                "player_id": player.player_id,
+                "hero_id": hero_id,
+            },
+        )
 
-    async def _handle_chat(self, player: ConnectedPlayer,
-                           msg: ClientMsg) -> None:
+    async def _handle_chat(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
         """处理聊天 (含输入净化)"""
         room = self.rooms.get(player.room_id or "")
         if not room:
@@ -552,9 +645,9 @@ class GameServer:
 
     # ==================== 断线重连 ====================
 
-    async def reconnect_player(self, player: ConnectedPlayer,
-                               room_id: str, last_seq: int,
-                               token: str = "") -> bool:
+    async def reconnect_player(
+        self, player: ConnectedPlayer, room_id: str, last_seq: int, token: str = ""
+    ) -> bool:
         """断线重连: 验证令牌并重放玩家缺失的事件
 
         Args:
@@ -637,6 +730,7 @@ class GameServer:
         if not self._ssl_cert or not self._ssl_key:
             return None
         import ssl
+
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(self._ssl_cert, self._ssl_key)
         logger.info("已加载 TLS 证书")
@@ -656,6 +750,12 @@ class GameServer:
             return False
         return True
 
+    def _get_serve_origins(self) -> list[str] | None:
+        """为 websockets.serve 提供 origins 参数。"""
+        if not self._origin_validator.is_enabled:
+            return None
+        return list(self._origin_validator.allowed_origins)
+
     async def start(self) -> None:
         """启动服务端"""
         try:
@@ -666,17 +766,24 @@ class GameServer:
 
         self._running = True
         ssl_ctx = self._build_ssl_context()
+        if not ssl_ctx:
+            logger.warning(
+                "Running without TLS (ws://). Auth tokens will be transmitted "
+                "in plaintext. Use --ssl-cert and --ssl-key for production."
+            )
         protocol = "wss" if ssl_ctx else "ws"
         logger.info(f"三国杀服务端启动: {protocol}://{self.host}:{self.port}")
 
         # 启动心跳超时检测后台任务
         self._heartbeat_task = asyncio.create_task(self._heartbeat_checker())
+        serve_origins = self._get_serve_origins()
 
         async with websockets.serve(
             self._connection_handler,
             self.host,
             self.port,
             max_size=self._max_message_size,
+            origins=serve_origins,
             ssl=ssl_ctx,
         ):
             while self._running:
@@ -691,6 +798,7 @@ class GameServer:
 
 
 # ==================== CLI 入口 ====================
+
 
 def main():
     """命令行启动服务端"""

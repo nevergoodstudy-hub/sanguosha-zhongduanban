@@ -27,9 +27,11 @@ if TYPE_CHECKING:
 
 # ==================== 孙权 ====================
 
+
 @skill_handler("zhiheng")
-def handle_zhiheng(player: Player, engine: GameEngine,
-                   cards: list[Card] | None = None, **kwargs) -> bool:
+def handle_zhiheng(
+    player: Player, engine: GameEngine, cards: list[Card] | None = None, **kwargs
+) -> bool:
     """制衡：弃置任意数量的牌，然后摸等量的牌"""
     if not cards:
         return False
@@ -44,7 +46,10 @@ def handle_zhiheng(player: Player, engine: GameEngine,
     new_cards = engine.deck.draw(discard_count)
     player.draw_cards(new_cards)
 
-    engine.log_event("skill", _t("skill_msg.zhiheng", name=player.name, discard=discard_count, draw=len(new_cards)))
+    engine.log_event(
+        "skill",
+        _t("skill_msg.zhiheng", name=player.name, discard=discard_count, draw=len(new_cards)),
+    )
     return True
 
 
@@ -56,6 +61,7 @@ def handle_jiuyuan(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 # ==================== 周瑜 ====================
 
+
 @skill_handler("yingzi")
 def handle_yingzi(player: Player, engine: GameEngine, **kwargs) -> bool:
     """英姿：摸牌阶段多摸一张牌（此技能在摸牌阶段自动触发）"""
@@ -63,9 +69,13 @@ def handle_yingzi(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 
 @skill_handler("fanjian")
-def handle_fanjian(player: Player, engine: GameEngine,
-                   targets: list[Player] | None = None,
-                   cards: list[Card] | None = None, **kwargs) -> bool:
+def handle_fanjian(
+    player: Player,
+    engine: GameEngine,
+    targets: list[Player] | None = None,
+    cards: list[Card] | None = None,
+    **kwargs,
+) -> bool:
     """反间：选择一名角色，展示一张手牌，让其猜花色"""
     if not targets or not cards:
         return False
@@ -79,7 +89,9 @@ def handle_fanjian(player: Player, engine: GameEngine,
     engine.log_event("skill", _t("skill_msg.fanjian", name=player.name, target=target.name))
 
     guessed_suit = engine.request_handler.choose_suit(target)
-    engine.log_event("skill", _t("skill_msg.fanjian_guess", name=target.name, suit=guessed_suit.symbol))
+    engine.log_event(
+        "skill", _t("skill_msg.fanjian_guess", name=target.name, suit=guessed_suit.symbol)
+    )
 
     player.remove_card(card)
     target.draw_cards([card])
@@ -97,10 +109,17 @@ def handle_fanjian(player: Player, engine: GameEngine,
 
 # ==================== 大乔 ====================
 
+
 @skill_handler("guose")
-def handle_guose(player: Player, engine: GameEngine,
-                 card: Card = None, target: Player = None,
-                 targets: list = None, cards: list = None, **kwargs) -> bool:
+def handle_guose(
+    player: Player,
+    engine: GameEngine,
+    card: Card = None,
+    target: Player = None,
+    targets: list = None,
+    cards: list = None,
+    **kwargs,
+) -> bool:
     """国色：出牌阶段，可以将一张方块牌当【乐不思蜀】使用"""
     from ..card import Card, CardName, CardSubtype, CardSuit, CardType
 
@@ -116,8 +135,11 @@ def handle_guose(player: Player, engine: GameEngine,
                 return False
             card = diamond_cards[0]
             others = engine.get_other_players(player)
-            valid = [t for t in others if t.is_alive
-                     and not any(c.name == CardName.LEBUSISHU for c in t.judge_area)]
+            valid = [
+                t
+                for t in others
+                if t.is_alive and not any(c.name == CardName.LEBUSISHU for c in t.judge_area)
+            ]
             if not valid:
                 return False
             target = valid[0]
@@ -128,7 +150,9 @@ def handle_guose(player: Player, engine: GameEngine,
         return False
 
     if any(c.name == CardName.LEBUSISHU for c in target.judge_area):
-        engine.log_event("error", _t("resolver.delay_exists", name=target.name, card=_t("card.lebusishu")))
+        engine.log_event(
+            "error", _t("resolver.delay_exists", name=target.name, card=_t("card.lebusishu"))
+        )
         return False
 
     if card in player.hand:
@@ -146,14 +170,14 @@ def handle_guose(player: Player, engine: GameEngine,
         number=card.number,
     )
     target.judge_area.insert(0, virtual_lebu)
-    engine.log_event("skill",
-        _t("skill_msg.guose", name=player.name, card=card.display_name, target=target.name))
+    engine.log_event(
+        "skill", _t("skill_msg.guose", name=player.name, card=card.display_name, target=target.name)
+    )
     return True
 
 
 @skill_handler("liuli")
-def handle_liuli(player: Player, engine: GameEngine,
-                 new_target: Player = None, **kwargs) -> bool:
+def handle_liuli(player: Player, engine: GameEngine, new_target: Player = None, **kwargs) -> bool:
     """流离：成为杀的目标时，可以弃置一张牌并选择攻击范围内的一名其他角色，将此杀转移给该角色"""
     if new_target is None or not player.hand:
         return False
@@ -168,10 +192,17 @@ def handle_liuli(player: Player, engine: GameEngine,
 
 # ==================== 甘宁 ====================
 
+
 @skill_handler("qixi")
-def handle_qixi(player: Player, engine: GameEngine,
-                card: Card = None, target: Player = None,
-                targets: list = None, cards: list = None, **kwargs) -> bool:
+def handle_qixi(
+    player: Player,
+    engine: GameEngine,
+    card: Card = None,
+    target: Player = None,
+    targets: list = None,
+    cards: list = None,
+    **kwargs,
+) -> bool:
     """奇袭：出牌阶段，可以将任意黑色牌当【过河拆桥】使用，可以被无懈可击抵消"""
     from ..card import Card, CardName, CardSubtype, CardType
 
@@ -207,8 +238,9 @@ def handle_qixi(player: Player, engine: GameEngine,
         engine.equipment_sys.remove(player, card)
     engine.deck.discard([card])
 
-    engine.log_event("skill",
-        _t("skill_msg.qixi", name=player.name, card=card.display_name, target=target.name))
+    engine.log_event(
+        "skill", _t("skill_msg.qixi", name=player.name, card=card.display_name, target=target.name)
+    )
 
     virtual_guohe = Card(
         id=f"virtual_guohe_{card.id}",
@@ -225,11 +257,14 @@ def handle_qixi(player: Player, engine: GameEngine,
 
     discarded = engine.card_resolver.choose_and_discard_card(player, target)
     if discarded:
-        engine.log_event("effect", _t("resolver.card_discarded", name=target.name, card=discarded.display_name))
+        engine.log_event(
+            "effect", _t("resolver.card_discarded", name=target.name, card=discarded.display_name)
+        )
     return True
 
 
 # ==================== 吕蒙 ====================
+
 
 @skill_handler("keji")
 def handle_keji(player: Player, engine: GameEngine, **kwargs) -> bool:
@@ -241,6 +276,7 @@ def handle_keji(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 
 # ==================== 黄盖 ====================
+
 
 @skill_handler("kurou")
 def handle_kurou(player: Player, engine: GameEngine, **kwargs) -> bool:
@@ -264,9 +300,11 @@ def handle_kurou(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 # ==================== 孙尚香 ====================
 
+
 @skill_handler("jieyin")
-def handle_jieyin(player: Player, engine: GameEngine,
-                  target: Player = None, cards: list[Card] = None, **kwargs) -> bool:
+def handle_jieyin(
+    player: Player, engine: GameEngine, target: Player = None, cards: list[Card] = None, **kwargs
+) -> bool:
     """结姻：弃两张手牌，自己和一名受伤男性各回复1点体力"""
     if not target or not cards or len(cards) < 2:
         return False

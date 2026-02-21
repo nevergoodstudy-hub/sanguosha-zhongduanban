@@ -6,6 +6,7 @@
 - get_registry() 返回不可变副本用于外部读取
 - 防重复注册（后注册覆盖并记录警告）
 """
+
 from __future__ import annotations
 
 import logging
@@ -24,11 +25,13 @@ def skill_handler(skill_id: str) -> Callable[[Callable[..., bool]], Callable[...
         @skill_handler("rende")
         def handle_rende(player, engine, **kwargs): ...
     """
+
     def _decorator(fn: Callable[..., bool]) -> Callable[..., bool]:
         if skill_id in _SKILL_REGISTRY:
             logger.warning("Skill handler for '%s' duplicated, overriding", skill_id)
         _SKILL_REGISTRY[skill_id] = fn
         return fn
+
     return _decorator
 
 

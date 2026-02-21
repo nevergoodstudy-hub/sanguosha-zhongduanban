@@ -62,3 +62,14 @@ GAMEPLAY_IMPROVEMENTS.md
 IMPROVEMENT_PLAN.md
 PROJECT_OVERVIEW.html
 PROJECT_ROADMAP.md
+RESEARCH_SYNTHESIS.md
+
+# 临时分析文档
+运行机理分析*.md
+项目问题分析报告*.md
+
+# MyPy 缓存
+.mypy_cache/
+
+# Ruff 缓存
+.ruff_cache/

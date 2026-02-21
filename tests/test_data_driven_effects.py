@@ -30,6 +30,7 @@ def _make_card():
 
 # ==================== DataDrivenCardEffect ====================
 
+
 class TestDataDrivenCardEffect:
     def test_init(self):
         config = {"display_name": "桃", "needs_target": False}
@@ -61,10 +62,7 @@ class TestCanUse:
         assert ok is True
 
     def test_condition_fail(self):
-        config = {
-            "condition": {"check": "hp_below_max"},
-            "condition_fail_msg": "满血了"
-        }
+        config = {"condition": {"check": "hp_below_max"}, "condition_fail_msg": "满血了"}
         effect = DataDrivenCardEffect("tao", config)
         player = _make_player(hp=4, max_hp=4)
         ok, msg = effect.can_use(MagicMock(), player, MagicMock(), [])
@@ -96,7 +94,7 @@ class TestResolve:
         config = {
             "condition": {"check": "hp_below_max"},
             "condition_fail_action": "return_card",
-            "condition_fail_msg": "满血"
+            "condition_fail_msg": "满血",
         }
         effect = DataDrivenCardEffect("tao", config)
         engine = _make_engine()
@@ -337,6 +335,7 @@ class TestResolvePlayer:
 
 # ==================== load_card_effects_config ====================
 
+
 class TestLoadCardEffectsConfig:
     def test_load_existing(self):
         result = load_card_effects_config()
@@ -349,7 +348,9 @@ class TestLoadCardEffectsConfig:
             assert result == {}
 
     def test_json_error(self):
-        with patch.object(Path, "exists", return_value=True), \
-             patch("builtins.open", side_effect=Exception("bad")):
+        with (
+            patch.object(Path, "exists", return_value=True),
+            patch("builtins.open", side_effect=Exception("bad")),
+        ):
             result = load_card_effects_config()
             assert result == {}

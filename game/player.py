@@ -18,15 +18,17 @@ if TYPE_CHECKING:
 
 class Identity(Enum):
     """身份枚举"""
-    LORD = "lord"           # 主公
-    LOYALIST = "loyalist"   # 忠臣
-    REBEL = "rebel"         # 反贼
-    SPY = "spy"             # 内奸
+
+    LORD = "lord"  # 主公
+    LOYALIST = "loyalist"  # 忠臣
+    REBEL = "rebel"  # 反贼
+    SPY = "spy"  # 内奸
 
     @property
     def chinese_name(self) -> str:
         """获取国际化显示名称"""
         from i18n import identity_name
+
         return identity_name(self.value)
 
     @property
@@ -36,17 +38,18 @@ class Identity(Enum):
             Identity.LORD: "red",
             Identity.LOYALIST: "yellow",
             Identity.REBEL: "green",
-            Identity.SPY: "blue"
+            Identity.SPY: "blue",
         }
         return colors.get(self, "white")
 
 
 class EquipmentSlot(Enum):
     """装备槽位枚举"""
-    WEAPON = "weapon"           # 武器
-    ARMOR = "armor"             # 防具
+
+    WEAPON = "weapon"  # 武器
+    ARMOR = "armor"  # 防具
     HORSE_MINUS = "horse_minus"  # -1马（攻击马）
-    HORSE_PLUS = "horse_plus"   # +1马（防御马）
+    HORSE_PLUS = "horse_plus"  # +1马（防御马）
 
 
 @dataclass
@@ -54,28 +57,26 @@ class Equipment:
     """装备区类
     管理玩家的装备
     """
+
     weapon: Card | None = None
     armor: Card | None = None
     horse_minus: Card | None = None  # -1马（攻击马，如赤兔）
-    horse_plus: Card | None = None   # +1马（防御马，如的卢）
+    horse_plus: Card | None = None  # +1马（防御马，如的卢）
 
     def __post_init__(self) -> None:
         """校验预设装备的子类型是否匹配槽位"""
         from .card import CardSubtype
 
         _slot_subtype = {
-            'weapon': CardSubtype.WEAPON,
-            'armor': CardSubtype.ARMOR,
-            'horse_minus': CardSubtype.HORSE_MINUS,
-            'horse_plus': CardSubtype.HORSE_PLUS,
+            "weapon": CardSubtype.WEAPON,
+            "armor": CardSubtype.ARMOR,
+            "horse_minus": CardSubtype.HORSE_MINUS,
+            "horse_plus": CardSubtype.HORSE_PLUS,
         }
         for slot, expected in _slot_subtype.items():
             card = getattr(self, slot)
             if card is not None and card.subtype != expected:
-                raise ValueError(
-                    f"槽位 {slot} 期望子类型 {expected}, "
-                    f"实际为 {card.subtype}"
-                )
+                raise ValueError(f"槽位 {slot} 期望子类型 {expected}, 实际为 {card.subtype}")
 
     # -- 可读性别名 --
     @property
@@ -250,6 +251,7 @@ class Player:
         is_alive: 是否存活
         seat: 座位号
     """
+
     id: int
     name: str
     is_ai: bool = True
@@ -271,7 +273,7 @@ class Player:
 
     # 军争篇状态
     is_chained: bool = field(default=False, repr=False)  # 铁索连环状态
-    is_drunk: bool = field(default=False, repr=False)    # 酒状态（下一张杀伤害+1）
+    is_drunk: bool = field(default=False, repr=False)  # 酒状态（下一张杀伤害+1）
     alcohol_used: bool = field(default=False, repr=False)  # 本回合是否使用过酒
     flipped: bool = field(default=False, repr=False)  # 武将牌翻面状态
 
@@ -556,7 +558,7 @@ class Player:
             "hand_count": self.hand_count,
             "equipment": str(self.equipment),
             "is_alive": self.is_alive,
-            "seat": self.seat
+            "seat": self.seat,
         }
 
     def __str__(self) -> str:

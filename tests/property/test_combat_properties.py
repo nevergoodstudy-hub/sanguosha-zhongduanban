@@ -29,6 +29,7 @@ from game.player import Player
 # 辅助
 # ---------------------------------------------------------------------------
 
+
 def _make_player(hp: int = 4, max_hp: int = 4) -> Player:
     return Player(id=0, name="战斗测试", is_ai=True, seat=0, hp=hp, max_hp=max_hp)
 
@@ -36,6 +37,7 @@ def _make_player(hp: int = 4, max_hp: int = 4) -> Player:
 # ---------------------------------------------------------------------------
 # 性质 1: 非致死伤害 + 满额回复 → hp == max_hp
 # ---------------------------------------------------------------------------
+
 
 @given(
     max_hp=st.integers(min_value=1, max_value=10),
@@ -54,6 +56,7 @@ def test_damage_then_full_heal_restores_hp(max_hp: int, damage: int) -> None:
 # 性质 2: use_alcohol 每回合只能成功一次
 # ---------------------------------------------------------------------------
 
+
 @given(attempts=st.integers(min_value=1, max_value=10))
 @settings(max_examples=50)
 def test_alcohol_once_per_turn(attempts: int) -> None:
@@ -69,6 +72,7 @@ def test_alcohol_once_per_turn(attempts: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 3: consume_drunk 只返回 True 一次
 # ---------------------------------------------------------------------------
+
 
 def test_consume_drunk_once() -> None:
     p = _make_player()
@@ -86,6 +90,7 @@ def test_consume_drunk_once() -> None:
 # 性质 4: use_sha 单调递增
 # ---------------------------------------------------------------------------
 
+
 @given(n_uses=st.integers(min_value=1, max_value=20))
 @settings(max_examples=50)
 def test_sha_count_monotonic(n_uses: int) -> None:
@@ -100,6 +105,7 @@ def test_sha_count_monotonic(n_uses: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 5: can_use_sha 默认每回合限一次
 # ---------------------------------------------------------------------------
+
 
 @given(n_shas=st.integers(min_value=0, max_value=5))
 @settings(max_examples=20)
@@ -117,6 +123,7 @@ def test_can_use_sha_default_limit(n_shas: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 6: reset_turn 后可再使用杀和酒
 # ---------------------------------------------------------------------------
+
 
 @given(n_turns=st.integers(min_value=1, max_value=5))
 @settings(max_examples=20)
@@ -137,6 +144,7 @@ def test_reset_turn_restores_combat_state(n_turns: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 7: 连续伤害序列使 HP 严格递减
 # ---------------------------------------------------------------------------
+
 
 @given(
     damages=st.lists(
@@ -159,6 +167,7 @@ def test_consecutive_damage_decreases_hp(damages: list[int]) -> None:
 # 性质 8: 满血回复 = 0（不会超额回复）
 # ---------------------------------------------------------------------------
 
+
 @given(
     max_hp=st.integers(min_value=1, max_value=10),
     heal_amount=st.integers(min_value=0, max_value=20),
@@ -174,6 +183,7 @@ def test_heal_at_full_hp_is_zero(max_hp: int, heal_amount: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 9: 伤害-回复 交替序列的 HP 边界
 # ---------------------------------------------------------------------------
+
 
 @given(
     max_hp=st.integers(min_value=3, max_value=10),
@@ -204,6 +214,7 @@ def test_damage_heal_sequence_hp_bounded(max_hp: int, ops: list) -> None:
 # 性质 10: 濒死→回复→脱离濒死
 # ---------------------------------------------------------------------------
 
+
 @given(
     max_hp=st.integers(min_value=2, max_value=10),
     overkill=st.integers(min_value=0, max_value=5),
@@ -226,6 +237,7 @@ def test_dying_healed_back(max_hp: int, overkill: int) -> None:
 # 性质 11: 酒后杀 → consume_drunk 恰好触发一次
 # ---------------------------------------------------------------------------
 
+
 @given(n_sha=st.integers(min_value=1, max_value=5))
 @settings(max_examples=30)
 def test_drunk_consumed_on_first_sha_only(n_sha: int) -> None:
@@ -243,6 +255,7 @@ def test_drunk_consumed_on_first_sha_only(n_sha: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 12: break_chain 总是将 is_chained 设为 False
 # ---------------------------------------------------------------------------
+
 
 @given(initial=st.booleans())
 @settings(max_examples=10)

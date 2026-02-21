@@ -101,12 +101,15 @@ class TestRegistryDataDriven:
         registry = create_default_registry()
 
         # 动态添加一个全新的卡牌效果
-        custom = DataDrivenCardEffect("custom_heal_card", {
-            "display_name": "测试回血卡",
-            "needs_target": False,
-            "steps": [{"heal": {"target": "self", "amount": 2}}],
-            "discard_after": True,
-        })
+        custom = DataDrivenCardEffect(
+            "custom_heal_card",
+            {
+                "display_name": "测试回血卡",
+                "needs_target": False,
+                "steps": [{"heal": {"target": "self", "amount": 2}}],
+                "discard_after": True,
+            },
+        )
         registry.register("custom_heal_card", custom)
 
         assert registry.has("custom_heal_card")

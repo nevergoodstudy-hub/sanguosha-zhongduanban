@@ -68,8 +68,9 @@ class MultiTargetModal(AnimatedModalScreen[Optional[list[int]]]):
     }
     """
 
-    def __init__(self, targets: list, prompt: str = "选择目标",
-                 min_count: int = 0, max_count: int = 2):
+    def __init__(
+        self, targets: list, prompt: str = "选择目标", min_count: int = 0, max_count: int = 2
+    ):
         """Args:
         targets: Player 对象列表
         prompt: 提示文字
@@ -87,8 +88,7 @@ class MultiTargetModal(AnimatedModalScreen[Optional[list[int]]]):
         with Container(id="mt-container"):
             yield Static(f"🎯 {self._prompt}", id="mt-title")
             yield Static(
-                f"可选 {self._min_count}-{self._max_count} 个目标"
-                f"（已选 0 个，点击切换选中）",
+                f"可选 {self._min_count}-{self._max_count} 个目标（已选 0 个，点击切换选中）",
                 id="mt-hint",
             )
             for i, t in enumerate(self._targets):
@@ -110,8 +110,7 @@ class MultiTargetModal(AnimatedModalScreen[Optional[list[int]]]):
                     f"{hp_bar} {t.hp}/{t.max_hp}  "
                     f"手牌:{t.hand_count}  {equip_str}{chain_str}"
                 )
-                yield Button(label, id=f"mt-{i}", classes="mt-btn",
-                             variant="primary")
+                yield Button(label, id=f"mt-{i}", classes="mt-btn", variant="primary")
             yield Button("✅ 确认", id="btn-mt-confirm", variant="success")
             yield Button("❌ 取消", id="btn-mt-cancel", variant="error")
 

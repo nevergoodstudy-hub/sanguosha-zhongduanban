@@ -37,7 +37,7 @@ class TestBaiyinshizi:
             card_type=CardType.EQUIPMENT,
             subtype=CardSubtype.ARMOR,
             suit=CardSuit.CLUB,
-            number=1
+            number=1,
         )
 
     def test_baiyinshizi_damage_reduction(self, engine, baiyinshizi_card):
@@ -127,7 +127,7 @@ class TestGudingdao:
             subtype=CardSubtype.WEAPON,
             suit=CardSuit.SPADE,
             number=1,
-            range=2
+            range=2,
         )
 
     def test_gudingdao_extra_damage(self, engine, gudingdao_card):
@@ -170,7 +170,7 @@ class TestZhuqueyushan:
             subtype=CardSubtype.WEAPON,
             suit=CardSuit.DIAMOND,
             number=1,
-            range=4
+            range=4,
         )
 
     def test_zhuqueyushan_equipped(self, engine, zhuqueyushan_card):

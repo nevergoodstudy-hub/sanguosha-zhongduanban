@@ -47,10 +47,10 @@ class SkillSystem:
 
     def __getattr__(self, name: str):
         """向后兼容：将 _handle_xxx 属性访问代理到 _skill_handlers['xxx']。"""
-        if name.startswith('_handle_'):
-            skill_id = name[len('_handle_'):]
+        if name.startswith("_handle_"):
+            skill_id = name[len("_handle_") :]
             # 必须通过 __dict__ 访问避免无限递归
-            handlers = self.__dict__.get('_skill_handlers', {})
+            handlers = self.__dict__.get("_skill_handlers", {})
             if skill_id in handlers:
                 return handlers[skill_id]
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
@@ -109,8 +109,9 @@ class SkillSystem:
 
         return True
 
-    def trigger_skill(self, skill_id: str, player: Player,
-                      game_engine: GameEngine, **kwargs) -> bool:
+    def trigger_skill(
+        self, skill_id: str, player: Player, game_engine: GameEngine, **kwargs
+    ) -> bool:
         """触发技能
 
         优先使用 DSL 解释器执行，若 DSL 未定义或执行失败，
@@ -129,12 +130,16 @@ class SkillSystem:
         dsl = self._dsl_registry.get(skill_id)
         if dsl is not None:
             try:
+                # 解析技能中文名（避免 DSL 日志显示拼音）
+                skill_chinese_name = self._resolve_skill_name(skill_id, player)
                 result = self._interpreter.execute(
-                    dsl, player, skill_id,
-                    targets=kwargs.get('targets'),
-                    cards=kwargs.get('cards'),
-                    source=kwargs.get('source'),
-                    damage_card=kwargs.get('damage_card'),
+                    dsl,
+                    player,
+                    skill_chinese_name,
+                    targets=kwargs.get("targets"),
+                    cards=kwargs.get("cards"),
+                    source=kwargs.get("source"),
+                    damage_card=kwargs.get("damage_card"),
                 )
                 if result:
                     return True
@@ -149,9 +154,13 @@ class SkillSystem:
         handler = self._skill_handlers[skill_id]
         return handler(player, game_engine, **kwargs)
 
-    def use_skill(self, skill_id: str, player: Player,
-                  targets: list[Player] | None = None,
-                  cards: list[Card] | None = None) -> bool:
+    def use_skill(
+        self,
+        skill_id: str,
+        player: Player,
+        targets: list[Player] | None = None,
+        cards: list[Card] | None = None,
+    ) -> bool:
         """使用主动技能
 
         Args:
@@ -166,8 +175,7 @@ class SkillSystem:
         if not self.can_use_skill(skill_id, player):
             return False
 
-        result = self.trigger_skill(skill_id, player, self.engine,
-                                    targets=targets, cards=cards)
+        result = self.trigger_skill(skill_id, player, self.engine, targets=targets, cards=cards)
 
         if result:
             # 记录使用次数
@@ -204,6 +212,7 @@ class SkillSystem:
         而非由引擎在代码中内联调用。
         """
         from .events import EventType
+
         event_bus.subscribe(EventType.DAMAGE_INFLICTED, self._on_damage_inflicted)
 
     def _on_damage_inflicted(self, event: GameEvent) -> None:
@@ -218,9 +227,9 @@ class SkillSystem:
         """
         from .constants import SkillId
 
-        target = event.data.get('target')
-        source = event.data.get('source')
-        damage_card = event.data.get('card')
+        target = event.data.get("target")
+        source = event.data.get("source")
+        damage_card = event.data.get("card")
 
         if not target or not target.is_alive:
             return
@@ -228,28 +237,31 @@ class SkillSystem:
         # 奸雄：受到伤害后可获得造成伤害的牌
         if target.has_skill(SkillId.JIANXIONG) and source:
             self._trigger_with_dsl_fallback(
-                SkillId.JIANXIONG, target,
+                SkillId.JIANXIONG,
+                target,
                 damage_card=damage_card,
-                _py_handler=self._skill_handlers['jianxiong'],
-                _py_kwargs={'damage_card': damage_card},
+                _py_handler=self._skill_handlers["jianxiong"],
+                _py_kwargs={"damage_card": damage_card},
             )
 
         # 反馈：受到伤害后获取来源一张牌
         if target.has_skill(SkillId.FANKUI) and source and source != target:
             self._trigger_with_dsl_fallback(
-                SkillId.FANKUI, target,
+                SkillId.FANKUI,
+                target,
                 source=source,
-                _py_handler=self._skill_handlers['fankui'],
-                _py_kwargs={'source': source},
+                _py_handler=self._skill_handlers["fankui"],
+                _py_kwargs={"source": source},
             )
 
         # 刚烈：受到伤害后判定反击
         if target.has_skill(SkillId.GANGLIE) and source and source != target:
             self._trigger_with_dsl_fallback(
-                SkillId.GANGLIE, target,
+                SkillId.GANGLIE,
+                target,
                 source=source,
-                _py_handler=self._skill_handlers['ganglie'],
-                _py_kwargs={'source': source},
+                _py_handler=self._skill_handlers["ganglie"],
+                _py_kwargs={"source": source},
             )
 
     def _trigger_with_dsl_fallback(
@@ -269,9 +281,8 @@ class SkillSystem:
         dsl = self._dsl_registry.get(skill_id)
         if dsl is not None:
             try:
-                result = self._interpreter.execute(
-                    dsl, player, skill_id, **dsl_kwargs
-                )
+                skill_chinese_name = self._resolve_skill_name(skill_id, player)
+                result = self._interpreter.execute(dsl, player, skill_chinese_name, **dsl_kwargs)
                 if result:
                     return True
             except Exception as e:
@@ -280,59 +291,59 @@ class SkillSystem:
         py_kw = _py_kwargs or {}
         return _py_handler(player, self.engine, **py_kw)
 
+    def _resolve_skill_name(self, skill_id: str, player: Player) -> str:
+        """将 skill_id（拼音）解析为中文技能名，用于日志显示"""
+        # 优先从玩家武将的技能对象获取
+        skill_obj = player.get_skill(skill_id)
+        if skill_obj and skill_obj.name and skill_obj.name != skill_id:
+            return skill_obj.name
+        # 回退到 SKILL_DESCRIPTIONS 映射表
+        desc = SKILL_DESCRIPTIONS.get(skill_id)
+        if desc:
+            return desc["name"]
+        return skill_id
+
 
 # 技能效果描述
 SKILL_DESCRIPTIONS = {
     "rende": {
         "name": "仁德",
-        "description": "出牌阶段，你可以将任意数量的手牌交给其他角色。每回合你以此法给出第二张牌时，回复1点体力。"
+        "description": "出牌阶段，你可以将任意数量的手牌交给其他角色。每回合你以此法给出第二张牌时，回复1点体力。",
     },
     "jijiang": {
         "name": "激将",
-        "description": "主公技。当你需要使用或打出【杀】时，你可以令其他蜀势力角色选择是否打出一张【杀】。"
+        "description": "主公技。当你需要使用或打出【杀】时，你可以令其他蜀势力角色选择是否打出一张【杀】。",
     },
-    "jianxiong": {
-        "name": "奸雄",
-        "description": "当你受到伤害后，你可以获得造成伤害的牌。"
-    },
+    "jianxiong": {"name": "奸雄", "description": "当你受到伤害后，你可以获得造成伤害的牌。"},
     "hujia": {
         "name": "护驾",
-        "description": "主公技。当你需要使用或打出【闪】时，你可以令其他魏势力角色选择是否打出一张【闪】。"
+        "description": "主公技。当你需要使用或打出【闪】时，你可以令其他魏势力角色选择是否打出一张【闪】。",
     },
     "zhiheng": {
         "name": "制衡",
-        "description": "出牌阶段限一次，你可以弃置任意数量的牌，然后摸等量的牌。"
+        "description": "出牌阶段限一次，你可以弃置任意数量的牌，然后摸等量的牌。",
     },
     "jiuyuan": {
         "name": "救援",
-        "description": "主公技。锁定技。其他吴势力角色对你使用【桃】时，你额外回复1点体力。"
+        "description": "主公技。锁定技。其他吴势力角色对你使用【桃】时，你额外回复1点体力。",
     },
-    "wusheng": {
-        "name": "武圣",
-        "description": "你可以将一张红色牌当【杀】使用或打出。"
-    },
-    "paoxiao": {
-        "name": "咆哮",
-        "description": "锁定技。出牌阶段，你使用【杀】无次数限制。"
-    },
+    "wusheng": {"name": "武圣", "description": "你可以将一张红色牌当【杀】使用或打出。"},
+    "paoxiao": {"name": "咆哮", "description": "锁定技。出牌阶段，你使用【杀】无次数限制。"},
     "guanxing": {
         "name": "观星",
-        "description": "准备阶段，你可以观看牌堆顶的X张牌（X为存活角色数且至多为5），然后将这些牌以任意顺序放置于牌堆顶或牌堆底。"
+        "description": "准备阶段，你可以观看牌堆顶的X张牌（X为存活角色数且至多为5），然后将这些牌以任意顺序放置于牌堆顶或牌堆底。",
     },
     "kongcheng": {
         "name": "空城",
-        "description": "锁定技。若你没有手牌，你不是【杀】和【决斗】的合法目标。"
+        "description": "锁定技。若你没有手牌，你不是【杀】和【决斗】的合法目标。",
     },
-    "yingzi": {
-        "name": "英姿",
-        "description": "摸牌阶段，你可以多摸一张牌。"
-    },
+    "yingzi": {"name": "英姿", "description": "摸牌阶段，你可以多摸一张牌。"},
     "fanjian": {
         "name": "反间",
-        "description": "出牌阶段限一次，你可以选择一名其他角色并展示一张手牌，令其选择一种花色后获得此牌。若此牌花色与其所选花色不同，你对其造成1点伤害。"
+        "description": "出牌阶段限一次，你可以选择一名其他角色并展示一张手牌，令其选择一种花色后获得此牌。若此牌花色与其所选花色不同，你对其造成1点伤害。",
     },
     "wushuang": {
         "name": "无双",
-        "description": "锁定技。你使用【杀】指定目标后，目标角色需使用两张【闪】才能抵消此【杀】；你使用【决斗】指定目标后，或成为【决斗】的目标后，对方每次需打出两张【杀】。"
-    }
+        "description": "锁定技。你使用【杀】指定目标后，目标角色需使用两张【闪】才能抵消此【杀】；你使用【决斗】指定目标后，或成为【决斗】的目标后，对方每次需打出两张【杀】。",
+    },
 }

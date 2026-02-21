@@ -1,5 +1,4 @@
-"""卡牌效果注册表（M1-T02 + M2-T04）
-"""
+"""卡牌效果注册表（M1-T02 + M2-T04）"""
 
 from __future__ import annotations
 

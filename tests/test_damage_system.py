@@ -10,14 +10,12 @@ from game.damage_system import (
 
 # ==================== Dataclasses ====================
 
+
 class TestDamageEvent:
     def test_creation(self):
         target = MagicMock()
         source = MagicMock()
-        evt = DamageEvent(
-            source=source, target=target, damage=2,
-            damage_type="fire"
-        )
+        evt = DamageEvent(source=source, target=target, damage=2, damage_type="fire")
         assert evt.source is source
         assert evt.target is target
         assert evt.damage == 2
@@ -26,16 +24,14 @@ class TestDamageEvent:
 
     def test_chain_flag(self):
         evt = DamageEvent(
-            source=None, target=MagicMock(), damage=1,
-            damage_type="normal", is_chain=True
+            source=None, target=MagicMock(), damage=1, damage_type="normal", is_chain=True
         )
         assert evt.is_chain is True
 
 
 class TestDamageResult:
     def test_creation(self):
-        r = DamageResult(actual_damage=3, target_died=False,
-                         chain_triggered=True, chain_targets=[])
+        r = DamageResult(actual_damage=3, target_died=False, chain_triggered=True, chain_targets=[])
         assert r.actual_damage == 3
         assert r.target_died is False
         assert r.chain_triggered is True
@@ -43,6 +39,7 @@ class TestDamageResult:
 
 
 # ==================== Helper function ====================
+
 
 class TestCalculateDamageWithModifiers:
     def test_no_modifiers(self):
@@ -112,6 +109,7 @@ class TestEngineDealDamage:
 
     def test_zero_damage_ignored(self):
         from game.engine import GameEngine
+
         engine = GameEngine.__new__(GameEngine)
         # Use mock engine to test the method directly
         engine_mock = _make_engine()
@@ -130,6 +128,7 @@ class TestEngineDamageHelpers:
 
     def test_ai_should_save_same_identity(self):
         from game.player import Identity
+
         engine = _make_engine()
 
         savior = MagicMock()

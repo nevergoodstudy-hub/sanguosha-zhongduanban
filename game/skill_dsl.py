@@ -37,55 +37,56 @@ from typing import Any
 
 class DslTrigger(str, Enum):
     """DSL 触发类型"""
-    ACTIVE = "active"                       # 主动使用
-    AFTER_DAMAGED = "after_damaged"         # 受到伤害后
+
+    ACTIVE = "active"  # 主动使用
+    AFTER_DAMAGED = "after_damaged"  # 受到伤害后
     AFTER_DAMAGE_DEALT = "after_damage_dealt"  # 造成伤害后
-    PHASE_PREPARE = "phase_prepare"         # 准备阶段开始
-    PHASE_DRAW = "phase_draw"               # 摸牌阶段
-    PHASE_END = "phase_end"                 # 结束阶段
-    PHASE_DISCARD = "phase_discard"         # 弃牌阶段
-    ON_LOSE_EQUIP = "on_lose_equip"         # 失去装备后
-    ON_USE_SHA = "on_use_sha"               # 使用杀后
-    PASSIVE = "passive"                     # 被动/锁定技（规则层面生效）
+    PHASE_PREPARE = "phase_prepare"  # 准备阶段开始
+    PHASE_DRAW = "phase_draw"  # 摸牌阶段
+    PHASE_END = "phase_end"  # 结束阶段
+    PHASE_DISCARD = "phase_discard"  # 弃牌阶段
+    ON_LOSE_EQUIP = "on_lose_equip"  # 失去装备后
+    ON_USE_SHA = "on_use_sha"  # 使用杀后
+    PASSIVE = "passive"  # 被动/锁定技（规则层面生效）
 
 
 # ---------- 条件节点 ----------
 
 VALID_CONDITIONS = {
-    "has_hand_cards",       # 有手牌 (min)
-    "hp_below_max",         # 体力未满
-    "hp_above",             # 体力 >= value
-    "target_has_cards",     # 目标有牌
-    "no_sha_used",          # 本回合未使用杀
-    "distance_le",          # 与目标距离 <= value
-    "target_hand_ge_hp",    # 目标手牌 >= 自己体力
-    "target_hand_le_range", # 目标手牌 <= 自己攻击范围
+    "has_hand_cards",  # 有手牌 (min)
+    "hp_below_max",  # 体力未满
+    "hp_above",  # 体力 >= value
+    "target_has_cards",  # 目标有牌
+    "no_sha_used",  # 本回合未使用杀
+    "distance_le",  # 与目标距离 <= value
+    "target_hand_ge_hp",  # 目标手牌 >= 自己体力
+    "target_hand_le_range",  # 目标手牌 <= 自己攻击范围
 }
 
 
 # ---------- 代价节点 ----------
 
 VALID_COSTS = {
-    "discard",      # 弃牌 {from, count, filter?}
-    "lose_hp",      # 失去体力
+    "discard",  # 弃牌 {from, count, filter?}
+    "lose_hp",  # 失去体力
 }
 
 
 # ---------- 步骤节点 ----------
 
 VALID_STEPS = {
-    "draw",         # 摸牌 N
-    "discard",      # 弃牌
-    "heal",         # 回血
-    "damage",       # 造伤害
-    "lose_hp",      # 失去体力
-    "transfer",     # 转移牌
-    "judge",        # 判定
-    "get_card",     # 获取牌
-    "flip",         # 翻面
-    "log",          # 日志
-    "if",           # 条件分支
-    "skip_phase",   # 跳过阶段
+    "draw",  # 摸牌 N
+    "discard",  # 弃牌
+    "heal",  # 回血
+    "damage",  # 造伤害
+    "lose_hp",  # 失去体力
+    "transfer",  # 转移牌
+    "judge",  # 判定
+    "get_card",  # 获取牌
+    "flip",  # 翻面
+    "log",  # 日志
+    "if",  # 条件分支
+    "skip_phase",  # 跳过阶段
 }
 
 
@@ -95,6 +96,7 @@ class SkillDsl:
 
     从 heroes.json 中 skill 条目的 "dsl" 字段解析而来。
     """
+
     trigger: str
     steps: list[dict[str, Any]]
     phase: str | None = None

@@ -89,25 +89,32 @@ python -m pytest tests/test_skills.py -v
 
 ## 项目结构
 
-```
-sanguosha/
-├── game/           # 游戏核心逻辑
-│   ├── engine.py   # 游戏引擎
-│   ├── card.py     # 卡牌系统
-│   ├── player.py   # 玩家系统
-│   ├── hero.py     # 武将系统
-│   ├── skill.py    # 技能系统
-│   └── events.py   # 事件系统
-├── ai/             # AI 模块
-│   └── bot.py      # AI 决策逻辑
-├── ui/             # 界面模块
-│   ├── rich_ui.py  # Rich 终端界面
-│   └── terminal.py # 基础终端界面
-├── tests/          # 测试文件
-├── data/           # 数据文件
-│   └── cards.json  # 卡牌数据
-└── docs/           # 文档
-```
+详见 `ARCHITECTURE.md`。主要目录:
+
+- `game/` — 核心游戏逻辑 (engine, combat, events, skills, cards, ...)
+- `ai/` — 3层 AI (easy/normal/hard) + 决策日志
+- `net/` — WebSocket 服务端/客户端 + 安全 + 会话重连
+- `ui/` — Textual 终端 UI
+- `i18n/` — 国际化 (zh_CN, en_US)
+- `data/` — JSON 数据 (cards, heroes, skill_dsl, skill_config)
+- `tools/` — 开发工具 (profiling, replay)
+- `tests/` — 测试套件 (1400+ tests)
+
+## 添加新技能
+
+1. 在 `data/skill_config.json` 中添加技能参数
+2. 在 `data/skill_dsl.json` 中添加 DSL 定义（如果 DSL 可表达）
+3. 若 DSL 不足，在 `game/skills/<kingdom>.py` 中添加 Python handler
+4. 在 `game/constants.py` 中添加 `SkillId` 条目
+5. 在 `data/heroes.json` 中添加武将数据
+6. 在 `tests/` 中编写测试
+
+## 添加新卡牌
+
+1. 在 `data/cards.json` 中添加卡牌数据
+2. 更新 `game/card.py` `Deck.EXPECTED_CARD_COUNTS` 字典
+3. 如有特殊效果，在 `game/effects/` 或 `game/card_resolver.py` 中添加 handler
+4. 编写测试
 
 ## 问题反馈
 

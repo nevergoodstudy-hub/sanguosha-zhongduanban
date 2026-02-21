@@ -27,12 +27,10 @@ from game.player import Equipment, Player
 # 辅助
 # ---------------------------------------------------------------------------
 
+
 def _make_players(n: int) -> list[Player]:
     """创建 n 个存活玩家，无装备。"""
-    return [
-        Player(id=i, name=f"P{i}", is_ai=True, seat=i, hp=4, max_hp=4)
-        for i in range(n)
-    ]
+    return [Player(id=i, name=f"P{i}", is_ai=True, seat=i, hp=4, max_hp=4) for i in range(n)]
 
 
 def _make_horse(subtype: CardSubtype) -> Card:
@@ -87,6 +85,7 @@ class _FakeEngine:
 # 性质 1: 自己到自己距离为 0
 # ---------------------------------------------------------------------------
 
+
 @given(n=st.integers(min_value=2, max_value=10))
 @settings(max_examples=50)
 def test_distance_to_self_is_zero(n: int) -> None:
@@ -99,6 +98,7 @@ def test_distance_to_self_is_zero(n: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 2: 无装备时距离对称
 # ---------------------------------------------------------------------------
+
 
 @given(
     n=st.integers(min_value=2, max_value=10),
@@ -113,13 +113,15 @@ def test_distance_symmetry_no_equipment(n: int, data: st.DataObject) -> None:
     j = data.draw(st.integers(min_value=0, max_value=n - 1))
     assume(i != j)
 
-    assert eng.calculate_distance(players[i], players[j]) == \
-           eng.calculate_distance(players[j], players[i])
+    assert eng.calculate_distance(players[i], players[j]) == eng.calculate_distance(
+        players[j], players[i]
+    )
 
 
 # ---------------------------------------------------------------------------
 # 性质 3: 不同玩家之间距离 ≥ 1
 # ---------------------------------------------------------------------------
+
 
 @given(
     n=st.integers(min_value=2, max_value=10),
@@ -140,6 +142,7 @@ def test_distance_minimum_is_one(n: int, data: st.DataObject) -> None:
 # ---------------------------------------------------------------------------
 # 性质 4: +1马 增大别人到自己的距离（单调性）
 # ---------------------------------------------------------------------------
+
 
 @given(
     n=st.integers(min_value=3, max_value=10),
@@ -164,14 +167,13 @@ def test_plus_horse_increases_distance_from_others(n: int, data: st.DataObject) 
 
     dist_after = eng.calculate_distance(attacker, target)
 
-    assert dist_after >= dist_before, (
-        f"+1马 应使距离不减少：{dist_before} -> {dist_after}"
-    )
+    assert dist_after >= dist_before, f"+1马 应使距离不减少：{dist_before} -> {dist_after}"
 
 
 # ---------------------------------------------------------------------------
 # 性质 5: -1马 减小自己到别人的距离（单调性）
 # ---------------------------------------------------------------------------
+
 
 @given(
     n=st.integers(min_value=3, max_value=10),
@@ -196,6 +198,4 @@ def test_minus_horse_decreases_distance_to_others(n: int, data: st.DataObject) -
 
     dist_after = eng.calculate_distance(attacker, target)
 
-    assert dist_after <= dist_before, (
-        f"-1马 应使距离不增加：{dist_before} -> {dist_after}"
-    )
+    assert dist_after <= dist_before, f"-1马 应使距离不增加：{dist_before} -> {dist_after}"

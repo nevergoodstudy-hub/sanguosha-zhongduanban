@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 #  子协议 1: GameDisplay — 纯展示                                         #
 # ====================================================================== #
 
+
 class GameDisplay(Protocol):
     """纯展示协议 — 只负责向用户输出信息，无需返回有意义的值。"""
 
@@ -44,6 +45,7 @@ class GameDisplay(Protocol):
 # ====================================================================== #
 #  子协议 2: GameInput — 交互输入                                          #
 # ====================================================================== #
+
 
 class GameInput(Protocol):
     """交互输入协议 — 阻塞等待并返回玩家选择/响应。"""
@@ -63,9 +65,7 @@ class GameInput(Protocol):
     ) -> Player | None: ...
     def choose_card_to_play(self, player: Player) -> Card | None: ...
     def choose_cards_to_discard(self, player: Player, count: int) -> list[Card]: ...
-    def show_skill_menu(
-        self, player: Player, usable_skills: list[str]
-    ) -> str | None: ...
+    def show_skill_menu(self, player: Player, usable_skills: list[str]) -> str | None: ...
 
     # ---- 响应请求输入 ----
     def ask_for_shan(self, player: Player) -> Card | None: ...
@@ -79,9 +79,7 @@ class GameInput(Protocol):
         target: Player | None,
         currently_cancelled: bool,
     ) -> Card | None: ...
-    def choose_card_from_player(
-        self, chooser: Player, target: Player
-    ) -> Card | None: ...
+    def choose_card_from_player(self, chooser: Player, target: Player) -> Card | None: ...
     def choose_suit(self, player: Player) -> CardSuit: ...
     def guanxing_selection(
         self, player: Player, cards: list[Card]
@@ -97,6 +95,7 @@ class GameInput(Protocol):
 #  子协议 3: GameNotify — 生命周期与事件通知                                #
 # ====================================================================== #
 
+
 class GameNotify(Protocol):
     """生命周期与事件通知协议 — 引擎绑定、动画/音效触发等异步通知。"""
 
@@ -107,6 +106,7 @@ class GameNotify(Protocol):
 #  组合协议: GameUI — 向后兼容                                             #
 # ====================================================================== #
 
+
 class GameUI(GameDisplay, GameInput, GameNotify, Protocol):
     """完整 UI 协议 — 组合 Display + Input + Notify，向后兼容。
 
@@ -114,4 +114,5 @@ class GameUI(GameDisplay, GameInput, GameNotify, Protocol):
     需要更窄接口约束时，可直接使用 ``GameDisplay`` / ``GameInput`` /
     ``GameNotify`` 子协议。
     """
+
     ...

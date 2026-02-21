@@ -6,6 +6,7 @@
 - sanitize_chat_message: 聊天内容净化 (防 XSS / 注入)
 - 安全相关常量
 """
+
 from __future__ import annotations
 
 import hmac
@@ -15,7 +16,6 @@ import re
 import secrets
 import time
 from collections import deque
-from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_MESSAGE_SIZE: int = 65_536  # 64 KB
 
 # 连接限制
-DEFAULT_MAX_CONNECTIONS: int = 200        # 服务器总连接上限
-DEFAULT_MAX_CONNECTIONS_PER_IP: int = 8   # 单 IP 连接上限
+DEFAULT_MAX_CONNECTIONS: int = 200  # 服务器总连接上限
+DEFAULT_MAX_CONNECTIONS_PER_IP: int = 8  # 单 IP 连接上限
 
 # 心跳超时 (秒): 超过此时间未收到心跳则视为断线
 DEFAULT_HEARTBEAT_TIMEOUT: float = 60.0
@@ -39,6 +39,7 @@ TOKEN_EXPIRY: float = 86_400.0  # 24 小时
 
 
 # ==================== 连接令牌管理 ====================
+
 
 class ConnectionTokenManager:
     """基于 ``secrets`` 模块的连接令牌管理器。
@@ -86,8 +87,7 @@ class ConnectionTokenManager:
             return False
         return pid == expected_player_id
 
-    def revoke(self, *, player_id: int | None = None,
-               token: str | None = None) -> None:
+    def revoke(self, *, player_id: int | None = None, token: str | None = None) -> None:
         """撤销令牌 (按玩家 ID 或按令牌)。"""
         if player_id is not None:
             tok = self._player_tokens.pop(player_id, None)
@@ -102,8 +102,7 @@ class ConnectionTokenManager:
         """清理所有过期令牌，返回清理数量。"""
         now = time.time()
         expired = [
-            tok for tok, (_, created) in self._tokens.items()
-            if now - created > self._expiry
+            tok for tok, (_, created) in self._tokens.items() if now - created > self._expiry
         ]
         for tok in expired:
             record = self._tokens.pop(tok, None)
@@ -118,6 +117,7 @@ class ConnectionTokenManager:
 
 # ==================== Origin 验证 ====================
 
+
 class OriginValidator:
     """WebSocket Origin 白名单验证器。
 
@@ -128,7 +128,8 @@ class OriginValidator:
         """初始化 Origin 验证器。
 
         Args:
-            allowed_origins: 逗号分隔的允许 Origin 列表，空字符串表示允许所有。
+            allowed_origins: 逗号分隔的允许 Origin 列表。
+                             空字符串时拒绝所有连接 (fail-closed)。
         """
         self._allowed: set[str] = set()
         if allowed_origins.strip():
@@ -142,6 +143,11 @@ class OriginValidator:
         """是否启用了 Origin 验证。"""
         return len(self._allowed) > 0
 
+    @property
+    def allowed_origins(self) -> tuple[str, ...]:
+        """返回标准化后的 Origin 白名单（只读）。"""
+        return tuple(sorted(self._allowed))
+
     def is_allowed(self, origin: str | None) -> bool:
         """检查 Origin 是否在白名单中。
 
@@ -152,7 +158,7 @@ class OriginValidator:
             True 表示允许，False 表示拒绝。
         """
         if not self._allowed:
-            return True  # 未配置白名单，允许所有
+            return False  # FAIL-CLOSED: 未配置白名单时拒绝所有连接 (CWE-1385)
         if not origin:
             return False  # 有白名单但无 Origin 头，拒绝
         normalized = origin.strip().rstrip("/").lower()
@@ -160,6 +166,7 @@ class OriginValidator:
 
 
 # ==================== 速率限制器 ====================
+
 
 class RateLimiter:
     """基于滑动窗口的速率限制器 (O(1) 操作)。"""
@@ -221,6 +228,7 @@ def sanitize_chat_message(text: str, max_length: int = 500) -> str:
 
 
 # ==================== IP 连接计数 ====================
+
 
 class IPConnectionTracker:
     """跟踪每个 IP 的活跃连接数。"""

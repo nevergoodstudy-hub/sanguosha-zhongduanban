@@ -30,7 +30,7 @@ class TestCard(unittest.TestCase):
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
             number=1,
-            description="对一名角色使用"
+            description="对一名角色使用",
         )
 
         self.assertEqual(card.name, "杀")
@@ -47,7 +47,7 @@ class TestCard(unittest.TestCase):
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.HEART,
-            number=5
+            number=5,
         )
         self.assertTrue(red_card.is_red)
         self.assertFalse(red_card.is_black)
@@ -60,7 +60,7 @@ class TestCard(unittest.TestCase):
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=10
+            number=10,
         )
         self.assertTrue(black_card.is_black)
         self.assertFalse(black_card.is_red)
@@ -167,8 +167,7 @@ class TestPlayer(unittest.TestCase):
 
         # 创建测试武将
         skills = [
-            Skill(id="rende", name="仁德", description="测试技能",
-                  skill_type=SkillType.ACTIVE)
+            Skill(id="rende", name="仁德", description="测试技能", skill_type=SkillType.ACTIVE)
         ]
         hero = Hero(
             id="test_hero",
@@ -177,7 +176,7 @@ class TestPlayer(unittest.TestCase):
             max_hp=4,
             gender="male",
             title="测试",
-            skills=skills
+            skills=skills,
         )
         self.player.set_hero(hero)
 
@@ -198,7 +197,7 @@ class TestPlayer(unittest.TestCase):
             max_hp=4,
             gender="male",
             title="测试",
-            skills=[]
+            skills=[],
         )
         player.set_hero(hero)
 
@@ -264,8 +263,15 @@ class TestPlayer(unittest.TestCase):
 
     def test_equipment(self):
         """测试装备"""
-        weapon = Card("weapon", "诸葛连弩", CardType.EQUIPMENT,
-                     CardSubtype.WEAPON, CardSuit.DIAMOND, 1, range=1)
+        weapon = Card(
+            "weapon",
+            "诸葛连弩",
+            CardType.EQUIPMENT,
+            CardSubtype.WEAPON,
+            CardSuit.DIAMOND,
+            1,
+            range=1,
+        )
 
         old = self.player.equip_card(weapon)
 
@@ -280,8 +286,15 @@ class TestEquipment(unittest.TestCase):
     def test_weapon_equip(self):
         """测试装备武器"""
         equipment = Equipment()
-        weapon = Card("weapon", "青龙偃月刀", CardType.EQUIPMENT,
-                     CardSubtype.WEAPON, CardSuit.SPADE, 5, range=3)
+        weapon = Card(
+            "weapon",
+            "青龙偃月刀",
+            CardType.EQUIPMENT,
+            CardSubtype.WEAPON,
+            CardSuit.SPADE,
+            5,
+            range=3,
+        )
 
         old = equipment.equip(weapon)
 
@@ -292,8 +305,7 @@ class TestEquipment(unittest.TestCase):
     def test_armor_equip(self):
         """测试装备防具"""
         equipment = Equipment()
-        armor = Card("armor", "八卦阵", CardType.EQUIPMENT,
-                    CardSubtype.ARMOR, CardSuit.SPADE, 2)
+        armor = Card("armor", "八卦阵", CardType.EQUIPMENT, CardSubtype.ARMOR, CardSuit.SPADE, 2)
 
         old = equipment.equip(armor)
 
@@ -304,10 +316,12 @@ class TestEquipment(unittest.TestCase):
         """测试装备坐骑"""
         equipment = Equipment()
 
-        minus_horse = Card("horse_minus", "赤兔", CardType.EQUIPMENT,
-                          CardSubtype.HORSE_MINUS, CardSuit.HEART, 5)
-        plus_horse = Card("horse_plus", "的卢", CardType.EQUIPMENT,
-                         CardSubtype.HORSE_PLUS, CardSuit.CLUB, 5)
+        minus_horse = Card(
+            "horse_minus", "赤兔", CardType.EQUIPMENT, CardSubtype.HORSE_MINUS, CardSuit.HEART, 5
+        )
+        plus_horse = Card(
+            "horse_plus", "的卢", CardType.EQUIPMENT, CardSubtype.HORSE_PLUS, CardSuit.CLUB, 5
+        )
 
         equipment.equip(minus_horse)
         equipment.equip(plus_horse)
@@ -321,10 +335,12 @@ class TestEquipment(unittest.TestCase):
         """测试替换装备"""
         equipment = Equipment()
 
-        old_weapon = Card("old", "诸葛连弩", CardType.EQUIPMENT,
-                         CardSubtype.WEAPON, CardSuit.DIAMOND, 1, range=1)
-        new_weapon = Card("new", "青龙偃月刀", CardType.EQUIPMENT,
-                         CardSubtype.WEAPON, CardSuit.SPADE, 5, range=3)
+        old_weapon = Card(
+            "old", "诸葛连弩", CardType.EQUIPMENT, CardSubtype.WEAPON, CardSuit.DIAMOND, 1, range=1
+        )
+        new_weapon = Card(
+            "new", "青龙偃月刀", CardType.EQUIPMENT, CardSubtype.WEAPON, CardSuit.SPADE, 5, range=3
+        )
 
         equipment.equip(old_weapon)
         replaced = equipment.equip(new_weapon)
@@ -358,12 +374,7 @@ class TestGameEngine(unittest.TestCase):
     def test_hero_assignment(self):
         """测试武将分配"""
         # 分配武将
-        choices = {
-            0: "liubei",
-            1: "caocao",
-            2: "sunquan",
-            3: "guanyu"
-        }
+        choices = {0: "liubei", 1: "caocao", 2: "sunquan", 3: "guanyu"}
         self.engine.choose_heroes(choices)
 
         for player in self.engine.players:
@@ -372,8 +383,7 @@ class TestGameEngine(unittest.TestCase):
     def test_game_start(self):
         """测试游戏开始"""
         # 分配武将
-        choices = {i: hero.id for i, hero in
-                  enumerate(self.engine.hero_repo.get_all_heroes()[:4])}
+        choices = {i: hero.id for i, hero in enumerate(self.engine.hero_repo.get_all_heroes()[:4])}
         self.engine.choose_heroes(choices)
 
         self.engine.start_game()
@@ -387,8 +397,7 @@ class TestGameEngine(unittest.TestCase):
     def test_distance_calculation(self):
         """测试距离计算"""
         # 分配武将并开始游戏
-        choices = {i: hero.id for i, hero in
-                  enumerate(self.engine.hero_repo.get_all_heroes()[:4])}
+        choices = {i: hero.id for i, hero in enumerate(self.engine.hero_repo.get_all_heroes()[:4])}
         self.engine.choose_heroes(choices)
         self.engine.start_game()
 
@@ -403,8 +412,7 @@ class TestGameEngine(unittest.TestCase):
 
     def test_attack_range(self):
         """测试攻击范围"""
-        choices = {i: hero.id for i, hero in
-                  enumerate(self.engine.hero_repo.get_all_heroes()[:4])}
+        choices = {i: hero.id for i, hero in enumerate(self.engine.hero_repo.get_all_heroes()[:4])}
         self.engine.choose_heroes(choices)
         self.engine.start_game()
 
@@ -524,6 +532,7 @@ class TestVictoryConditions(unittest.TestCase):
         heroes = list(self.engine.hero_repo.get_all_heroes()[:4])
         for i, player in enumerate(self.engine.players):
             import copy
+
             player.set_hero(copy.deepcopy(heroes[i]))
 
     def test_lord_death_rebel_wins(self):

@@ -79,6 +79,7 @@ class GameClient:
         """连接到服务端"""
         try:
             import websockets
+
             self._ws = await websockets.connect(self.server_url)
             self._connected = True
             logger.info(f"已连接到 {self.server_url}")
@@ -184,16 +185,18 @@ class GameClient:
             if await self.connect():
                 # 重连后请求重放缺失的事件 (携带令牌)
                 if self.room_id:
-                    await self.send(ClientMsg(
-                        type=MsgType.ROOM_JOIN,
-                        player_id=self.player_id,
-                        data={
-                            "room_id": self.room_id,
-                            "reconnect": True,
-                            "last_seq": self.last_seq,
-                            "token": self.auth_token,
-                        },
-                    ))
+                    await self.send(
+                        ClientMsg(
+                            type=MsgType.ROOM_JOIN,
+                            player_id=self.player_id,
+                            data={
+                                "room_id": self.room_id,
+                                "reconnect": True,
+                                "last_seq": self.last_seq,
+                                "token": self.auth_token,
+                            },
+                        )
+                    )
                 return True
 
         logger.error("重连失败，已达最大尝试次数")
@@ -227,13 +230,12 @@ class GameClient:
 
     # ==================== 便捷操作方法 ====================
 
-    async def create_room(self, player_name: str, max_players: int = 4,
-                          ai_fill: bool = True) -> None:
+    async def create_room(
+        self, player_name: str, max_players: int = 4, ai_fill: bool = True
+    ) -> None:
         """创建房间"""
         self.player_name = player_name
-        await self.send(ClientMsg.room_create(
-            self.player_id, player_name, max_players, ai_fill
-        ))
+        await self.send(ClientMsg.room_create(self.player_id, player_name, max_players, ai_fill))
 
     async def join_room(self, player_name: str, room_id: str) -> None:
         """加入房间"""
@@ -259,29 +261,32 @@ class GameClient:
 
     async def play_card(self, card_id: int, target_ids: list[int] = None) -> None:
         """出牌"""
-        await self.send(ClientMsg.game_action(
-            self.player_id, "play_card",
-            {"card_id": card_id, "target_ids": target_ids or []},
-        ))
+        await self.send(
+            ClientMsg.game_action(
+                self.player_id,
+                "play_card",
+                {"card_id": card_id, "target_ids": target_ids or []},
+            )
+        )
 
     async def use_skill(self, skill_id: str, target_ids: list[int] = None) -> None:
         """使用技能"""
-        await self.send(ClientMsg.game_action(
-            self.player_id, "use_skill",
-            {"skill_id": skill_id, "target_ids": target_ids or []},
-        ))
+        await self.send(
+            ClientMsg.game_action(
+                self.player_id,
+                "use_skill",
+                {"skill_id": skill_id, "target_ids": target_ids or []},
+            )
+        )
 
     async def end_turn(self) -> None:
         """结束回合"""
         await self.send(ClientMsg.game_action(self.player_id, "end_turn"))
 
-    async def respond(self, request_type: str, accepted: bool,
-                      card_id: int = None) -> None:
+    async def respond(self, request_type: str, accepted: bool, card_id: int = None) -> None:
         """响应请求"""
         data = {"card_id": card_id} if card_id is not None else {}
-        await self.send(ClientMsg.game_response(
-            self.player_id, request_type, accepted, data
-        ))
+        await self.send(ClientMsg.game_response(self.player_id, request_type, accepted, data))
 
     async def choose_hero(self, hero_id: str) -> None:
         """选择武将"""
@@ -294,38 +299,41 @@ class GameClient:
 
 # ==================== CLI 客户端 ====================
 
+
 async def cli_client_main(server_url: str, player_name: str):
     """简化的命令行客户端"""
     client = GameClient(server_url)
     client.player_name = player_name
 
     # 注册回调
+    cli_log = logging.getLogger("sanguosha.cli")
+
     def on_room_created(msg: ServerMsg):
         client.room_id = msg.data.get("room_id", "")
-        print(f"✓ 房间已创建: {client.room_id}")
+        cli_log.info("✓ 房间已创建: %s", client.room_id)
 
     def on_room_joined(msg: ServerMsg):
         client.room_id = msg.data.get("room_id", "")
         client.player_id = msg.data.get("player_id", 0)
-        print(f"✓ 已加入房间 {client.room_id}, 你的 ID: {client.player_id}")
+        cli_log.info("✓ 已加入房间 %s, 你的 ID: %s", client.room_id, client.player_id)
 
     def on_room_update(msg: ServerMsg):
         players = msg.data.get("players", [])
         state = msg.data.get("state", "")
-        print(f"  房间状态: {state}, 玩家: {[p['name'] for p in players]}")
+        cli_log.info("房间状态: %s, 玩家: %s", state, [p["name"] for p in players])
 
     def on_game_event(msg: ServerMsg):
         event_type = msg.data.get("event_type", "")
-        print(f"  [事件] {event_type}: {msg.data}")
+        cli_log.info("[事件] %s: %s", event_type, msg.data)
 
     def on_game_over(msg: ServerMsg):
-        print(f"  游戏结束! 胜者: {msg.data.get('winner')}")
+        cli_log.info("游戏结束! 胜者: %s", msg.data.get("winner"))
 
     def on_chat(msg: ServerMsg):
-        print(f"  💬 {msg.data.get('player_name')}: {msg.data.get('message')}")
+        cli_log.info("💬 %s: %s", msg.data.get("player_name"), msg.data.get("message"))
 
     def on_error(msg: ServerMsg):
-        print(f"  ❌ 错误: {msg.data.get('message')}")
+        cli_log.error("❌ 错误: %s", msg.data.get("message"))
 
     client.on(MsgType.ROOM_CREATED, on_room_created)
     client.on(MsgType.ROOM_JOINED, on_room_joined)

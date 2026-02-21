@@ -122,16 +122,10 @@ class ResponseModalBase(AnimatedModalScreen[bool]):
             if self.cards_info:
                 yield Static(f"可用: {self.cards_info}", id="modal-cards-info")
             if self.countdown_seconds > 0:
-                yield Static(
-                    f"⏱ {self._remaining}s", id="modal-countdown"
-                )
+                yield Static(f"⏱ {self._remaining}s", id="modal-countdown")
             with Horizontal(classes="btn-row"):
-                yield Button(
-                    self.confirm_label, id="btn-confirm", variant="success"
-                )
-                yield Button(
-                    self.reject_label, id="btn-reject", variant="error"
-                )
+                yield Button(self.confirm_label, id="btn-confirm", variant="success")
+                yield Button(self.reject_label, id="btn-reject", variant="error")
 
     def on_mount(self) -> None:
         super().on_mount()  # 淡入动画

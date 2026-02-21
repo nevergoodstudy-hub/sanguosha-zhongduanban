@@ -42,9 +42,11 @@ def register_migration(from_schema: int, to_schema: int):
         from_schema: 源 schema 版本
         to_schema: 目标 schema 版本 (必须 > from_schema)
     """
+
     def decorator(fn: Callable[[dict[str, Any]], dict[str, Any]]):
         _MIGRATIONS[from_schema] = (to_schema, fn)
         return fn
+
     return decorator
 
 
@@ -71,15 +73,12 @@ def apply_migrations(data: dict[str, Any]) -> dict[str, Any]:
 
     if schema > SCHEMA_VERSION:
         raise ValueError(
-            f"存档 schema {schema} 高于当前支持的最大版本 {SCHEMA_VERSION}，"
-            "请升级游戏版本"
+            f"存档 schema {schema} 高于当前支持的最大版本 {SCHEMA_VERSION}，请升级游戏版本"
         )
 
     while schema < SCHEMA_VERSION:
         if schema not in _MIGRATIONS:
-            raise ValueError(
-                f"无法从 schema {schema} 迁移到 {SCHEMA_VERSION}: 缺少迁移路径"
-            )
+            raise ValueError(f"无法从 schema {schema} 迁移到 {SCHEMA_VERSION}: 缺少迁移路径")
         target, fn = _MIGRATIONS[schema]
         logger.info(f"存档迁移: schema {schema} → {target}")
         data = fn(data)
@@ -90,14 +89,20 @@ def apply_migrations(data: dict[str, Any]) -> dict[str, Any]:
 
 # ==================== 序列化 ====================
 
+
 def serialize_card(card: Card) -> dict[str, Any]:
     """序列化单张卡牌"""
     return {
-        "name": card.name if isinstance(card.name, str) else card.name.value
-            if hasattr(card.name, "value") else str(card.name),
+        "name": card.name
+        if isinstance(card.name, str)
+        else card.name.value
+        if hasattr(card.name, "value")
+        else str(card.name),
         "suit": card.suit.value if hasattr(card.suit, "value") else str(card.suit),
         "number": card.number,
-        "card_type": card.card_type.value if hasattr(card.card_type, "value") else str(card.card_type),
+        "card_type": card.card_type.value
+        if hasattr(card.card_type, "value")
+        else str(card.card_type),
     }
 
 
@@ -119,8 +124,12 @@ def serialize_player(player: Player) -> dict[str, Any]:
         "equipment": {
             "weapon": serialize_card(player.equipment.weapon) if player.equipment.weapon else None,
             "armor": serialize_card(player.equipment.armor) if player.equipment.armor else None,
-            "horse_minus": serialize_card(player.equipment.horse_minus) if player.equipment.horse_minus else None,
-            "horse_plus": serialize_card(player.equipment.horse_plus) if player.equipment.horse_plus else None,
+            "horse_minus": serialize_card(player.equipment.horse_minus)
+            if player.equipment.horse_minus
+            else None,
+            "horse_plus": serialize_card(player.equipment.horse_plus)
+            if player.equipment.horse_plus
+            else None,
         },
         "sha_used": getattr(player, "sha_used", 0),
         "is_chained": getattr(player, "is_chained", False),
@@ -143,25 +152,20 @@ def serialize_engine(engine: GameEngine) -> dict[str, Any]:
         "schema_version": SCHEMA_VERSION,
         "saved_at": datetime.now().isoformat(),
         "timestamp": time.time(),
-
         # 游戏配置
         "game_seed": getattr(engine, "game_seed", None),
         "player_count": len(engine.players),
-
         # 游戏状态
         "state": engine.state.value if engine.state else None,
         "phase": engine.phase.value if engine.phase else None,
         "round_count": engine.round_count,
         "current_player_index": engine.current_player_index,
         "winner_identity": engine.winner_identity.value if engine.winner_identity else None,
-
         # 玩家
         "players": [serialize_player(p) for p in engine.players],
-
         # 牌堆状态
         "deck_remaining": engine.deck.remaining if engine.deck else 0,
         "discard_pile_count": engine.deck.discarded if engine.deck else 0,
-
         # 动作日志 (用于回放)
         "action_log": getattr(engine, "action_log", []),
     }
@@ -169,6 +173,7 @@ def serialize_engine(engine: GameEngine) -> dict[str, Any]:
 
 
 # ==================== 持久化 ====================
+
 
 def save_game(engine: GameEngine, filepath: str | None = None) -> str:
     """保存游戏到文件
@@ -233,14 +238,16 @@ def list_saves(save_dir: str = SAVE_DIR) -> list[dict[str, Any]]:
         try:
             with open(f, encoding="utf-8") as fp:
                 data = json.load(fp)
-            saves.append({
-                "filepath": str(f),
-                "saved_at": data.get("saved_at", "?"),
-                "player_count": data.get("player_count", 0),
-                "round_count": data.get("round_count", 0),
-                "state": data.get("state", "?"),
-                "winner": data.get("winner_identity"),
-            })
+            saves.append(
+                {
+                    "filepath": str(f),
+                    "saved_at": data.get("saved_at", "?"),
+                    "player_count": data.get("player_count", 0),
+                    "round_count": data.get("round_count", 0),
+                    "state": data.get("state", "?"),
+                    "winner": data.get("winner_identity"),
+                }
+            )
         except Exception:
             continue
 
@@ -257,6 +264,7 @@ def delete_save(filepath: str) -> bool:
 
 
 # ==================== 回放增强 ====================
+
 
 class EnhancedReplay:
     """增强回放器 (M4-T06)

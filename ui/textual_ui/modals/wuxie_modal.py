@@ -103,9 +103,7 @@ class WuxieResponseModal(AnimatedModalScreen[bool]):
     def _tick(self) -> None:
         self._remaining -= 1
         try:
-            self.query_one("#wuxie-countdown", Static).update(
-                f"⏱ {self._remaining}s 后自动放弃"
-            )
+            self.query_one("#wuxie-countdown", Static).update(f"⏱ {self._remaining}s 后自动放弃")
         except Exception:
             pass
         if self._remaining <= 0:

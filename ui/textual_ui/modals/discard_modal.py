@@ -75,8 +75,7 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
     }
     """
 
-    def __init__(self, cards: list[Card], need_count: int,
-                 countdown: int = 30):
+    def __init__(self, cards: list[Card], need_count: int, countdown: int = 30):
         """Args:
         cards: 玩家当前手牌列表
         need_count: 需要弃掉的张数
@@ -101,19 +100,12 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
                 id="discard-status",
             )
             if self._countdown > 0:
-                yield Static(
-                    f"⏱ {self._remaining}s", id="discard-countdown"
-                )
+                yield Static(f"⏱ {self._remaining}s", id="discard-countdown")
 
             with Horizontal(classes="card-row"):
                 for i, card in enumerate(self._cards):
-                    suit_map = {
-                        "spade": "♠", "heart": "♥",
-                        "club": "♣", "diamond": "♦"
-                    }
-                    suit_icon = suit_map.get(
-                        getattr(card.suit, "value", ""), "?"
-                    )
+                    suit_map = {"spade": "♠", "heart": "♥", "club": "♣", "diamond": "♦"}
+                    suit_icon = suit_map.get(getattr(card.suit, "value", ""), "?")
                     color = "red" if suit_icon in ("♥", "♦") else "white"
                     label = f"{suit_icon}{card.number_str} {card.name}"
                     yield Button(
@@ -146,9 +138,7 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
             if self._timer:
                 self._timer.stop()
             # 超时：自动选择最后 N 张牌
-            auto = list(range(
-                len(self._cards) - self._need_count, len(self._cards)
-            ))
+            auto = list(range(len(self._cards) - self._need_count, len(self._cards)))
             self.dismiss(auto)
 
     def _status_text(self) -> str:
@@ -160,9 +150,7 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
     def _refresh_ui(self) -> None:
         """刷新选中状态"""
         try:
-            self.query_one("#discard-status", Static).update(
-                self._status_text()
-            )
+            self.query_one("#discard-status", Static).update(self._status_text())
         except Exception:
             pass
 
@@ -184,9 +172,7 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
             confirm = self.query_one("#btn-confirm-discard", Button)
             ok = len(self._selected) == self._need_count
             confirm.disabled = not ok
-            confirm.label = (
-                f"✅ 确认弃牌 ({len(self._selected)}/{self._need_count})"
-            )
+            confirm.label = f"✅ 确认弃牌 ({len(self._selected)}/{self._need_count})"
         except Exception:
             pass
 

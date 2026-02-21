@@ -29,25 +29,48 @@ from .skill import SkillSystem
 
 __all__ = [
     # 卡牌系统
-    'Card', 'CardType', 'CardSubtype', 'CardSuit', 'Deck', 'DamageType',
+    "Card",
+    "CardType",
+    "CardSubtype",
+    "CardSuit",
+    "Deck",
+    "DamageType",
     # 武将系统
-    'Hero', 'Skill', 'Kingdom',
+    "Hero",
+    "Skill",
+    "Kingdom",
     # 玩家系统
-    'Player', 'Identity',
+    "Player",
+    "Identity",
     # 游戏引擎
-    'GameEngine', 'GamePhase', 'GameState',
+    "GameEngine",
+    "GamePhase",
+    "GameState",
     # 技能系统
-    'SkillSystem',
+    "SkillSystem",
     # 事件系统
-    'EventBus', 'EventType', 'GameEvent', 'EventEmitter',
+    "EventBus",
+    "EventType",
+    "GameEvent",
+    "EventEmitter",
     # 动作系统
-    'GameAction', 'PlayCardAction', 'UseSkillAction', 'DiscardAction',
-    'RespondAction', 'EndPhaseAction', 'GameRequest', 'GameResponse',
-    'ActionType', 'RequestType', 'ActionValidator', 'ActionExecutor'
+    "GameAction",
+    "PlayCardAction",
+    "UseSkillAction",
+    "DiscardAction",
+    "RespondAction",
+    "EndPhaseAction",
+    "GameRequest",
+    "GameResponse",
+    "ActionType",
+    "RequestType",
+    "ActionValidator",
+    "ActionExecutor",
 ]
 
 try:
     from importlib.metadata import version as _get_version
+
     __version__ = _get_version("sanguosha")
 except Exception:
     __version__ = "3.0.0"  # fallback, keep in sync with pyproject.toml

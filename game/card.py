@@ -18,52 +18,56 @@ if TYPE_CHECKING:
 
 class CardType(Enum):
     """卡牌类型枚举"""
-    BASIC = "basic"           # 基本牌
-    TRICK = "trick"           # 锦囊牌
-    EQUIPMENT = "equipment"   # 装备牌
+
+    BASIC = "basic"  # 基本牌
+    TRICK = "trick"  # 锦囊牌
+    EQUIPMENT = "equipment"  # 装备牌
 
 
 class CardSubtype(Enum):
     """卡牌子类型枚举"""
+
     # 基本牌子类型
-    ATTACK = "attack"         # 杀
-    FIRE_ATTACK = "fire_attack"   # 火杀
+    ATTACK = "attack"  # 杀
+    FIRE_ATTACK = "fire_attack"  # 火杀
     THUNDER_ATTACK = "thunder_attack"  # 雷杀
-    DODGE = "dodge"           # 闪
-    HEAL = "heal"             # 桃
-    ALCOHOL = "alcohol"       # 酒
+    DODGE = "dodge"  # 闪
+    HEAL = "heal"  # 桃
+    ALCOHOL = "alcohol"  # 酒
 
     # 锦囊牌子类型
-    SINGLE_TARGET = "single_target"   # 单体锦囊
-    AOE = "aoe"                       # 范围锦囊（AOE）
-    SELF = "self"                     # 自用锦囊
-    ALL = "all"                       # 全体锦囊
-    COUNTER = "counter"               # 反制锦囊
-    DELAY = "delay"                   # 延时锦囊
-    CHAIN = "chain"                   # 连环锦囊（铁索连环）
+    SINGLE_TARGET = "single_target"  # 单体锦囊
+    AOE = "aoe"  # 范围锦囊（AOE）
+    SELF = "self"  # 自用锦囊
+    ALL = "all"  # 全体锦囊
+    COUNTER = "counter"  # 反制锦囊
+    DELAY = "delay"  # 延时锦囊
+    CHAIN = "chain"  # 连环锦囊（铁索连环）
 
     # 装备牌子类型
-    WEAPON = "weapon"         # 武器
-    ARMOR = "armor"           # 防具
-    TREASURE = "treasure"     # 宝物
+    WEAPON = "weapon"  # 武器
+    ARMOR = "armor"  # 防具
+    TREASURE = "treasure"  # 宝物
     HORSE_PLUS = "horse_plus"  # +1马（防御马）
     HORSE_MINUS = "horse_minus"  # -1马（攻击马）
 
 
 class DamageType(Enum):
     """伤害类型枚举 (军争篇)"""
-    NORMAL = "normal"       # 普通伤害
-    FIRE = "fire"           # 火焰伤害
-    THUNDER = "thunder"     # 雷电伤害
-    LOST_HP = "lost_hp"     # 体力流失（不可传导）
+
+    NORMAL = "normal"  # 普通伤害
+    FIRE = "fire"  # 火焰伤害
+    THUNDER = "thunder"  # 雷电伤害
+    LOST_HP = "lost_hp"  # 体力流失（不可传导）
 
 
 class CardSuit(Enum):
     """卡牌花色枚举"""
-    SPADE = "spade"       # 黑桃 ♠
-    HEART = "heart"       # 红心 ♥
-    CLUB = "club"         # 梅花 ♣
-    DIAMOND = "diamond"   # 方块 ♦
+
+    SPADE = "spade"  # 黑桃 ♠
+    HEART = "heart"  # 红心 ♥
+    CLUB = "club"  # 梅花 ♣
+    DIAMOND = "diamond"  # 方块 ♦
 
     @property
     def symbol(self) -> str:
@@ -72,7 +76,7 @@ class CardSuit(Enum):
             CardSuit.SPADE: "♠",
             CardSuit.HEART: "♥",
             CardSuit.CLUB: "♣",
-            CardSuit.DIAMOND: "♦"
+            CardSuit.DIAMOND: "♦",
         }
         return symbols.get(self, "?")
 
@@ -102,6 +106,7 @@ class Card:
         range: 攻击范围（仅武器有效）
         distance_modifier: 距离修正（仅坐骑有效）
     """
+
     id: str
     name: str
     card_type: CardType
@@ -212,7 +217,7 @@ class Card:
             "number": self.number,
             "description": self.description,
             "range": self.range,
-            "distance_modifier": self.distance_modifier
+            "distance_modifier": self.distance_modifier,
         }
 
     @classmethod
@@ -227,7 +232,7 @@ class Card:
             number=data["number"],
             description=data.get("description", ""),
             range=data.get("range", 1),
-            distance_modifier=data.get("distance_modifier", 0)
+            distance_modifier=data.get("distance_modifier", 0),
         )
 
 
@@ -242,9 +247,9 @@ class Deck:
         Args:
             data_path: 卡牌数据文件路径
         """
-        self.draw_pile: list[Card] = []      # 摸牌堆
-        self.discard_pile: list[Card] = []   # 弃牌堆
-        self._all_cards: list[Card] = []     # 所有卡牌副本
+        self.draw_pile: list[Card] = []  # 摸牌堆
+        self.discard_pile: list[Card] = []  # 弃牌堆
+        self._all_cards: list[Card] = []  # 所有卡牌副本
 
         if data_path:
             self.load_cards(data_path)
@@ -259,7 +264,7 @@ class Deck:
         if not path.exists():
             raise FileNotFoundError(f"卡牌数据文件不存在: {data_path}")
 
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
         self._all_cards.clear()
@@ -273,7 +278,7 @@ class Deck:
                 subtype=CardSubtype(card_data["subtype"]),
                 suit=CardSuit(card_data["suit"]),
                 number=card_data["number"],
-                description=card_data.get("description", "")
+                description=card_data.get("description", ""),
             )
             count = card_data.get("count", 1)
             for _ in range(count):
@@ -288,7 +293,7 @@ class Deck:
                 subtype=CardSubtype(card_data["subtype"]),
                 suit=CardSuit(card_data["suit"]),
                 number=card_data["number"],
-                description=card_data.get("description", "")
+                description=card_data.get("description", ""),
             )
             count = card_data.get("count", 1)
             for _ in range(count):
@@ -305,7 +310,7 @@ class Deck:
                 number=card_data["number"],
                 description=card_data.get("description", ""),
                 range=card_data.get("range", 1),
-                distance_modifier=card_data.get("distance_modifier", 0)
+                distance_modifier=card_data.get("distance_modifier", 0),
             )
             count = card_data.get("count", 1)
             for _ in range(count):
@@ -411,10 +416,86 @@ class Deck:
     def __str__(self) -> str:
         return f"Deck(摸牌堆:{self.remaining}, 弃牌堆:{self.discarded})"
 
+    # 标准三国杀牌堆预期卡牌数量 (基于 data/cards.json)
+    EXPECTED_CARD_COUNTS: dict[str, int] = {
+        # 基本牌
+        "杀": 21,
+        "闪": 14,
+        "桃": 8,
+        "酒": 5,
+        "火杀": 4,
+        "雷杀": 9,
+        # 锦囊牌
+        "决斗": 3,
+        "南蛮入侵": 3,
+        "万箭齐发": 1,
+        "无中生有": 4,
+        "过河拆桥": 6,
+        "顺手牵羊": 5,
+        "桃园结义": 1,
+        "无懈可击": 4,
+        "借刀杀人": 2,
+        "火攻": 3,
+        "铁索连环": 4,
+        # 延时锦囊
+        "乐不思蜀": 3,
+        "兵粮寸断": 2,
+        "闪电": 2,
+        # 武器
+        "青龙偃月刀": 1,
+        "丈八蛇矛": 1,
+        "诸葛连弩": 2,
+        "贯石斧": 1,
+        "麒麟弓": 1,
+        "方天画戟": 1,
+        "寒冰剑": 1,
+        "古锭刀": 1,
+        "朱雀羽扇": 1,
+        # 防具
+        "八卦阵": 2,
+        "仁王盾": 1,
+        "藤甲": 2,
+        "白银狮子": 1,
+        # 坐骑
+        "赤兔": 1,
+        "的卢": 1,
+        "爪黄飞电": 1,
+        "绝影": 1,
+        "大宛": 1,
+        "紫骍": 1,
+    }
+
+    def validate_deck(self) -> list[str]:
+        """验证牌堆完整性
+
+        检查所有卡牌 (牌堆 + 弃牌堆 + 不含已分发给玩家的) 的名称和数量
+        是否与预期匹配。
+
+        Returns:
+            错误列表（空表示验证通过）
+        """
+        errors: list[str] = []
+        counts: dict[str, int] = {}
+        for card in self._all_cards:
+            counts[card.name] = counts.get(card.name, 0) + 1
+
+        for name, expected in self.EXPECTED_CARD_COUNTS.items():
+            actual = counts.get(name, 0)
+            if actual != expected:
+                errors.append(f"{name}: expected {expected}, got {actual}")
+
+        # 检查是否有未知卡牌
+        for name, count in counts.items():
+            if name not in self.EXPECTED_CARD_COUNTS:
+                errors.append(f"unexpected card: {name} (count={count})")
+
+        return errors
+
 
 # 卡牌名称常量
 class CardName:
     """卡牌名称常量类"""
+
     # 基本牌
     SHA = "杀"
     SHAN = "闪"

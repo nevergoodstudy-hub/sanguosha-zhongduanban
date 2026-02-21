@@ -42,8 +42,7 @@ class HeroSelectScreen(Screen):
     }
     """
 
-    def __init__(self, player_count: int, difficulty: str,
-                 role_preference: str = "lord"):
+    def __init__(self, player_count: int, difficulty: str, role_preference: str = "lord"):
         super().__init__()
         self.player_count = player_count
         self.difficulty = difficulty
@@ -58,8 +57,9 @@ class HeroSelectScreen(Screen):
         from game.skill import SkillSystem
 
         engine = GameEngine()
-        engine.setup_game(self.player_count, human_player_index=0,
-                          role_preference=self.role_preference)
+        engine.setup_game(
+            self.player_count, human_player_index=0, role_preference=self.role_preference
+        )
 
         skill_system = SkillSystem(engine)
         engine.set_skill_system(skill_system)
@@ -132,8 +132,7 @@ class HeroSelectScreen(Screen):
             if p.is_ai and p.hero is None and available:
                 if p.identity == Identity.LORD:
                     # AI 主公优先选有主公技的武将
-                    lord_pool = [h for h in available
-                                 if any(s.is_lord_skill for s in h.skills)]
+                    lord_pool = [h for h in available if any(s.is_lord_skill for s in h.skills)]
                     h = random.choice(lord_pool) if lord_pool else random.choice(available)
                 else:
                     h = random.choice(available)
@@ -151,4 +150,5 @@ class HeroSelectScreen(Screen):
 
         # 跳过所有 setup screens，进入游戏
         from .game_play import GamePlayScreen
+
         self.app.switch_screen(GamePlayScreen())

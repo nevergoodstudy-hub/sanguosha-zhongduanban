@@ -66,7 +66,8 @@ class DataDrivenCardEffect(CardEffect):
         engine.log_event(
             "use_card",
             _t("effect.use_card", name=player.name, card=self._display_name),
-            source=player, card=card,
+            source=player,
+            card=card,
         )
 
         if scope == "all_alive_from_player":
@@ -76,8 +77,8 @@ class DataDrivenCardEffect(CardEffect):
             # 单体/自身效果
             if use_wuxie:
                 wuxie_target_str = self._config.get("wuxie_target", "self")
-                wuxie_target = player if wuxie_target_str == "self" else (
-                    targets[0] if targets else player
+                wuxie_target = (
+                    player if wuxie_target_str == "self" else (targets[0] if targets else player)
                 )
                 if engine._request_wuxie(card, player, wuxie_target):
                     engine.log_event(

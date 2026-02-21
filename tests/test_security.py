@@ -2,8 +2,6 @@
 
 import time
 
-import pytest
-
 from net.security import (
     ConnectionTokenManager,
     IPConnectionTracker,
@@ -11,7 +9,6 @@ from net.security import (
     RateLimiter,
     sanitize_chat_message,
 )
-
 
 # ==================== ConnectionTokenManager ====================
 
@@ -83,11 +80,12 @@ class TestConnectionTokenManager:
 
 
 class TestOriginValidator:
-    def test_empty_allows_all(self):
+    def test_empty_denies_all(self):
+        """P0-3: Empty whitelist = fail-closed (deny all), not fail-open."""
         v = OriginValidator("")
         assert v.is_enabled is False
-        assert v.is_allowed("http://evil.com") is True
-        assert v.is_allowed(None) is True
+        assert v.is_allowed("http://evil.com") is False
+        assert v.is_allowed(None) is False
 
     def test_whitelist_allows_valid(self):
         v = OriginValidator("http://localhost:8080, https://example.com")
@@ -110,6 +108,10 @@ class TestOriginValidator:
     def test_trailing_slash_ignored(self):
         v = OriginValidator("http://example.com/")
         assert v.is_allowed("http://example.com") is True
+
+    def test_allowed_origins_export_sorted(self):
+        v = OriginValidator("https://b.example, https://a.example")
+        assert v.allowed_origins == ("https://a.example", "https://b.example")
 
 
 # ==================== RateLimiter ====================

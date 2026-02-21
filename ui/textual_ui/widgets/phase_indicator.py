@@ -64,8 +64,13 @@ class PhaseIndicator(Static):
     def set_phase(self, phase: str) -> None:
         self.current_phase = phase
 
-    def set_info(self, round_count: int = 0, deck_count: int = 0,
-                 discard_count: int = 0, player_name: str = "") -> None:
+    def set_info(
+        self,
+        round_count: int = 0,
+        deck_count: int = 0,
+        discard_count: int = 0,
+        player_name: str = "",
+    ) -> None:
         """更新额外信息"""
         self.round_count = round_count
         self.deck_count = deck_count

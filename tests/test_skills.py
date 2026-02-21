@@ -35,7 +35,7 @@ class TestSkillSystem:
     def test_skill_system_init(self, skill_system):
         """测试技能系统初始化"""
         assert skill_system is not None
-        assert hasattr(skill_system, '_skill_handlers')
+        assert hasattr(skill_system, "_skill_handlers")
         assert len(skill_system._skill_handlers) > 0
 
     def test_can_use_skill_unknown(self, skill_system, engine):
@@ -83,7 +83,7 @@ class TestRende:
             card_type=CardType.BASIC,
             subtype=CardSubtype.HEAL,
             suit=CardSuit.HEART,
-            number=3
+            number=3,
         )
         player.hand.append(test_card)
 
@@ -91,11 +91,7 @@ class TestRende:
         skill_system = engine.skill_system
         initial_target_hand = len(target.hand)
 
-        result = skill_system._handle_rende(
-            player, engine,
-            targets=[target],
-            cards=[test_card]
-        )
+        result = skill_system._handle_rende(player, engine, targets=[target], cards=[test_card])
 
         if test_card not in player.hand:
             # 卡牌已转移
@@ -120,7 +116,7 @@ class TestRende:
             card_type=CardType.BASIC,
             subtype=CardSubtype.HEAL,
             suit=CardSuit.HEART,
-            number=3
+            number=3,
         )
         player.hand.append(test_card)
 
@@ -157,7 +153,7 @@ class TestZhiheng:
                 card_type=CardType.BASIC,
                 subtype=CardSubtype.ATTACK,
                 suit=CardSuit.SPADE,
-                number=i + 1
+                number=i + 1,
             )
             test_cards.append(card)
             player.hand.append(card)
@@ -205,16 +201,12 @@ class TestWusheng:
             card_type=CardType.BASIC,
             subtype=CardSubtype.HEAL,
             suit=CardSuit.HEART,
-            number=3
+            number=3,
         )
         player.hand.append(red_card)
 
         skill_system = engine.skill_system
-        result = skill_system._handle_wusheng(
-            player, engine,
-            targets=[target],
-            cards=[red_card]
-        )
+        result = skill_system._handle_wusheng(player, engine, targets=[target], cards=[red_card])
 
         # 武圣应该能将红色牌当杀使用
         assert result is True or result is False  # 取决于实现
@@ -244,16 +236,12 @@ class TestLongdan:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(sha_card)
 
         skill_system = engine.skill_system
-        result = skill_system._handle_longdan(
-            player, engine,
-            cards=[sha_card],
-            convert_to="shan"
-        )
+        result = skill_system._handle_longdan(player, engine, cards=[sha_card], convert_to="shan")
 
         assert result is True or result is False
 
@@ -287,18 +275,14 @@ class TestQingnang:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(test_card)
 
         skill_system = engine.skill_system
         target_hp_before = target.hp
 
-        result = skill_system._handle_qingnang(
-            player, engine,
-            targets=[target],
-            cards=[test_card]
-        )
+        result = skill_system._handle_qingnang(player, engine, targets=[target], cards=[test_card])
 
         if result:
             assert target.hp >= target_hp_before
@@ -425,16 +409,13 @@ class TestJianxiong:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
 
         skill_system = engine.skill_system
         hand_before = len(player.hand)
 
-        result = skill_system._handle_jianxiong(
-            player, engine,
-            damage_card=damage_card
-        )
+        result = skill_system._handle_jianxiong(player, engine, damage_card=damage_card)
 
         # 奸雄：受到伤害后可获得造成伤害的牌
         assert result is True or result is False
@@ -461,10 +442,7 @@ class TestGanglie:
 
         skill_system = engine.skill_system
 
-        result = skill_system._handle_ganglie(
-            player, engine,
-            source=source
-        )
+        result = skill_system._handle_ganglie(player, engine, source=source)
 
         # 刚烈：受到伤害后可进行判定，红色则伤害来源弃2牌或受1伤
         assert result is True or result is False
@@ -510,7 +488,7 @@ class TestFankui:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         source.hand.append(test_card)
 
@@ -574,7 +552,7 @@ class TestTuxi:
             card_type=CardType.BASIC,
             subtype=CardSubtype.DODGE,
             suit=CardSuit.DIAMOND,
-            number=5
+            number=5,
         )
         target.hand.append(test_card)
         hand_before = len(player.hand)
@@ -660,7 +638,7 @@ class TestKongcheng:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(test_card)
 
@@ -754,7 +732,7 @@ class TestGuicai:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(test_card)
 
@@ -926,7 +904,7 @@ class TestLiegong:
                 card_type=CardType.BASIC,
                 subtype=CardSubtype.ATTACK,
                 suit=CardSuit.SPADE,
-                number=i + 1
+                number=i + 1,
             )
             target.hand.append(test_card)
 
@@ -1014,7 +992,7 @@ class TestJieyin:
                 card_type=CardType.BASIC,
                 subtype=CardSubtype.ATTACK,
                 suit=CardSuit.SPADE,
-                number=i + 1
+                number=i + 1,
             )
             player.hand.append(card)
             cards.append(card)
@@ -1055,7 +1033,7 @@ class TestJieyin:
                 card_type=CardType.BASIC,
                 subtype=CardSubtype.ATTACK,
                 suit=CardSuit.SPADE,
-                number=i + 1
+                number=i + 1,
             )
             player.hand.append(card)
             cards.append(card)
@@ -1091,7 +1069,7 @@ class TestFanjian:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(card)
 
@@ -1118,7 +1096,7 @@ class TestFanjian:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         # 不加入手牌
 
@@ -1153,7 +1131,7 @@ class TestLiuli:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(card)
 
@@ -1212,7 +1190,7 @@ class TestLijian:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(card)
 
@@ -1288,7 +1266,7 @@ class TestPassiveSkills:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.DIAMOND,
-            number=5
+            number=5,
         )
         player.hand.append(diamond_card)
         target.judge_area.clear()
@@ -1314,7 +1292,7 @@ class TestPassiveSkills:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(black_card)
         target_card = Card(
@@ -1323,7 +1301,7 @@ class TestPassiveSkills:
             card_type=CardType.BASIC,
             subtype=CardSubtype.DODGE,
             suit=CardSuit.HEART,
-            number=2
+            number=2,
         )
         target.hand.append(target_card)
         skill_system = engine.skill_system
@@ -1341,7 +1319,7 @@ class TestPassiveSkills:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.CLUB,
-            number=4
+            number=4,
         )
         player.hand.append(black_basic)
         target.judge_area.clear()
@@ -1382,7 +1360,7 @@ class TestSkillUsage:
             name="仁德",
             description="仁德描述",
             skill_type=SkillType.ACTIVE,
-            limit_per_turn=1
+            limit_per_turn=1,
         )
         if player.hero:
             player.hero.skills.append(rende_skill)
@@ -1394,7 +1372,7 @@ class TestSkillUsage:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(card)
 
@@ -1413,7 +1391,7 @@ class TestSkillUsage:
             name="制衡",
             description="制衡描述",
             skill_type=SkillType.ACTIVE,
-            limit_per_turn=1
+            limit_per_turn=1,
         )
         if player.hero:
             player.hero.skills.append(test_skill)
@@ -1434,7 +1412,7 @@ class TestSkillUsage:
             name="反间",
             description="反间描述",
             skill_type=SkillType.ACTIVE,
-            limit_per_turn=1
+            limit_per_turn=1,
         )
         if player.hero:
             player.hero.skills.append(fanjian_skill)
@@ -1453,7 +1431,7 @@ class TestSkillUsage:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(card)
 
@@ -1485,7 +1463,7 @@ class TestJianxiongDetailed:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         # 把牌放入弃牌堆
         engine.deck.discard([damage_card])
@@ -1538,7 +1516,7 @@ class TestRendeDetailed:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         player.hand.append(card)
 
@@ -1601,7 +1579,7 @@ class TestQingnangDetailed:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
         # 不加入手牌
 

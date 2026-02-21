@@ -75,7 +75,7 @@ class SkillInterpreter:
 
         # 检查每回合限制
         if dsl.limit > 0:
-            skill_id = kwargs.get('skill_id', '')
+            skill_id = kwargs.get("skill_id", "")
             used = player.skill_used.get(skill_id, 0)
             if used >= dsl.limit:
                 return False
@@ -115,8 +115,12 @@ class SkillInterpreter:
             是否成功执行
         """
         ctx = DslContext(
-            self.engine, player, skill_name,
-            targets=targets, cards=cards, **kwargs,
+            self.engine,
+            player,
+            skill_name,
+            targets=targets,
+            cards=cards,
+            **kwargs,
         )
 
         # 1. 检查条件
@@ -167,7 +171,10 @@ class SkillInterpreter:
             return ctx.target is not None and ctx.target.hand_count >= ctx.player.hp
 
         if check == "target_hand_le_range":
-            return ctx.target is not None and ctx.target.hand_count <= ctx.player.equipment.attack_range
+            return (
+                ctx.target is not None
+                and ctx.target.hand_count <= ctx.player.equipment.attack_range
+            )
 
         if check == "source_hand_ge":
             return ctx.source is not None and ctx.source.hand_count >= cond.get("value", 1)
@@ -313,10 +320,7 @@ class SkillInterpreter:
             judge_cards = ctx.engine.deck.draw(1)
             if judge_cards:
                 judge_card = judge_cards[0]
-                ctx.engine.log_event(
-                    "judge",
-                    _t("judge.result", card=judge_card.display_name)
-                )
+                ctx.engine.log_event("judge", _t("judge.result", card=judge_card.display_name))
                 ctx.engine.deck.discard([judge_card])
 
                 # 评估判定条件

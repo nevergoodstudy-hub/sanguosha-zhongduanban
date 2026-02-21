@@ -12,6 +12,7 @@ from net.server import ConnectedPlayer, GameServer, Room
 
 # ==================== Room 数据模型测试 ====================
 
+
 class TestRoom:
     def test_player_count(self):
         room = Room(room_id="r1", host_id=1, max_players=4)
@@ -50,6 +51,7 @@ class TestRoom:
 
 # ==================== GameServer 测试 ====================
 
+
 class TestGameServer:
     def test_init(self):
         server = GameServer(host="localhost", port=9999)
@@ -63,6 +65,14 @@ class TestGameServer:
         assert server._assign_player_id() == 1
         assert server._assign_player_id() == 2
         assert server._assign_player_id() == 3
+
+    def test_get_serve_origins_disabled(self):
+        server = GameServer(allowed_origins="")
+        assert server._get_serve_origins() is None
+
+    def test_get_serve_origins_enabled(self):
+        server = GameServer(allowed_origins="https://b.example, https://a.example")
+        assert server._get_serve_origins() == ["https://a.example", "https://b.example"]
 
     @pytest.mark.asyncio
     async def test_register(self):
@@ -152,6 +162,7 @@ class TestGameServer:
 
 
 # ==================== 消息处理器测试 ====================
+
 
 class TestHandlers:
     """_register 现在会发送欢迎消息，因此 handler 测试在 register 后重置 mock。"""
@@ -278,6 +289,7 @@ class TestHandlers:
 
 # ==================== 断线重连测试 ====================
 
+
 class TestReconnect:
     @pytest.mark.asyncio
     async def test_reconnect_replays_events(self):
@@ -291,9 +303,7 @@ class TestReconnect:
         # 模拟3个事件
         for i in range(3):
             seq = room.next_seq()
-            room.event_log.append(
-                ServerMsg.game_event("test", {"i": i}, seq=seq)
-            )
+            room.event_log.append(ServerMsg.game_event("test", {"i": i}, seq=seq))
 
         # 玩家在 seq=1 之后断线, 重连时 last_seq=1
         result = await server.reconnect_player(player, "r1", last_seq=1)
@@ -311,6 +321,7 @@ class TestReconnect:
 
 
 # ==================== 广播事件测试 ====================
+
 
 class TestBroadcastGameEvent:
     @pytest.mark.asyncio
@@ -350,6 +361,7 @@ class TestSecurity:
 
     def test_token_issue_and_verify(self):
         from net.security import ConnectionTokenManager
+
         mgr = ConnectionTokenManager()
         token = mgr.issue(player_id=1)
         assert isinstance(token, str)
@@ -358,18 +370,21 @@ class TestSecurity:
 
     def test_token_verify_wrong_player(self):
         from net.security import ConnectionTokenManager
+
         mgr = ConnectionTokenManager()
         token = mgr.issue(player_id=1)
         assert not mgr.verify(token, expected_player_id=2)
 
     def test_token_verify_wrong_token(self):
         from net.security import ConnectionTokenManager
+
         mgr = ConnectionTokenManager()
         mgr.issue(player_id=1)
         assert not mgr.verify("invalid-token", expected_player_id=1)
 
     def test_token_revoke(self):
         from net.security import ConnectionTokenManager
+
         mgr = ConnectionTokenManager()
         token = mgr.issue(player_id=1)
         mgr.revoke(player_id=1)
@@ -379,6 +394,7 @@ class TestSecurity:
         import time
 
         from net.security import ConnectionTokenManager
+
         mgr = ConnectionTokenManager(expiry=0.01)  # 10ms expiry
         token = mgr.issue(player_id=1)
         time.sleep(0.02)
@@ -386,6 +402,7 @@ class TestSecurity:
 
     def test_token_reissue_replaces_old(self):
         from net.security import ConnectionTokenManager
+
         mgr = ConnectionTokenManager()
         t1 = mgr.issue(player_id=1)
         t2 = mgr.issue(player_id=1)
@@ -397,6 +414,7 @@ class TestSecurity:
         import time
 
         from net.security import ConnectionTokenManager
+
         mgr = ConnectionTokenManager(expiry=0.01)
         mgr.issue(player_id=1)
         mgr.issue(player_id=2)
@@ -409,6 +427,7 @@ class TestSecurity:
 
     def test_ip_tracker_limit(self):
         from net.security import IPConnectionTracker
+
         tracker = IPConnectionTracker(max_per_ip=2)
         assert tracker.can_connect("1.2.3.4")
         tracker.add("1.2.3.4")
@@ -419,6 +438,7 @@ class TestSecurity:
 
     def test_ip_tracker_remove(self):
         from net.security import IPConnectionTracker
+
         tracker = IPConnectionTracker(max_per_ip=2)
         tracker.add("1.2.3.4")
         tracker.add("1.2.3.4")
@@ -430,15 +450,21 @@ class TestSecurity:
 
     def test_sanitize_removes_html(self):
         from net.security import sanitize_chat_message
-        assert sanitize_chat_message("<script>alert(1)</script>") == "&lt;script&gt;alert(1)&lt;/script&gt;"
+
+        assert (
+            sanitize_chat_message("<script>alert(1)</script>")
+            == "&lt;script&gt;alert(1)&lt;/script&gt;"
+        )
 
     def test_sanitize_truncates(self):
         from net.security import sanitize_chat_message
+
         long_text = "a" * 1000
         assert len(sanitize_chat_message(long_text, max_length=100)) == 100
 
     def test_sanitize_strips_whitespace(self):
         from net.security import sanitize_chat_message
+
         assert sanitize_chat_message("  hello  ") == "hello"
 
     # ---------- 服务器连接限制 ----------
@@ -492,6 +518,7 @@ class TestSecurity:
         player = await server._register(ws)
         assert player is not None
         import json
+
         call_args = ws.send.call_args[0][0]
         data = json.loads(call_args)
         assert data["type"] == "heartbeat_ack"
@@ -528,6 +555,7 @@ class TestSecurity:
         msg = ClientMsg.chat(1, "<img src=x onerror=alert(1)>hello")
         await server._handle_chat(p1, msg)
         import json
+
         call_args = ws2.send.call_args[0][0]
         data = json.loads(call_args)
         text = data["data"]["message"]

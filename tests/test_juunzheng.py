@@ -50,7 +50,7 @@ class TestAlcohol:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ALCOHOL,
             suit=CardSuit.SPADE,
-            number=3
+            number=3,
         )
 
         # 创建杀牌
@@ -60,7 +60,7 @@ class TestAlcohol:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=7
+            number=7,
         )
 
         self.player1.draw_cards([jiu, sha])
@@ -88,7 +88,7 @@ class TestAlcohol:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ALCOHOL,
             suit=CardSuit.SPADE,
-            number=3
+            number=3,
         )
         jiu2 = Card(
             id="jiu_2",
@@ -96,7 +96,7 @@ class TestAlcohol:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ALCOHOL,
             suit=CardSuit.HEART,
-            number=9
+            number=9,
         )
 
         self.player1.draw_cards([jiu1, jiu2])
@@ -117,7 +117,7 @@ class TestAlcohol:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ALCOHOL,
             suit=CardSuit.SPADE,
-            number=3
+            number=3,
         )
 
         self.player1.hp = 0
@@ -156,7 +156,7 @@ class TestAttributeDamage:
             card_type=CardType.BASIC,
             subtype=CardSubtype.FIRE_ATTACK,
             suit=CardSuit.DIAMOND,
-            number=4
+            number=4,
         )
 
         self.player1.draw_cards([fire_sha])
@@ -176,7 +176,7 @@ class TestAttributeDamage:
             card_type=CardType.BASIC,
             subtype=CardSubtype.THUNDER_ATTACK,
             suit=CardSuit.CLUB,
-            number=6
+            number=6,
         )
 
         self.player1.draw_cards([thunder_sha])
@@ -213,7 +213,7 @@ class TestChainMechanic:
             card_type=CardType.TRICK,
             subtype=CardSubtype.CHAIN,
             suit=CardSuit.CLUB,
-            number=12
+            number=12,
         )
 
         self.player1.draw_cards([tiesuo])
@@ -235,7 +235,7 @@ class TestChainMechanic:
             card_type=CardType.TRICK,
             subtype=CardSubtype.CHAIN,
             suit=CardSuit.CLUB,
-            number=12
+            number=12,
         )
 
         self.player1.draw_cards([tiesuo])
@@ -292,7 +292,7 @@ class TestDistanceAndRange:
 
         # 创建4个玩家
         for i in range(4):
-            player = Player(id=i, name=f"玩家{i+1}", is_ai=True, seat=i)
+            player = Player(id=i, name=f"玩家{i + 1}", is_ai=True, seat=i)
             player.max_hp = 4
             player.hp = 4
             self.engine.players.append(player)
@@ -326,7 +326,7 @@ class TestDistanceAndRange:
             subtype=CardSubtype.WEAPON,
             suit=CardSuit.SPADE,
             number=5,
-            range=3
+            range=3,
         )
         p0.equip_card(weapon)
 

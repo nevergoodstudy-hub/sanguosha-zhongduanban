@@ -20,8 +20,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
-from typing import Dict
+
+logger = logging.getLogger(__name__)
 
 _LOCALE_DIR = Path(__file__).parent
 
@@ -90,14 +92,18 @@ def t(key: str, **kwargs: object) -> str:
         if "zh_CN" not in _tables:
             _tables["zh_CN"] = _load_table("zh_CN")
         template = _tables["zh_CN"].get(key)
+        if template is not None:
+            logger.debug("i18n fallback: '%s' not in %s, using zh_CN", key, _locale)
 
     if template is None:
-        return key
+        logger.warning("i18n missing key: '%s' (lang=%s)", key, _locale)
+        return f"[{key}]"
 
     if kwargs:
         try:
             return template.format_map(kwargs)
-        except KeyError:
+        except KeyError as e:
+            logger.warning("i18n format error: key='%s', missing=%s", key, e)
             return template
     return template
 
@@ -108,6 +114,12 @@ _ = t
 
 # ── 领域助手函数 ──
 
+
+def _is_missing(key: str, result: str) -> bool:
+    """检查 t() 返回值是否表示 key 缺失。"""
+    return result == f"[{key}]"
+
+
 def card_name(card_id: str) -> str:
     """获取卡牌的国际化显示名。
 
@@ -117,7 +129,7 @@ def card_name(card_id: str) -> str:
     """
     key = f"card.{card_id}"
     result = t(key)
-    if result != key:
+    if not _is_missing(key, result):
         return result
 
     # 尝试通过中文名反查 (兼容旧代码用中文名调用)
@@ -142,7 +154,7 @@ def skill_name(skill_id: str) -> str:
     """
     key = f"skill.{skill_id}"
     result = t(key)
-    return result if result != key else skill_id
+    return result if not _is_missing(key, result) else skill_id
 
 
 def kingdom_name(value: str) -> str:
@@ -153,7 +165,7 @@ def kingdom_name(value: str) -> str:
     """
     key = f"kingdom.{value}"
     result = t(key)
-    return result if result != key else value
+    return result if not _is_missing(key, result) else value
 
 
 def identity_name(value: str) -> str:
@@ -164,4 +176,4 @@ def identity_name(value: str) -> str:
     """
     key = f"identity.{value}"
     result = t(key)
-    return result if result != key else value
+    return result if not _is_missing(key, result) else value

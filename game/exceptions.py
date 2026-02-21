@@ -113,9 +113,7 @@ class CardNotFoundError(GameError):
     当指定的卡牌不存在时抛出
     """
 
-    def __init__(
-        self, message: str | None = None, card_id: str | None = None
-    ):
+    def __init__(self, message: str | None = None, card_id: str | None = None):
         if message is None:
             message = _t("exc.card_not_found")
         details = {}
@@ -339,9 +337,7 @@ class PlayerDeadError(PlayerError):
     当对已死亡玩家执行需要存活的操作时抛出
     """
 
-    def __init__(
-        self, message: str | None = None, player_id: int | None = None
-    ):
+    def __init__(self, message: str | None = None, player_id: int | None = None):
         if message is None:
             message = _t("exc.player_dead")
         super().__init__(message, player_id)
@@ -376,9 +372,7 @@ class ConfigurationError(GameError):
     当游戏配置有问题时抛出
     """
 
-    def __init__(
-        self, message: str | None = None, config_key: str | None = None
-    ):
+    def __init__(self, message: str | None = None, config_key: str | None = None):
         if message is None:
             message = _t("exc.config_error")
         details = {}

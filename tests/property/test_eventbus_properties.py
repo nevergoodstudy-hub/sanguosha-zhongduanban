@@ -25,6 +25,7 @@ from game.events import EventBus, EventType, GameEvent
 # 性质 1: 高优先级 handler 先调用
 # ---------------------------------------------------------------------------
 
+
 @given(
     priorities=st.lists(
         st.integers(min_value=-100, max_value=100),
@@ -49,14 +50,13 @@ def test_handlers_called_in_priority_order(priorities: list[int]) -> None:
 
     # 调用顺序应与优先级降序一致
     expected = sorted(priorities, reverse=True)
-    assert call_order == expected, (
-        f"Expected order {expected}, got {call_order}"
-    )
+    assert call_order == expected, f"Expected order {expected}, got {call_order}"
 
 
 # ---------------------------------------------------------------------------
 # 性质 2: unsubscribe 后 handler 不再被调用
 # ---------------------------------------------------------------------------
+
 
 @given(
     n_handlers=st.integers(min_value=1, max_value=10),
@@ -69,8 +69,10 @@ def test_unsubscribe_removes_handler(n_handlers: int, remove_idx: st.DataObject)
 
     handlers = []
     for i in range(n_handlers):
+
         def handler(event: GameEvent, idx: int = i) -> None:
             called.append(idx)
+
         handlers.append(handler)
         bus.subscribe(EventType.TURN_START, handler, priority=0)
 
@@ -88,6 +90,7 @@ def test_unsubscribe_removes_handler(n_handlers: int, remove_idx: st.DataObject)
 # 性质 3: handler 异常不阻断后续 handler
 # ---------------------------------------------------------------------------
 
+
 @given(
     n_handlers=st.integers(min_value=2, max_value=10),
     fail_idx=st.data(),
@@ -102,6 +105,7 @@ def test_exception_in_handler_does_not_block_others(
     bad_idx = fail_idx.draw(st.integers(min_value=0, max_value=n_handlers - 1))
 
     for i in range(n_handlers):
+
         def handler(event: GameEvent, idx: int = i, bad: int = bad_idx) -> None:
             if idx == bad:
                 raise RuntimeError("intentional test error")
@@ -119,6 +123,7 @@ def test_exception_in_handler_does_not_block_others(
 # ---------------------------------------------------------------------------
 # 性质 4: 事件历史不超过 max_history
 # ---------------------------------------------------------------------------
+
 
 @given(
     n_events=st.integers(min_value=0, max_value=300),
@@ -139,6 +144,7 @@ def test_event_history_bounded(n_events: int, max_hist: int) -> None:
 # 性质 5: clear 后不再有 handler 被调用
 # ---------------------------------------------------------------------------
 
+
 @given(n_handlers=st.integers(min_value=1, max_value=10))
 @settings(max_examples=50)
 def test_clear_removes_all_handlers(n_handlers: int) -> None:
@@ -146,8 +152,10 @@ def test_clear_removes_all_handlers(n_handlers: int) -> None:
     called: list[int] = []
 
     for i in range(n_handlers):
+
         def handler(event: GameEvent, idx: int = i) -> None:
             called.append(idx)
+
         bus.subscribe(EventType.GAME_START, handler, priority=i)
 
     bus.clear()

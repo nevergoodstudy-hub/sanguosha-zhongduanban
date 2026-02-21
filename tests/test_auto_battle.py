@@ -23,7 +23,7 @@ class AutoBattleSimulator:
     def __init__(self, player_count: int, max_rounds: int = 100):
         """
         初始化模拟器
-        
+
         Args:
             player_count: 玩家数量 (2-8)
             max_rounds: 最大回合数，防止死循环
@@ -47,7 +47,9 @@ class AutoBattleSimulator:
 
             # 初始化AI
             for player in self.engine.players:
-                difficulty = random.choice([AIDifficulty.EASY, AIDifficulty.NORMAL, AIDifficulty.HARD])
+                difficulty = random.choice(
+                    [AIDifficulty.EASY, AIDifficulty.NORMAL, AIDifficulty.HARD]
+                )
                 bot = AIBot(player, difficulty)
                 self.ai_bots[player.id] = bot
 
@@ -58,6 +60,7 @@ class AutoBattleSimulator:
         except Exception as e:
             self.errors.append(f"游戏设置失败: {str(e)}")
             import traceback
+
             self.errors.append(traceback.format_exc())
             return False
 
@@ -96,22 +99,19 @@ class AutoBattleSimulator:
         except Exception as e:
             self.errors.append(f"回合执行失败 ({player.name}): {str(e)}")
             import traceback
+
             self.errors.append(traceback.format_exc())
             return False
 
     def run_game(self) -> dict:
         """
         运行完整游戏
-        
+
         Returns:
             游戏结果统计
         """
         if not self.setup_game():
-            return {
-                "success": False,
-                "errors": self.errors,
-                "rounds": 0
-            }
+            return {"success": False, "errors": self.errors, "rounds": 0}
 
         rounds = 0
         while not self.engine.check_game_over() and rounds < self.max_rounds:
@@ -125,11 +125,7 @@ class AutoBattleSimulator:
                     continue
 
                 if not self.run_single_turn(player):
-                    return {
-                        "success": False,
-                        "errors": self.errors,
-                        "rounds": rounds
-                    }
+                    return {"success": False, "errors": self.errors, "rounds": rounds}
 
             self.engine.round_count += 1
 
@@ -144,7 +140,7 @@ class AutoBattleSimulator:
             "winner": self.engine.winner_identity,
             "alive_count": len(alive_players),
             "dead_count": len(dead_players),
-            "timeout": rounds >= self.max_rounds
+            "timeout": rounds >= self.max_rounds,
         }
 
 
@@ -242,7 +238,7 @@ class TestAutoBattle(unittest.TestCase):
             if result["success"]:
                 success_count += 1
             else:
-                print(f"\n第{i+1}局({player_count}人)失败:")
+                print(f"\n第{i + 1}局({player_count}人)失败:")
                 for err in result["errors"]:
                     print(err)
 
@@ -384,8 +380,15 @@ class TestCardUsage(unittest.TestCase):
         player = self.engine.players[0]
 
         # 创建武器 (使用range参数)
-        weapon = Card("test_weapon", "青龙偃月刀", CardType.EQUIPMENT, CardSubtype.WEAPON,
-                     CardSuit.SPADE, 5, range=3)
+        weapon = Card(
+            "test_weapon",
+            "青龙偃月刀",
+            CardType.EQUIPMENT,
+            CardSubtype.WEAPON,
+            CardSuit.SPADE,
+            5,
+            range=3,
+        )
         player.draw_cards([weapon])
 
         self.engine.use_card(player, weapon)
@@ -465,9 +468,15 @@ class TestDistanceCalculation(unittest.TestCase):
         p1 = self.engine.players[1]
 
         # 装备-1马（攻击马）
-        p0.equipment.horse_minus = Card("test_horse", "-1马", CardType.EQUIPMENT,
-                                        CardSubtype.HORSE_MINUS, CardSuit.SPADE, 5,
-                                        distance_modifier=-1)
+        p0.equipment.horse_minus = Card(
+            "test_horse",
+            "-1马",
+            CardType.EQUIPMENT,
+            CardSubtype.HORSE_MINUS,
+            CardSuit.SPADE,
+            5,
+            distance_modifier=-1,
+        )
 
         d = self.engine.calculate_distance(p0, p1)
         # 基础距离1 - 1(攻击马) = 0，但最小为1
@@ -502,21 +511,15 @@ class TestWinConditions(unittest.TestCase):
 def run_stress_test(battle_count: int = 20):
     """
     运行压力测试
-    
+
     Args:
         battle_count: 对局数量
     """
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"三国杀自动化压力测试 - {battle_count}局")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
-    results = {
-        "total": battle_count,
-        "success": 0,
-        "failed": 0,
-        "timeout": 0,
-        "errors": []
-    }
+    results = {"total": battle_count, "success": 0, "failed": 0, "timeout": 0, "errors": []}
 
     for i in range(battle_count):
         player_count = random.choice([2, 3, 4, 5, 6, 7, 8])
@@ -526,8 +529,10 @@ def run_stress_test(battle_count: int = 20):
         status = "✓" if result["success"] else "✗"
         timeout_mark = " (超时)" if result.get("timeout") else ""
 
-        print(f"[{i+1:3d}/{battle_count}] {player_count}人对战 {status} "
-              f"回合:{result['rounds']:3d}{timeout_mark}")
+        print(
+            f"[{i + 1:3d}/{battle_count}] {player_count}人对战 {status} "
+            f"回合:{result['rounds']:3d}{timeout_mark}"
+        )
 
         if result["success"]:
             results["success"] += 1
@@ -538,13 +543,13 @@ def run_stress_test(battle_count: int = 20):
         if result.get("timeout"):
             results["timeout"] += 1
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("测试完成:")
     print(f"  总计: {results['total']}")
     print(f"  成功: {results['success']}")
     print(f"  失败: {results['failed']}")
     print(f"  超时: {results['timeout']}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     if results["errors"]:
         print("\n错误详情:")

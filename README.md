@@ -15,8 +15,8 @@
   <img src="https://img.shields.io/badge/TUI-Textual-blueviolet" alt="Textual">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-green" alt="Platform">
   <img src="https://img.shields.io/badge/code%20style-ruff-261230.svg" alt="Code style: ruff">
-  <img src="https://img.shields.io/badge/tests-1256%20passed-brightgreen" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-75.71%25-yellowgreen" alt="Coverage">
+  <img src="https://img.shields.io/badge/tests-1503%20passed-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-77.91%25-yellowgreen" alt="Coverage">
 </p>
 
 ---
@@ -169,27 +169,29 @@ sanguosha/
 ├── main.py                          # 入口（TUI / 服务端 / 客户端 / 回放）
 ├── pyproject.toml                   # 项目配置 & 依赖
 ├── game/                            # 🎯 游戏核心逻辑
-│   ├── engine.py                    #   游戏引擎
+│   ├── engine.py                    #   游戏引擎 (异步)
 │   ├── player.py                    #   玩家 / 身份 / 装备
+│   ├── player_manager.py            #   统一玩家管理器
 │   ├── card.py                      #   卡牌 / 牌堆 / 枚举
 │   ├── hero.py                      #   武将加载
 │   ├── skill.py                     #   技能系统（DSL-first + Python fallback）
+│   ├── skill_resolver.py            #   技能解析器
+│   ├── skill_plugin.py              #   插件系统
 │   ├── skills/                      #   按势力分包的技能处理器
-│   │   ├── wei.py                   #     魏势力技能
-│   │   ├── shu.py                   #     蜀势力技能
-│   │   ├── wu.py                    #      吴势力技能
-│   │   └── qun.py                   #     群势力技能
+│   │   ├── wei.py / shu.py / wu.py / qun.py
+│   ├── phase_fsm.py                 #   回合阶段状态机
+│   ├── context.py                   #   GameContext 协议
+│   ├── exceptions.py                #   层次化异常体系
+│   ├── replay.py                    #   回放系统
+│   ├── match_history.py             #   战绩历史
 │   ├── combat.py                    #   战斗子系统
 │   ├── card_resolver.py             #   卡牌结算
 │   ├── damage_system.py             #   伤害计算 / 濒死 / 死亡
 │   ├── equipment_system.py          #   装备子系统
 │   ├── judge_system.py              #   判定子系统
-│   ├── game_controller.py           #   游戏控制器
-│   ├── request_handler.py           #   UI 请求分发
-│   ├── turn_manager.py              #   回合管理
-│   ├── save_system.py               #   存档 / 回放
-│   ├── events.py                    #   事件总线
-│   ├── actions.py                   #   动作系统
+│   ├── game_controller.py           #   游戏控制器 (异步)
+│   ├── config.py                    #   配置校验系统
+│   ├── events.py                    #   异步事件总线
 │   ├── effects/                     #   数据驱动卡牌效果
 │   └── skill_dsl.py                 #   技能 DSL
 ├── ui/                              # 🖥️ Textual TUI 界面
@@ -224,9 +226,10 @@ sanguosha/
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest tests/ -v              # 全量测试 (1256 用例)
+python -m pytest tests/ -v              # 全量测试 (1503 用例)
 python -m pytest --cov=game --cov=ai    # 含覆盖率报告
 python -m ruff check .                  # 静态分析
+python -m mypy game ai net              # 类型检查
 ```
 
 ### 扩展武将
@@ -242,6 +245,31 @@ python -m ruff check .                  # 静态分析
 3. `ui/textual_ui/widgets/card_widget.py` — 添加 `CARD_EFFECT_DESC` tooltip
 
 ## 📝 版本历史
+
+### v4.0.0 (2026-02-21) — 架构升级 & 全面强化
+
+**架构重构（28 项改进）：**
+- 异步引擎转换 — 全异步 async/await 底层，支持真实并发
+- PlayerManager 统一玩家管理 — 单一职责玩家生命周期管理
+- 阶段状态机 (PhaseFSM) — 形式化回合流转，消除程序性 bug
+- 异常体系标准化 — GameError 层次化异常代替裸 raise
+- GameContext 协议 — 解耦引擎依赖，提升可测试性
+
+**网络 & 安全：**
+- WebSocket TLS 支持 + 会话重连机制 + 速率限制
+- is_ai 门控 — 防止协议层混淆 AI/人类操作
+
+**游戏系统：**
+- 无懂可击链式响应 — 支持连环无懂
+- 数据驱动技能 (skill_config.json) — DSL 优先 + Python 回退
+- 回放系统 / 战绩历史 / 插件系统
+- 主题系统 (classic/dark/solarized)
+
+**质量：**
+- 1503 测试用例全部通过，覆盖率 77.91%
+- i18n 完整审计 (zh_CN / en_US)
+- 统一日志标准 (tools/log_config.py)
+- 配置校验 + 无障碍支持 + ARCHITECTURE.md
 
 ### v3.3.1 (2026-02-10) — PyInstaller 打包支持
 

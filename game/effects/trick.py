@@ -1,5 +1,4 @@
-"""锦囊牌效果处理器（M1-T02）
-"""
+"""锦囊牌效果处理器（M1-T02）"""
 
 from __future__ import annotations
 

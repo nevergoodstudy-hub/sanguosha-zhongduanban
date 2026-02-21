@@ -68,18 +68,15 @@ class ThreatEvaluator:
         """获取指定玩家的嘲讽值"""
         return self.threat_values.get(player_id, 0)
 
-    def get_highest_threat_enemy(self, player: Player,
-                                 engine: GameEngine) -> Player | None:
+    def get_highest_threat_enemy(self, player: Player, engine: GameEngine) -> Player | None:
         """获取威胁值最高的敌人"""
-        enemies = [p for p in engine.get_other_players(player)
-                   if is_enemy(player, p)]
+        enemies = [p for p in engine.get_other_players(player) if is_enemy(player, p)]
         if not enemies:
             return None
         enemies.sort(key=lambda p: self.threat_values.get(p.id, 0), reverse=True)
         return enemies[0]
 
-    def calculate_player_power(self, player: Player,
-                               engine: GameEngine) -> float:
+    def calculate_player_power(self, player: Player, engine: GameEngine) -> float:
         """计算玩家战力评分"""
         if not player.is_alive:
             return 0.0
@@ -114,8 +111,7 @@ class ThreatEvaluator:
 
         return power
 
-    def calculate_danger_level(self, player: Player,
-                               engine: GameEngine) -> float:
+    def calculate_danger_level(self, player: Player, engine: GameEngine) -> float:
         """计算玩家危险等级（0-100）"""
         danger = 0.0
 
@@ -134,8 +130,7 @@ class ThreatEvaluator:
             danger += 15
 
         # 敌人数量和威胁
-        enemies = [p for p in engine.get_other_players(player)
-                   if is_enemy(player, p)]
+        enemies = [p for p in engine.get_other_players(player) if is_enemy(player, p)]
         for enemy in enemies:
             if enemy.is_alive:
                 danger += enemy.hand_count * 2
@@ -156,8 +151,7 @@ class IdentityPredictor:
         self.owner = owner
         self.identity_guess: dict[int, Identity] = {}
 
-    def infer_identity(self, target: Player,
-                       engine: GameEngine) -> dict[str, float]:
+    def infer_identity(self, target: Player, engine: GameEngine) -> dict[str, float]:
         """基于行为推断目标身份概率
 
         Returns:
@@ -165,36 +159,32 @@ class IdentityPredictor:
         """
         # 主公身份公开
         if target.identity == Identity.LORD:
-            return {'lord': 1.0, 'loyalist': 0.0, 'rebel': 0.0, 'spy': 0.0}
+            return {"lord": 1.0, "loyalist": 0.0, "rebel": 0.0, "spy": 0.0}
 
         # 初始概率（基于人数分布）
-        probs = {
-            'lord': 0.0,
-            'loyalist': 0.25,
-            'rebel': 0.50,
-            'spy': 0.25
-        }
+        probs = {"lord": 0.0, "loyalist": 0.25, "rebel": 0.50, "spy": 0.25}
 
         # 基于已知行为调整概率
         if target.id in self.identity_guess:
             guessed = self.identity_guess[target.id]
             if guessed == Identity.LOYALIST:
-                probs['loyalist'] = 0.7
-                probs['rebel'] = 0.15
-                probs['spy'] = 0.15
+                probs["loyalist"] = 0.7
+                probs["rebel"] = 0.15
+                probs["spy"] = 0.15
             elif guessed == Identity.REBEL:
-                probs['rebel'] = 0.7
-                probs['loyalist'] = 0.15
-                probs['spy'] = 0.15
+                probs["rebel"] = 0.7
+                probs["loyalist"] = 0.15
+                probs["spy"] = 0.15
             elif guessed == Identity.SPY:
-                probs['spy'] = 0.6
-                probs['rebel'] = 0.2
-                probs['loyalist'] = 0.2
+                probs["spy"] = 0.6
+                probs["rebel"] = 0.2
+                probs["loyalist"] = 0.2
 
         return probs
 
-    def record_behavior(self, actor: Player, action_type: str,
-                        target: Player | None = None) -> None:
+    def record_behavior(
+        self, actor: Player, action_type: str, target: Player | None = None
+    ) -> None:
         """记录玩家行为用于身份推断
 
         Args:
@@ -217,8 +207,7 @@ class IdentityPredictor:
             self.identity_guess[actor.id] = Identity.LOYALIST
 
         # 帮助主公/忠臣 → 可能是忠臣
-        elif action_type == "help" and target.identity in [Identity.LORD,
-                                                           Identity.LOYALIST]:
+        elif action_type == "help" and target.identity in [Identity.LORD, Identity.LOYALIST]:
             if actor.id not in self.identity_guess:
                 self.identity_guess[actor.id] = Identity.LOYALIST
 
@@ -247,7 +236,7 @@ class HardStrategy:
         state = self.evaluate_game_state(engine)
 
         # 危险时优先回血
-        if state['danger_level'] > 60 and player.hp < player.max_hp:
+        if state["danger_level"] > 60 and player.hp < player.max_hp:
             tao = player.get_cards_by_name(CardName.TAO)
             if tao:
                 engine.use_card(player, tao[0])
@@ -255,13 +244,11 @@ class HardStrategy:
         # 使用普通AI逻辑（目标选择已利用嘲讽值）
         self._normal.play_phase(player, engine)
 
-    def choose_discard(self, player: Player, count: int,
-                       engine: GameEngine) -> list[Card]:
+    def choose_discard(self, player: Player, count: int, engine: GameEngine) -> list[Card]:
         """智能弃牌（同普通模式）"""
         return smart_discard(player, count)
 
-    def should_use_qinglong(self, player: Player, target: Player,
-                            engine: GameEngine) -> bool:
+    def should_use_qinglong(self, player: Player, target: Player, engine: GameEngine) -> bool:
         """有杀且是敌人就继续"""
         sha_count = len(player.get_cards_by_name(CardName.SHA))
         if sha_count > 1:
@@ -310,19 +297,20 @@ class HardStrategy:
             total_score = 1
 
         return {
-            'lord_advantage': lord_score / total_score,
-            'rebel_advantage': rebel_score / total_score,
-            'spy_advantage': spy_score / total_score,
-            'lord_alive': lord_alive,
-            'rebel_count': rebel_count,
-            'loyalist_count': loyalist_count,
-            'spy_count': spy_count,
-            'my_power': self.threat_evaluator.calculate_player_power(player, engine),
-            'danger_level': self.threat_evaluator.calculate_danger_level(player, engine)
+            "lord_advantage": lord_score / total_score,
+            "rebel_advantage": rebel_score / total_score,
+            "spy_advantage": spy_score / total_score,
+            "lord_alive": lord_alive,
+            "rebel_count": rebel_count,
+            "loyalist_count": loyalist_count,
+            "spy_count": spy_count,
+            "my_power": self.threat_evaluator.calculate_player_power(player, engine),
+            "danger_level": self.threat_evaluator.calculate_danger_level(player, engine),
         }
 
-    def choose_best_target(self, player: Player, targets: list[Player],
-                           engine: GameEngine) -> Player:
+    def choose_best_target(
+        self, player: Player, targets: list[Player], engine: GameEngine
+    ) -> Player:
         """选择最佳攻击目标（困难模式 — 综合评分系统）
 
         综合考虑：嘲讽值、危险等级、战力评分

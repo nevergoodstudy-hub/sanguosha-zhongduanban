@@ -102,6 +102,7 @@ jobs:
             ### ⚙️ 构建信息
             - Python 3.14 + PyInstaller 6.18
             - Textual TUI 跨平台终端界面
+            - v4.0: 异步引擎 / 状态机 / 插件系统 / 1503 测试用例
           files: |
             release-assets/**/*
           fail_on_unmatched_files: false

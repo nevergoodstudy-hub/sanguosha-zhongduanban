@@ -26,7 +26,9 @@ def build(*, onedir: bool = False, debug: bool = False, name: str = "sanguosha")
             shutil.rmtree(p, ignore_errors=True)
 
     args = [
-        sys.executable, "-m", "PyInstaller",
+        sys.executable,
+        "-m",
+        "PyInstaller",
         str(PROJECT_ROOT / "main.py"),
         f"--name={name}",
         f"--distpath={PROJECT_ROOT / 'dist'}",
@@ -36,12 +38,14 @@ def build(*, onedir: bool = False, debug: bool = False, name: str = "sanguosha")
         f"--add-data={PROJECT_ROOT / 'data'}{SEP}data",
         f"--add-data={PROJECT_ROOT / 'i18n'}{SEP}i18n",
         f"--add-data={PROJECT_ROOT / 'ui' / 'textual_ui' / 'styles'}{SEP}ui/textual_ui/styles",
+        f"--add-data={PROJECT_ROOT / 'ui' / 'textual_ui' / 'themes'}{SEP}ui/textual_ui/themes",
         # ===== 项目包（完整收集） =====
         "--collect-submodules=game",
         "--collect-submodules=ai",
         "--collect-submodules=ui",
         "--collect-submodules=net",
         "--collect-submodules=i18n",
+        "--collect-submodules=tools",
         # ===== 第三方库动态加载模块 =====
         "--collect-submodules=rich",
         "--collect-submodules=textual",
@@ -91,6 +95,7 @@ def build(*, onedir: bool = False, debug: bool = False, name: str = "sanguosha")
 
 if __name__ == "__main__":
     import argparse
+
     p = argparse.ArgumentParser()
     p.add_argument("--onedir", action="store_true")
     p.add_argument("--debug", action="store_true")

@@ -44,13 +44,14 @@ def _get_env_bool(key: str, default: bool) -> bool:
 @dataclass(frozen=True)
 class GameConfig:
     """游戏配置类 (不可变)
-    
+
     所有配置项支持通过环境变量覆盖：
     - SANGUOSHA_AI_DELAY: AI 回合延迟秒数
     - SANGUOSHA_PLAY_TIMEOUT: 出牌阶段超时秒数
     - SANGUOSHA_MAX_ACTIONS: AI 单回合最大动作数
     - SANGUOSHA_COVERAGE_THRESHOLD: 测试覆盖率阈值
     """
+
     # ==================== 玩家与游戏规模 ====================
     min_players: int = 2
     max_players: int = 8
@@ -59,9 +60,7 @@ class GameConfig:
     default_sha_limit: int = 1
 
     # ==================== 时间与延迟 ====================
-    ai_turn_delay: float = field(
-        default_factory=lambda: _get_env_float("SANGUOSHA_AI_DELAY", 0.3)
-    )
+    ai_turn_delay: float = field(default_factory=lambda: _get_env_float("SANGUOSHA_AI_DELAY", 0.3))
     play_phase_timeout: int = field(
         default_factory=lambda: _get_env_int("SANGUOSHA_PLAY_TIMEOUT", 30)
     )
@@ -70,17 +69,13 @@ class GameConfig:
     )
 
     # ==================== AI 配置 ====================
-    ai_max_actions: int = field(
-        default_factory=lambda: _get_env_int("SANGUOSHA_MAX_ACTIONS", 10)
-    )
+    ai_max_actions: int = field(default_factory=lambda: _get_env_int("SANGUOSHA_MAX_ACTIONS", 10))
     ai_think_delay: float = field(
         default_factory=lambda: _get_env_float("SANGUOSHA_AI_THINK_DELAY", 0.5)
     )
 
     # ==================== 网络配置 ====================
-    websocket_port: int = field(
-        default_factory=lambda: _get_env_int("SANGUOSHA_WS_PORT", 8765)
-    )
+    websocket_port: int = field(default_factory=lambda: _get_env_int("SANGUOSHA_WS_PORT", 8765))
     heartbeat_interval: float = field(
         default_factory=lambda: _get_env_float("SANGUOSHA_HEARTBEAT", 15.0)
     )
@@ -112,12 +107,8 @@ class GameConfig:
     )
 
     # TLS 配置
-    ws_ssl_cert: str = field(
-        default_factory=lambda: os.environ.get("SANGUOSHA_WS_SSL_CERT", "")
-    )
-    ws_ssl_key: str = field(
-        default_factory=lambda: os.environ.get("SANGUOSHA_WS_SSL_KEY", "")
-    )
+    ws_ssl_cert: str = field(default_factory=lambda: os.environ.get("SANGUOSHA_WS_SSL_CERT", ""))
+    ws_ssl_key: str = field(default_factory=lambda: os.environ.get("SANGUOSHA_WS_SSL_KEY", ""))
 
     # Origin 白名单 (逗号分隔，空表示允许所有)
     ws_allowed_origins: str = field(
@@ -125,12 +116,8 @@ class GameConfig:
     )
 
     # ==================== 日志与调试 ====================
-    log_level: str = field(
-        default_factory=lambda: os.environ.get("SANGUOSHA_LOG_LEVEL", "INFO")
-    )
-    debug_mode: bool = field(
-        default_factory=lambda: _get_env_bool("SANGUOSHA_DEBUG", False)
-    )
+    log_level: str = field(default_factory=lambda: os.environ.get("SANGUOSHA_LOG_LEVEL", "INFO"))
+    debug_mode: bool = field(default_factory=lambda: _get_env_bool("SANGUOSHA_DEBUG", False))
 
     # ==================== 测试配置 ====================
     coverage_threshold: float = field(
@@ -145,6 +132,56 @@ class GameConfig:
     def get(self, key: str, default: any | None = None) -> any:
         """字典风格的访问方法（兼容旧代码）"""
         return getattr(self, key, default)
+
+    def validate(self) -> list[str]:
+        """验证配置值范围
+
+        Returns:
+            错误列表（空表示验证通过）
+        """
+        errors: list[str] = []
+
+        # 玩家数量
+        if self.min_players < 2:
+            errors.append(f"min_players must be >= 2, got {self.min_players}")
+        if self.max_players > 10:
+            errors.append(f"max_players must be <= 10, got {self.max_players}")
+        if self.min_players > self.max_players:
+            errors.append(f"min_players ({self.min_players}) > max_players ({self.max_players})")
+
+        # 网络端口
+        if not (1 <= self.websocket_port <= 65535):
+            errors.append(f"websocket_port must be 1-65535, got {self.websocket_port}")
+
+        # 超时和延迟 (> 0)
+        if self.ai_turn_delay < 0:
+            errors.append(f"ai_turn_delay must be >= 0, got {self.ai_turn_delay}")
+        if self.play_phase_timeout <= 0:
+            errors.append(f"play_phase_timeout must be > 0, got {self.play_phase_timeout}")
+        if self.request_timeout <= 0:
+            errors.append(f"request_timeout must be > 0, got {self.request_timeout}")
+
+        # AI
+        if self.ai_max_actions <= 0:
+            errors.append(f"ai_max_actions must be > 0, got {self.ai_max_actions}")
+
+        # 网络安全
+        if self.ws_max_connections <= 0:
+            errors.append(f"ws_max_connections must be > 0, got {self.ws_max_connections}")
+        if self.ws_max_connections_per_ip <= 0:
+            errors.append(
+                f"ws_max_connections_per_ip must be > 0, got {self.ws_max_connections_per_ip}"
+            )
+        if self.ws_max_message_size <= 0:
+            errors.append(f"ws_max_message_size must be > 0, got {self.ws_max_message_size}")
+
+        # 初始手牌
+        if self.initial_hand_size <= 0:
+            errors.append(f"initial_hand_size must be > 0, got {self.initial_hand_size}")
+        if self.default_draw_count <= 0:
+            errors.append(f"default_draw_count must be > 0, got {self.default_draw_count}")
+
+        return errors
 
 
 # 全局配置单例

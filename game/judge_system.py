@@ -79,46 +79,66 @@ class JudgeSystem:
         """乐不思蜀: 非红桃 → 跳过出牌阶段。"""
         ctx = self.ctx
         if judge_card.suit != CardSuit.HEART:
-            ctx.log_event("effect",
-                          _t("judge.lebusishu_fail", name=player.name))
+            ctx.log_event("effect", _t("judge.lebusishu_fail", name=player.name))
             player.skip_play_phase = True
         else:
-            ctx.log_event("effect",
-                          _t("judge.lebusishu_success", name=player.name))
+            ctx.log_event("effect", _t("judge.lebusishu_success", name=player.name))
 
     def _resolve_bingliang(self, player: Player, judge_card: object) -> None:
         """兵粮寸断: 非梅花 → 跳过摸牌阶段。"""
         ctx = self.ctx
         if judge_card.suit != CardSuit.CLUB:
-            ctx.log_event("effect",
-                          _t("judge.bingliang_fail", name=player.name))
+            ctx.log_event("effect", _t("judge.bingliang_fail", name=player.name))
             player.skip_draw_phase = True
         else:
-            ctx.log_event("effect",
-                          _t("judge.bingliang_success", name=player.name))
+            ctx.log_event("effect", _t("judge.bingliang_success", name=player.name))
 
-    def _resolve_shandian(self, player: Player, card: object,
-                          judge_card: object) -> bool:
+    def _resolve_shandian(self, player: Player, card: object, judge_card: object) -> bool:
         """闪电: 黑桃 2-9 → 3 点雷电伤害; 否则传递给下家。
 
         返回 True 表示闪电传递 (不进弃牌堆), False 表示命中 (进弃牌堆)。
         """
         ctx = self.ctx
 
-        if (judge_card.suit == CardSuit.SPADE
-                and 2 <= judge_card.number <= 9):
+        if judge_card.suit == CardSuit.SPADE and 2 <= judge_card.number <= 9:
             ctx.log_event("effect", _t("judge.shandian_hit", name=player.name))
             ctx.deal_damage(None, player, 3, "thunder")
             return False  # 闪电命中, 进弃牌堆
 
-        # 未命中 → 传递给下家
+        # 未命中 → 传递给下一个没有闪电的存活玩家
         ctx.log_event("effect", _t("judge.shandian_dodge", name=player.name))
-        next_player = ctx.get_next_player(player)
-        if next_player and next_player != player:
-            next_player.judge_area.insert(0, card)
-            ctx.log_event("effect",
-                          _t("judge.shandian_pass", name=next_player.name))
+        receiver = self._find_lightning_receiver(player)
+        if receiver:
+            receiver.judge_area.insert(0, card)
+            ctx.log_event("effect", _t("judge.shandian_pass", name=receiver.name))
             ctx.deck.discard([judge_card])
             return True  # 闪电传递, 不进弃牌堆
 
+        # 没有合法接收者，闪电进弃牌堆
+        logger.debug("No valid receiver for Lightning, discarding")
         return False
+
+    def _find_lightning_receiver(self, current: Player) -> Player | None:
+        """找到下一个可以接收闪电的玩家。
+
+        跳过死亡玩家和已有闪电的玩家。
+        如果绕一圈回到自己或无合法目标，返回 None。
+        """
+        ctx = self.ctx
+        alive = ctx.get_alive_players()
+        if len(alive) <= 1:
+            return None
+
+        try:
+            start_idx = alive.index(current)
+        except ValueError:
+            return None
+
+        for i in range(1, len(alive)):
+            candidate = alive[(start_idx + i) % len(alive)]
+            # 跳过已有闪电的玩家
+            has_lightning = any(c.name == CardName.SHANDIAN for c in candidate.judge_area)
+            if not has_lightning:
+                return candidate
+
+        return None  # 所有玩家都已有闪电

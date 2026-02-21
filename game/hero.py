@@ -17,15 +17,17 @@ if TYPE_CHECKING:
 
 class Kingdom(Enum):
     """势力枚举"""
-    WEI = "wei"   # 魏
-    SHU = "shu"   # 蜀
-    WU = "wu"     # 吴
-    QUN = "qun"   # 群
+
+    WEI = "wei"  # 魏
+    SHU = "shu"  # 蜀
+    WU = "wu"  # 吴
+    QUN = "qun"  # 群
 
     @property
     def chinese_name(self) -> str:
         """获取国际化显示名称"""
         from i18n import kingdom_name
+
         return kingdom_name(self.value)
 
     @property
@@ -35,16 +37,17 @@ class Kingdom(Enum):
             Kingdom.WEI: "blue",
             Kingdom.SHU: "red",
             Kingdom.WU: "green",
-            Kingdom.QUN: "yellow"
+            Kingdom.QUN: "yellow",
         }
         return colors.get(self, "white")
 
 
 class SkillType(Enum):
     """技能类型枚举"""
-    PASSIVE = "passive"     # 被动技能（锁定技）
-    ACTIVE = "active"       # 主动技能
-    TRIGGER = "trigger"     # 触发技能
+
+    PASSIVE = "passive"  # 被动技能（锁定技）
+    ACTIVE = "active"  # 主动技能
+    TRIGGER = "trigger"  # 触发技能
     TRANSFORM = "transform"  # 转化技能
 
 
@@ -67,6 +70,7 @@ class Skill:
         limit_per_turn: 每回合使用次数限制（0表示无限制）
         target_card: 目标卡牌（用于转化技）
     """
+
     id: str
     name: str
     description: str
@@ -102,7 +106,7 @@ class Skill:
             return False
 
         # 主公技检查 — 避免循环导入，使用字符串值比较
-        if self.is_lord_skill and getattr(player.identity, 'value', None) != "lord":
+        if self.is_lord_skill and getattr(player.identity, "value", None) != "lord":
             return False
 
         return True
@@ -126,7 +130,7 @@ class Skill:
             "is_lord_skill": self.is_lord_skill,
             "is_compulsory": self.is_compulsory,
             "limit_per_turn": self.limit_per_turn,
-            "target_card": self.target_card
+            "target_card": self.target_card,
         }
 
     @classmethod
@@ -148,7 +152,7 @@ class Skill:
             is_lord_skill=data.get("is_lord_skill", False),
             is_compulsory=data.get("is_compulsory", False),
             limit_per_turn=data.get("limit_per_turn", 0),
-            target_card=data.get("target_card")
+            target_card=data.get("target_card"),
         )
 
     def __str__(self) -> str:
@@ -173,6 +177,7 @@ class Hero:
         title: 称号
         skills: 技能列表
     """
+
     id: str
     name: str
     kingdom: Kingdom
@@ -242,7 +247,7 @@ class Hero:
             "max_hp": self.max_hp,
             "gender": self.gender,
             "title": self.title,
-            "skills": [skill.to_dict() for skill in self.skills]
+            "skills": [skill.to_dict() for skill in self.skills],
         }
 
     @classmethod
@@ -256,7 +261,7 @@ class Hero:
             max_hp=data["max_hp"],
             gender=data["gender"],
             title=data.get("title", ""),
-            skills=skills
+            skills=skills,
         )
 
     def __str__(self) -> str:
@@ -293,7 +298,7 @@ class HeroRepository:
         if not path.exists():
             raise FileNotFoundError(f"武将数据文件不存在: {data_path}")
 
-        with open(path, encoding='utf-8') as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
         self._heroes.clear()
@@ -352,6 +357,7 @@ class HeroRepository:
             武将列表
         """
         import random
+
         all_heroes = self.get_all_heroes()
         return random.sample(all_heroes, min(count, len(all_heroes)))
 

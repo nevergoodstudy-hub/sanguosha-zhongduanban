@@ -65,9 +65,9 @@ def _make_equip_card(subtype: CardSubtype, idx: int = 0) -> Card:
         suit=CardSuit.SPADE,
         number=1,
         range=3 if subtype == CardSubtype.WEAPON else 1,
-        distance_modifier=-1 if subtype == CardSubtype.HORSE_MINUS else (
-            1 if subtype == CardSubtype.HORSE_PLUS else 0
-        ),
+        distance_modifier=-1
+        if subtype == CardSubtype.HORSE_MINUS
+        else (1 if subtype == CardSubtype.HORSE_PLUS else 0),
     )
 
 
@@ -75,12 +75,11 @@ def _make_equip_card(subtype: CardSubtype, idx: int = 0) -> Card:
 # 性质 1: 每张牌恰好是红色或黑色之一（互斥且完备）
 # ---------------------------------------------------------------------------
 
+
 @given(suit=card_suits)
 @settings(max_examples=20)
 def test_suit_color_mutually_exclusive(suit: CardSuit) -> None:
-    assert suit.is_red != suit.is_black, (
-        f"花色 {suit} 应恰好属于红色或黑色之一"
-    )
+    assert suit.is_red != suit.is_black, f"花色 {suit} 应恰好属于红色或黑色之一"
 
 
 @given(card=card_strategy())
@@ -94,24 +93,28 @@ def test_card_color_matches_suit(card: Card) -> None:
 # 性质 2: 花色符号映射完备
 # ---------------------------------------------------------------------------
 
+
 @given(suit=card_suits)
 @settings(max_examples=20)
 def test_suit_symbol_is_valid(suit: CardSuit) -> None:
-    assert suit.symbol in ("♠", "♥", "♣", "♦"), (
-        f"花色 {suit} 的符号 {suit.symbol} 不在合法集合内"
-    )
+    assert suit.symbol in ("♠", "♥", "♣", "♦"), f"花色 {suit} 的符号 {suit.symbol} 不在合法集合内"
 
 
 # ---------------------------------------------------------------------------
 # 性质 3: 点数字符串映射正确
 # ---------------------------------------------------------------------------
 
+
 @given(number=card_numbers)
 @settings(max_examples=20)
 def test_number_str_mapping(number: int) -> None:
     card = Card(
-        id="t", name="t", card_type=CardType.BASIC,
-        subtype=CardSubtype.ATTACK, suit=CardSuit.HEART, number=number,
+        id="t",
+        name="t",
+        card_type=CardType.BASIC,
+        subtype=CardSubtype.ATTACK,
+        suit=CardSuit.HEART,
+        number=number,
     )
     expected = {1: "A", 11: "J", 12: "Q", 13: "K"}
     if number in expected:
@@ -123,6 +126,7 @@ def test_number_str_mapping(number: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 4: display_name 组成结构
 # ---------------------------------------------------------------------------
+
 
 @given(card=card_strategy())
 @settings(max_examples=100)
@@ -137,6 +141,7 @@ def test_display_name_structure(card: Card) -> None:
 # 性质 5: to_dict / from_dict 往返不丢失数据
 # ---------------------------------------------------------------------------
 
+
 @given(
     suit=card_suits,
     number=card_numbers,
@@ -145,7 +150,10 @@ def test_display_name_structure(card: Card) -> None:
 )
 @settings(max_examples=100)
 def test_card_serialization_roundtrip(
-    suit: CardSuit, number: int, range_val: int, dist_mod: int,
+    suit: CardSuit,
+    number: int,
+    range_val: int,
+    dist_mod: int,
 ) -> None:
     original = Card(
         id="rt_test",
@@ -176,10 +184,17 @@ def test_card_serialization_roundtrip(
 # 性质 6: Equipment equip 放入正确的槽位
 # ---------------------------------------------------------------------------
 
-@given(subtype=st.sampled_from([
-    CardSubtype.WEAPON, CardSubtype.ARMOR,
-    CardSubtype.HORSE_MINUS, CardSubtype.HORSE_PLUS,
-]))
+
+@given(
+    subtype=st.sampled_from(
+        [
+            CardSubtype.WEAPON,
+            CardSubtype.ARMOR,
+            CardSubtype.HORSE_MINUS,
+            CardSubtype.HORSE_PLUS,
+        ]
+    )
+)
 @settings(max_examples=20)
 def test_equip_places_in_correct_slot(subtype: CardSubtype) -> None:
     equip = Equipment()
@@ -201,10 +216,17 @@ def test_equip_places_in_correct_slot(subtype: CardSubtype) -> None:
 # 性质 7: Equipment equip 替换后返回旧装备
 # ---------------------------------------------------------------------------
 
-@given(subtype=st.sampled_from([
-    CardSubtype.WEAPON, CardSubtype.ARMOR,
-    CardSubtype.HORSE_MINUS, CardSubtype.HORSE_PLUS,
-]))
+
+@given(
+    subtype=st.sampled_from(
+        [
+            CardSubtype.WEAPON,
+            CardSubtype.ARMOR,
+            CardSubtype.HORSE_MINUS,
+            CardSubtype.HORSE_PLUS,
+        ]
+    )
+)
 @settings(max_examples=20)
 def test_equip_replace_returns_old(subtype: CardSubtype) -> None:
     equip = Equipment()
@@ -221,11 +243,16 @@ def test_equip_replace_returns_old(subtype: CardSubtype) -> None:
 # 性质 8: unequip 后槽位为空
 # ---------------------------------------------------------------------------
 
+
 @given(
-    subtype=st.sampled_from([
-        CardSubtype.WEAPON, CardSubtype.ARMOR,
-        CardSubtype.HORSE_MINUS, CardSubtype.HORSE_PLUS,
-    ]),
+    subtype=st.sampled_from(
+        [
+            CardSubtype.WEAPON,
+            CardSubtype.ARMOR,
+            CardSubtype.HORSE_MINUS,
+            CardSubtype.HORSE_PLUS,
+        ]
+    ),
 )
 @settings(max_examples=20)
 def test_unequip_clears_slot(subtype: CardSubtype) -> None:
@@ -249,6 +276,7 @@ def test_unequip_clears_slot(subtype: CardSubtype) -> None:
 # 性质 9: Equipment.count 始终等于非空槽位数
 # ---------------------------------------------------------------------------
 
+
 @given(
     equip_flags=st.tuples(st.booleans(), st.booleans(), st.booleans(), st.booleans()),
 )
@@ -257,8 +285,12 @@ def test_equipment_count_matches_filled_slots(
     equip_flags: tuple[bool, bool, bool, bool],
 ) -> None:
     equip = Equipment()
-    subtypes = [CardSubtype.WEAPON, CardSubtype.ARMOR,
-                CardSubtype.HORSE_MINUS, CardSubtype.HORSE_PLUS]
+    subtypes = [
+        CardSubtype.WEAPON,
+        CardSubtype.ARMOR,
+        CardSubtype.HORSE_MINUS,
+        CardSubtype.HORSE_PLUS,
+    ]
 
     expected = 0
     for flag, sub in zip(equip_flags, subtypes):
@@ -275,6 +307,7 @@ def test_equipment_count_matches_filled_slots(
 # 性质 10: attack_range 默认为 1，装备武器后为武器 range
 # ---------------------------------------------------------------------------
 
+
 @given(weapon_range=st.integers(min_value=1, max_value=10))
 @settings(max_examples=50)
 def test_attack_range_with_weapon(weapon_range: int) -> None:
@@ -282,8 +315,12 @@ def test_attack_range_with_weapon(weapon_range: int) -> None:
     assert equip.attack_range == 1  # 默认值
 
     weapon = Card(
-        id="w", name="测试武器", card_type=CardType.EQUIPMENT,
-        subtype=CardSubtype.WEAPON, suit=CardSuit.SPADE, number=1,
+        id="w",
+        name="测试武器",
+        card_type=CardType.EQUIPMENT,
+        subtype=CardSubtype.WEAPON,
+        suit=CardSuit.SPADE,
+        number=1,
         range=weapon_range,
     )
     equip.equip(weapon)
@@ -293,6 +330,7 @@ def test_attack_range_with_weapon(weapon_range: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 11: distance_to_others 和 distance_from_others 的语义
 # ---------------------------------------------------------------------------
+
 
 def test_distance_modifiers_semantics() -> None:
     equip = Equipment()

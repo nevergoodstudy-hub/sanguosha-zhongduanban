@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from i18n import t as _t
 
 from .card import CardName
+from .events import EventType
 from .player import EquipmentSlot
 
 if TYPE_CHECKING:
@@ -40,13 +41,32 @@ class EquipmentSystem:
         旧装备自动进入弃牌堆。
         """
         ctx = self.ctx
+
+        # 装备前事件（可取消）
+        before_event = ctx.event_bus.emit(EventType.BEFORE_EQUIP, player=player, card=card)
+        if before_event.cancelled:
+            player.draw_cards([card])
+            return False
+
         old_equipment = player.equip_card(card)
-        ctx.log_event("equip", _t("equipment.equipped", name=player.name, card=card.name),
-                      source=player, card=card)
+        ctx.log_event(
+            "equip",
+            _t("equipment.equipped", name=player.name, card=card.name),
+            source=player,
+            card=card,
+        )
 
         if old_equipment:
             ctx.log_event("equip", _t("equipment.replaced", card=old_equipment.name))
             ctx.deck.discard([old_equipment])
+
+        # 装备后事件
+        ctx.event_bus.emit(
+            EventType.AFTER_EQUIP,
+            player=player,
+            card=card,
+            old_equipment=old_equipment,
+        )
 
         return True
 
@@ -65,19 +85,21 @@ class EquipmentSystem:
                 break
 
         # 白银狮子效果
-        if (card_name == CardName.BAIYINSHIZI
-                and player.is_alive
-                and player.hp < player.max_hp):
+        if card_name == CardName.BAIYINSHIZI and player.is_alive and player.hp < player.max_hp:
             player.heal(1)
             ctx.log_event(
                 "equipment",
-                _t("equipment.baiyinshizi_heal", name=player.name, hp=player.hp, max_hp=player.max_hp),
+                _t(
+                    "equipment.baiyinshizi_heal",
+                    name=player.name,
+                    hp=player.hp,
+                    max_hp=player.max_hp,
+                ),
             )
 
     # ==================== 护甲伤害修正 ====================
 
-    def modify_damage(self, target: Player, damage: int,
-                      damage_type: str) -> int:
+    def modify_damage(self, target: Player, damage: int, damage_type: str) -> int:
         """根据目标护甲修正伤害值。
 
         - 藤甲: 火焰伤害 +1
@@ -90,20 +112,34 @@ class EquipmentSystem:
 
         # 藤甲: 火焰伤害 +1
         if damage_type == "fire" and armor and armor.name == CardName.TENGJIA:
-            damage += 1
-            ctx.log_event(
-                "equipment",
-                _t("damage.tengjia_fire", name=target.name),
+            event = ctx.event_bus.emit(
+                EventType.EQUIPMENT_EFFECT,
+                equipment="tengjia",
+                player=target,
+                effect="fire_damage_increase",
             )
+            if not event.cancelled:
+                damage += 1
+                ctx.log_event(
+                    "equipment",
+                    _t("damage.tengjia_fire", name=target.name),
+                )
 
         # 白银狮子: 伤害封顶为 1
         if armor and armor.name == CardName.BAIYINSHIZI and damage > 1:
-            original = damage
-            damage = 1
-            ctx.log_event(
-                "equipment",
-                _t("damage.baiyinshizi_prevent", name=target.name, prevented=original - 1),
+            event = ctx.event_bus.emit(
+                EventType.EQUIPMENT_EFFECT,
+                equipment="baiyinshizi",
+                player=target,
+                effect="damage_cap",
             )
+            if not event.cancelled:
+                original = damage
+                damage = 1
+                ctx.log_event(
+                    "equipment",
+                    _t("damage.baiyinshizi_prevent", name=target.name, prevented=original - 1),
+                )
 
         return damage
 

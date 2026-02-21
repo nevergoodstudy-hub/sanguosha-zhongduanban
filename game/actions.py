@@ -19,30 +19,32 @@ if TYPE_CHECKING:
 
 class ActionType(Enum):
     """动作类型枚举"""
-    PLAY_CARD = auto()       # 出牌
-    USE_SKILL = auto()       # 使用技能
-    DISCARD = auto()         # 弃牌
-    EQUIP = auto()           # 装备
-    RESPOND = auto()         # 响应（出闪、出杀等）
-    END_PHASE = auto()       # 结束阶段
-    CHOOSE_TARGET = auto()   # 选择目标
-    CHOOSE_CARD = auto()     # 选择卡牌
-    CHOOSE_OPTION = auto()   # 选择选项
+
+    PLAY_CARD = auto()  # 出牌
+    USE_SKILL = auto()  # 使用技能
+    DISCARD = auto()  # 弃牌
+    EQUIP = auto()  # 装备
+    RESPOND = auto()  # 响应（出闪、出杀等）
+    END_PHASE = auto()  # 结束阶段
+    CHOOSE_TARGET = auto()  # 选择目标
+    CHOOSE_CARD = auto()  # 选择卡牌
+    CHOOSE_OPTION = auto()  # 选择选项
 
 
 class RequestType(Enum):
     """请求类型枚举"""
-    PLAY_SHAN = auto()       # 请求出闪
-    PLAY_SHA = auto()        # 请求出杀
-    PLAY_TAO = auto()        # 请求出桃
-    PLAY_WUXIE = auto()      # 请求出无懈可击
-    CHOOSE_TARGET = auto()   # 选择目标
-    CHOOSE_CARD = auto()     # 选择卡牌
-    CHOOSE_CARDS = auto()    # 选择多张卡牌
-    CHOOSE_OPTION = auto()   # 选择选项
-    CHOOSE_SUIT = auto()     # 选择花色
-    GUANXING = auto()        # 观星排列
-    DISCARD = auto()         # 弃牌
+
+    PLAY_SHAN = auto()  # 请求出闪
+    PLAY_SHA = auto()  # 请求出杀
+    PLAY_TAO = auto()  # 请求出桃
+    PLAY_WUXIE = auto()  # 请求出无懈可击
+    CHOOSE_TARGET = auto()  # 选择目标
+    CHOOSE_CARD = auto()  # 选择卡牌
+    CHOOSE_CARDS = auto()  # 选择多张卡牌
+    CHOOSE_OPTION = auto()  # 选择选项
+    CHOOSE_SUIT = auto()  # 选择花色
+    GUANXING = auto()  # 观星排列
+    DISCARD = auto()  # 弃牌
 
 
 @dataclass
@@ -50,9 +52,10 @@ class GameAction(ABC):
     """游戏动作基类
     所有玩家操作都应继承此类
     """
+
     action_type: ActionType
     player_id: int
-    timestamp: float = field(default_factory=lambda: __import__('time').time())
+    timestamp: float = field(default_factory=lambda: __import__("time").time())
 
     @abstractmethod
     def validate(self, engine: GameEngine) -> tuple[bool, str]:
@@ -76,6 +79,7 @@ class GameAction(ABC):
 @dataclass
 class PlayCardAction(GameAction):
     """出牌动作"""
+
     action_type: ActionType = field(default=ActionType.PLAY_CARD, init=False)
     card_id: int = 0
     target_ids: list[int] = field(default_factory=list)
@@ -92,7 +96,7 @@ class PlayCardAction(GameAction):
         # 检查卡牌是否存在
         card = None
         for c in player.hand:
-            if id(c) == self.card_id or getattr(c, 'id', None) == self.card_id:
+            if id(c) == self.card_id or getattr(c, "id", None) == self.card_id:
                 card = c
                 break
 
@@ -109,7 +113,7 @@ class PlayCardAction(GameAction):
         player = engine.get_player_by_id(self.player_id)
         card = None
         for c in player.hand:
-            if id(c) == self.card_id or getattr(c, 'id', None) == self.card_id:
+            if id(c) == self.card_id or getattr(c, "id", None) == self.card_id:
                 card = c
                 break
 
@@ -122,6 +126,7 @@ class PlayCardAction(GameAction):
 @dataclass
 class UseSkillAction(GameAction):
     """使用技能动作"""
+
     action_type: ActionType = field(default=ActionType.USE_SKILL, init=False)
     skill_id: str = ""
     target_ids: list[int] = field(default_factory=list)
@@ -153,20 +158,22 @@ class UseSkillAction(GameAction):
         cards = []
         for cid in self.card_ids:
             for c in player.hand:
-                if id(c) == cid or getattr(c, 'id', None) == cid:
+                if id(c) == cid or getattr(c, "id", None) == cid:
                     cards.append(c)
                     break
 
         return engine.skill_system.use_skill(
-            self.skill_id, player,
+            self.skill_id,
+            player,
             targets=targets if targets else None,
-            cards=cards if cards else None
+            cards=cards if cards else None,
         )
 
 
 @dataclass
 class DiscardAction(GameAction):
     """弃牌动作"""
+
     action_type: ActionType = field(default=ActionType.DISCARD, init=False)
     card_ids: list[int] = field(default_factory=list)
 
@@ -189,7 +196,7 @@ class DiscardAction(GameAction):
         cards = []
         for cid in self.card_ids:
             for c in player.hand:
-                if id(c) == cid or getattr(c, 'id', None) == cid:
+                if id(c) == cid or getattr(c, "id", None) == cid:
                     cards.append(c)
                     break
 
@@ -202,6 +209,7 @@ class DiscardAction(GameAction):
 @dataclass
 class RespondAction(GameAction):
     """响应动作（出闪、出杀等）"""
+
     action_type: ActionType = field(default=ActionType.RESPOND, init=False)
     card_id: int | None = None  # None 表示不响应
     skill_id: str | None = None  # 使用技能响应
@@ -220,6 +228,7 @@ class RespondAction(GameAction):
 @dataclass
 class EndPhaseAction(GameAction):
     """结束阶段动作"""
+
     action_type: ActionType = field(default=ActionType.END_PHASE, init=False)
 
     def validate(self, engine: GameEngine) -> tuple[bool, str]:
@@ -236,6 +245,7 @@ class GameRequest:
     """游戏请求
     引擎向玩家请求输入时使用
     """
+
     request_type: RequestType
     player_id: int
     message: str = ""
@@ -255,6 +265,7 @@ class GameResponse:
     """游戏响应
     玩家对请求的响应
     """
+
     request_type: RequestType
     player_id: int
     accepted: bool = False  # 是否接受/响应
@@ -269,8 +280,9 @@ class ActionValidator:
     """
 
     @staticmethod
-    def validate_play_card(player: Player, card: Card,
-                           targets: list[Player], engine: GameEngine) -> tuple[bool, str]:
+    def validate_play_card(
+        player: Player, card: Card, targets: list[Player], engine: GameEngine
+    ) -> tuple[bool, str]:
         """验证出牌动作"""
         from .card import CardName
         from .constants import SkillId
@@ -316,8 +328,7 @@ class ActionValidator:
         return True, ""
 
     @staticmethod
-    def validate_use_skill(player: Player, skill_id: str,
-                           engine: GameEngine) -> tuple[bool, str]:
+    def validate_use_skill(player: Player, skill_id: str, engine: GameEngine) -> tuple[bool, str]:
         """验证技能使用"""
         if not engine.skill_system:
             return False, _t("error.skill_system_not_init")
@@ -343,8 +354,8 @@ class ActionExecutor:
             # 发送错误事件
             if self.engine.event_bus:
                 self.engine.event_bus.emit(
-                    __import__('game.events', fromlist=['EventType']).EventType.LOG_MESSAGE,
-                    message=_t("error.invalid_action", msg=msg)
+                    __import__("game.events", fromlist=["EventType"]).EventType.LOG_MESSAGE,
+                    message=_t("error.invalid_action", msg=msg),
                 )
             return False
 

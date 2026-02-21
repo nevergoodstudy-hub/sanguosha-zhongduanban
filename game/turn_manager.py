@@ -18,6 +18,7 @@ from .constants import SkillId
 from .enums import GamePhase
 from .events import EventType
 from .hero import SkillTiming
+from .phase_fsm import PhaseFSM
 
 # M1-T04: 阶段 → EventType 映射
 _PHASE_START_EVENTS: dict[GamePhase, EventType] = {
@@ -70,6 +71,7 @@ class TurnManager:
         """
         self.engine = engine
         self.current_phase = GamePhase.PREPARE
+        self.fsm = PhaseFSM()
         self._phase_handlers: dict[GamePhase, Callable] = {}
         self._init_phase_handlers()
 
@@ -97,6 +99,7 @@ class TurnManager:
         self.engine.event_bus.emit(EventType.TURN_START, player=player)
         self.engine.log_event("turn_start", _t("turn.start", name=player.name))
         player.reset_turn()
+        self.fsm.reset()
 
         # 按顺序执行各阶段
         for phase in PHASE_ORDER:
@@ -115,6 +118,9 @@ class TurnManager:
             player: 当前回合玩家
             phase: 要执行的阶段
         """
+        # FSM 验证阶段转换合法性（首个阶段 PREPARE 跳过检查）
+        if phase != GamePhase.PREPARE or self.fsm.current != GamePhase.PREPARE:
+            self.fsm.transition(phase)
         self.current_phase = phase
         self.engine.phase = phase
 
@@ -170,7 +176,9 @@ class TurnManager:
 
         cards = self.engine.deck.draw(draw_count)
         player.draw_cards(cards)
-        self.engine.log_event("draw_cards", _t("resolver.drew_cards", name=player.name, count=len(cards)))
+        self.engine.log_event(
+            "draw_cards", _t("resolver.drew_cards", name=player.name, count=len(cards))
+        )
 
     def _try_trigger_tuxi(self, player: Player, draw_count: int) -> bool:
         """尝试触发突袭技能
@@ -188,10 +196,7 @@ class TurnManager:
 
         # AI 决策是否使用突袭
         if player.is_ai and player.id in self.engine.ai_bots:
-            targets = [
-                p for p in self.engine.get_other_players(player)
-                if p.hand_count > 0
-            ]
+            targets = [p for p in self.engine.get_other_players(player) if p.hand_count > 0]
             if not targets:
                 return False
 
@@ -210,8 +215,10 @@ class TurnManager:
                     if remaining > 0:
                         cards = self.engine.deck.draw(remaining)
                         player.draw_cards(cards)
-                        self.engine.log_event("draw_cards",
-                            _t("resolver.drew_cards", name=player.name, count=len(cards)))
+                        self.engine.log_event(
+                            "draw_cards",
+                            _t("resolver.drew_cards", name=player.name, count=len(cards)),
+                        )
                     return True
         return False
 
@@ -245,10 +252,7 @@ class TurnManager:
         """执行弃牌阶段"""
         discard_count = player.need_discard
         if discard_count > 0:
-            self.engine.log_event(
-                "phase",
-                _t("turn.discard_phase", count=discard_count)
-            )
+            self.engine.log_event("phase", _t("turn.discard_phase", count=discard_count))
 
             if player.is_ai:
                 self._ai_discard(player, discard_count)

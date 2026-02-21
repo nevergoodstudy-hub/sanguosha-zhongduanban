@@ -106,16 +106,27 @@ class CombatSystem:
         type_icon = {"fire": "🔥", "thunder": "⚡"}.get(damage_type, "⚔")
         ctx.log_event(
             "use_card",
-            _t("combat.use_sha", icon=type_icon, player=player.name,
-               target=target.name, card=card_name,
-               suit=card.suit.symbol, number=card.number_str, distance=dist),
-            source=player, target=target, card=card,
+            _t(
+                "combat.use_sha",
+                icon=type_icon,
+                player=player.name,
+                target=target.name,
+                card=card_name,
+                suit=card.suit.symbol,
+                number=card.number_str,
+                distance=dist,
+            ),
+            source=player,
+            target=target,
+            card=card,
         )
 
         # 无双
         required_shan = 2 if player.has_skill(SkillId.WUSHUANG) else 1
         if required_shan > 1:
-            ctx.log_event("skill", _t("combat.wushuang_require", name=player.name, count=required_shan))
+            ctx.log_event(
+                "skill", _t("combat.wushuang_require", name=player.name, count=required_shan)
+            )
 
         shan_count = self.request_shan(target, required_shan)
 
@@ -129,7 +140,10 @@ class CombatSystem:
             if player.equipment.weapon and player.equipment.weapon.name == CardName.GUDINGDAO:
                 if target.hand_count == 0:
                     base_damage += 1
-                    ctx.log_event("equipment", _t("combat.gudingdao_bonus", player=player.name, target=target.name))
+                    ctx.log_event(
+                        "equipment",
+                        _t("combat.gudingdao_bonus", player=player.name, target=target.name),
+                    )
             ctx.deal_damage(player, target, base_damage, damage_type)
 
         ctx.deck.discard([card])
@@ -152,13 +166,22 @@ class CombatSystem:
             # 龙胆: 杀当闪
             if player.has_skill(SkillId.LONGDAN):
                 sha_cards = player.get_cards_by_name(CardName.SHA)
-                if sha_cards and player.is_ai:
-                    card = sha_cards[0]
-                    player.remove_card(card)
-                    ctx.deck.discard([card])
-                    ctx.log_event("skill", _t("combat.longdan_as_shan", name=player.name, card=card.display_name))
-                    shan_played += 1
-                    continue
+                if sha_cards:
+                    if player.is_ai:
+                        card = sha_cards[0]
+                    else:
+                        card = ctx.request_handler.request_skill_card(
+                            player, "longdan_as_shan", sha_cards
+                        )
+                    if card:
+                        player.remove_card(card)
+                        ctx.deck.discard([card])
+                        ctx.log_event(
+                            "skill",
+                            _t("combat.longdan_as_shan", name=player.name, card=card.display_name),
+                        )
+                        shan_played += 1
+                        continue
 
             card = ctx.request_handler.request_shan(player)
             if card:
@@ -181,24 +204,42 @@ class CombatSystem:
             # 武圣: 红色牌当杀
             if player.has_skill(SkillId.WUSHENG):
                 red_cards = player.get_red_cards()
-                if red_cards and player.is_ai:
-                    card = red_cards[0]
-                    player.remove_card(card)
-                    ctx.deck.discard([card])
-                    ctx.log_event("skill", _t("combat.wusheng_as_sha", name=player.name, card=card.display_name))
-                    sha_played += 1
-                    continue
+                if red_cards:
+                    if player.is_ai:
+                        card = red_cards[0]
+                    else:
+                        card = ctx.request_handler.request_skill_card(
+                            player, "wusheng_as_sha", red_cards
+                        )
+                    if card:
+                        player.remove_card(card)
+                        ctx.deck.discard([card])
+                        ctx.log_event(
+                            "skill",
+                            _t("combat.wusheng_as_sha", name=player.name, card=card.display_name),
+                        )
+                        sha_played += 1
+                        continue
 
             # 龙胆: 闪当杀
             if player.has_skill(SkillId.LONGDAN):
                 shan_cards = player.get_cards_by_name(CardName.SHAN)
-                if shan_cards and player.is_ai:
-                    card = shan_cards[0]
-                    player.remove_card(card)
-                    ctx.deck.discard([card])
-                    ctx.log_event("skill", _t("combat.longdan_as_sha", name=player.name, card=card.display_name))
-                    sha_played += 1
-                    continue
+                if shan_cards:
+                    if player.is_ai:
+                        card = shan_cards[0]
+                    else:
+                        card = ctx.request_handler.request_skill_card(
+                            player, "longdan_as_sha", shan_cards
+                        )
+                    if card:
+                        player.remove_card(card)
+                        ctx.deck.discard([card])
+                        ctx.log_event(
+                            "skill",
+                            _t("combat.longdan_as_sha", name=player.name, card=card.display_name),
+                        )
+                        sha_played += 1
+                        continue
 
             card = ctx.request_handler.request_sha(player)
             if card:
@@ -226,8 +267,13 @@ class CombatSystem:
             player.draw_cards([card])
             return False
 
-        ctx.log_event("use_card", _t("combat.use_juedou", player=player.name, target=target.name),
-                       source=player, target=target, card=card)
+        ctx.log_event(
+            "use_card",
+            _t("combat.use_juedou", player=player.name, target=target.name),
+            source=player,
+            target=target,
+            card=card,
+        )
 
         if self.request_wuxie(card, player, target):
             ctx.log_event("effect", _t("combat.juedou_nullified"))
@@ -281,6 +327,9 @@ class CombatSystem:
 
     # ==================== 无懈可击 ====================
 
+    # 无懂可击链最大深度（防止无限循环）
+    _WUXIE_MAX_DEPTH: int = 10
+
     def request_wuxie(
         self,
         trick_card: Card,
@@ -288,16 +337,23 @@ class CombatSystem:
         target: Player | None = None,
         is_delay: bool = False,
     ) -> bool:
-        """无懈可击响应链。返回 True 表示锦囊被抵消。"""
+        """无懂可击响应链。返回 True 表示锯囊被抵消。
+
+        规则：所有玩家按座位顺序依次有机会使用无懂可击。
+        每次无懂可击打出后，其他玩家可以再使用无懂可击来抵消前一张无懂可击。
+        偶数深度 = 抵消原锯囊，奇数深度 = 反抵消（让原锯囊生效）。
+        最大深度 {_WUXIE_MAX_DEPTH} 层以防止无限循环。
+        """
         ctx = self.ctx
 
         if trick_card.name == CardName.WUXIE:
             return False
 
         is_cancelled = False
+        depth = 0
         start_index = ctx.players.index(source)
 
-        while True:
+        while depth < self._WUXIE_MAX_DEPTH:
             wuxie_played = False
 
             for i in range(len(ctx.players)):
@@ -318,17 +374,33 @@ class CombatSystem:
                     responder.remove_card(result)
                     ctx.deck.discard([result])
 
-                    action_text = _t("combat.wuxie_cancel") if not is_cancelled else _t("combat.wuxie_activate")
+                    action_text = (
+                        _t("combat.wuxie_cancel")
+                        if not is_cancelled
+                        else _t("combat.wuxie_activate")
+                    )
                     ctx.log_event(
                         "wuxie",
-                        _t("combat.wuxie_played", name=responder.name, action=action_text, card=trick_card.name),
+                        _t(
+                            "combat.wuxie_played",
+                            name=responder.name,
+                            action=action_text,
+                            card=trick_card.name,
+                        ),
                     )
                     is_cancelled = not is_cancelled
                     wuxie_played = True
+                    depth += 1
                     break
 
             if not wuxie_played:
                 break
+
+        if depth >= self._WUXIE_MAX_DEPTH:
+            logger.warning(
+                "Wuxie chain reached max depth (%d), ending chain",
+                self._WUXIE_MAX_DEPTH,
+            )
 
         return is_cancelled
 
@@ -363,7 +435,9 @@ class CombatSystem:
             ctx.log_event("equipment", _t("combat.qinglong_prompt", name=player.name))
             if player.is_ai and player.id in ctx.ai_bots:
                 bot = ctx.ai_bots[player.id]
-                if hasattr(bot, 'should_use_qinglong') and bot.should_use_qinglong(player, target, ctx):
+                if hasattr(bot, "should_use_qinglong") and bot.should_use_qinglong(
+                    player, target, ctx
+                ):
                     card = sha_cards[0]
                     player.remove_card(card)
                     self.use_sha(player, card, [target])

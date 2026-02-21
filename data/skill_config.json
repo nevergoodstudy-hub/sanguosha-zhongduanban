@@ -1,0 +1,170 @@
+{
+  "_comment": "技能参数配置 — 数据驱动的技能属性 (P2-2). 与 skill_dsl.json 互补: DSL 定义行为步骤, 此文件定义可调参数.",
+
+  "longdan": {
+    "type": "convert",
+    "convert_rules": [
+      {"from": "sha", "to": "shan"},
+      {"from": "shan", "to": "sha"}
+    ],
+    "bidirectional": true,
+    "description_key": "skill.longdan.desc"
+  },
+  "wusheng": {
+    "type": "convert",
+    "convert_rules": [
+      {"from": "red_card", "to": "sha"}
+    ],
+    "filter": "color_red",
+    "description_key": "skill.wusheng.desc"
+  },
+  "qixi": {
+    "type": "convert",
+    "convert_rules": [
+      {"from": "black_card", "to": "guohe"}
+    ],
+    "filter": "color_black",
+    "description_key": "skill.qixi.desc"
+  },
+  "guose": {
+    "type": "convert",
+    "convert_rules": [
+      {"from": "diamond_card", "to": "lebusishu"}
+    ],
+    "filter": "suit_diamond",
+    "description_key": "skill.guose.desc"
+  },
+  "duanliang": {
+    "type": "convert",
+    "convert_rules": [
+      {"from": "black_card", "to": "bingliang"}
+    ],
+    "filter": "color_black",
+    "description_key": "skill.duanliang.desc"
+  },
+  "jianxiong": {
+    "type": "trigger",
+    "trigger_event": "after_damaged",
+    "effect": "pick_damage_card",
+    "description_key": "skill.jianxiong.desc"
+  },
+  "ganglie": {
+    "type": "trigger",
+    "trigger_event": "after_damaged",
+    "effect": "judge_retaliate",
+    "judge_condition": "not_heart",
+    "damage_amount": 1,
+    "discard_count": 2,
+    "description_key": "skill.ganglie.desc"
+  },
+  "fankui": {
+    "type": "trigger",
+    "trigger_event": "after_damaged",
+    "effect": "steal_from_source",
+    "steal_count": 1,
+    "description_key": "skill.fankui.desc"
+  },
+  "yingzi": {
+    "type": "trigger",
+    "trigger_event": "phase_draw",
+    "effect": "extra_draw",
+    "extra_draw_count": 1,
+    "description_key": "skill.yingzi.desc"
+  },
+  "tuxi": {
+    "type": "trigger",
+    "trigger_event": "phase_draw",
+    "effect": "steal_instead_draw",
+    "steal_count": 2,
+    "description_key": "skill.tuxi.desc"
+  },
+  "guanxing": {
+    "type": "trigger",
+    "trigger_event": "phase_draw",
+    "effect": "rearrange_deck",
+    "peek_count_formula": "min(5, alive_count)",
+    "description_key": "skill.guanxing.desc"
+  },
+  "paoxiao": {
+    "type": "passive",
+    "effect": "unlimited_sha",
+    "description_key": "skill.paoxiao.desc"
+  },
+  "mashu": {
+    "type": "passive",
+    "effect": "distance_minus_one",
+    "distance_modifier": -1,
+    "description_key": "skill.mashu.desc"
+  },
+  "kongcheng": {
+    "type": "passive",
+    "effect": "immune_when_empty_hand",
+    "immune_to": ["sha", "juedou"],
+    "condition": "hand_empty",
+    "description_key": "skill.kongcheng.desc"
+  },
+  "wushuang": {
+    "type": "passive",
+    "effect": "double_response",
+    "sha_shan_required": 2,
+    "juedou_sha_required": 2,
+    "description_key": "skill.wushuang.desc"
+  },
+  "rende": {
+    "type": "active",
+    "phase": "play",
+    "effect": "give_cards",
+    "heal_threshold": 2,
+    "description_key": "skill.rende.desc"
+  },
+  "zhiheng": {
+    "type": "active",
+    "phase": "play",
+    "limit_per_turn": 1,
+    "effect": "discard_draw_equal",
+    "description_key": "skill.zhiheng.desc"
+  },
+  "fanjian": {
+    "type": "active",
+    "phase": "play",
+    "limit_per_turn": 1,
+    "effect": "guess_suit_damage",
+    "damage_amount": 1,
+    "description_key": "skill.fanjian.desc"
+  },
+  "kurou": {
+    "type": "active",
+    "phase": "play",
+    "effect": "lose_hp_draw",
+    "hp_cost": 1,
+    "draw_count": 2,
+    "condition": "hp_above_1",
+    "description_key": "skill.kurou.desc"
+  },
+  "lijian": {
+    "type": "active",
+    "phase": "play",
+    "limit_per_turn": 1,
+    "effect": "force_duel",
+    "target_filter": "male",
+    "description_key": "skill.lijian.desc"
+  },
+  "jijiu": {
+    "type": "convert",
+    "convert_rules": [
+      {"from": "red_card", "to": "tao"}
+    ],
+    "filter": "color_red",
+    "timing": "outside_turn",
+    "description_key": "skill.jijiu.desc"
+  },
+  "qingnang": {
+    "type": "active",
+    "phase": "play",
+    "limit_per_turn": 1,
+    "effect": "heal_target",
+    "heal_amount": 1,
+    "cost": {"discard_hand": 1},
+    "description_key": "skill.qingnang.desc"
+  }
+}

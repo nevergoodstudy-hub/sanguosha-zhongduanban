@@ -20,6 +20,7 @@ from game.effects.trick import (
 
 # ==================== Basic effects ====================
 
+
 class TestShaEffect:
     def test_needs_target(self):
         assert ShaEffect().needs_target is True
@@ -124,6 +125,7 @@ class TestJiuEffect:
 
 
 # ==================== Trick effects ====================
+
 
 class TestTrickEffectsNeedsTarget:
     def test_juedou_needs_target(self):

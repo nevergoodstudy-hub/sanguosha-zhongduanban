@@ -102,11 +102,13 @@ class TestValidateClientMessage:
         assert msg.type == "heartbeat"
 
     def test_valid_room_create(self):
-        raw = json.dumps({
-            "type": "room_create",
-            "player_id": 1,
-            "data": {"player_name": "曹操", "max_players": 4},
-        })
+        raw = json.dumps(
+            {
+                "type": "room_create",
+                "player_id": 1,
+                "data": {"player_name": "曹操", "max_players": 4},
+            }
+        )
         msg = validate_client_message(raw)
         assert msg.type == "room_create"
 
@@ -115,28 +117,34 @@ class TestValidateClientMessage:
             validate_client_message("{not valid json")
 
     def test_room_create_bad_data_rejected(self):
-        raw = json.dumps({
-            "type": "room_create",
-            "player_id": 1,
-            "data": {"player_name": "", "max_players": 100},
-        })
+        raw = json.dumps(
+            {
+                "type": "room_create",
+                "player_id": 1,
+                "data": {"player_name": "", "max_players": 100},
+            }
+        )
         with pytest.raises(ValidationError):
             validate_client_message(raw)
 
     def test_chat_message_validation(self):
-        raw = json.dumps({
-            "type": "chat",
-            "player_id": 1,
-            "data": {"message": ""},
-        })
+        raw = json.dumps(
+            {
+                "type": "chat",
+                "player_id": 1,
+                "data": {"message": ""},
+            }
+        )
         with pytest.raises(ValidationError):
             validate_client_message(raw)
 
     def test_hero_chosen_validation(self):
-        raw = json.dumps({
-            "type": "hero_chosen",
-            "player_id": 1,
-            "data": {"hero_id": "liubei"},
-        })
+        raw = json.dumps(
+            {
+                "type": "hero_chosen",
+                "player_id": 1,
+                "data": {"hero_id": "liubei"},
+            }
+        )
         msg = validate_client_message(raw)
         assert msg.type == "hero_chosen"

@@ -17,59 +17,62 @@ from typing import Any
 
 # ==================== 消息类型枚举 ====================
 
+
 class MsgType(Enum):
     """网络消息类型"""
 
     # ---- 连接管理 ----
-    HEARTBEAT = "heartbeat"             # 心跳
-    HEARTBEAT_ACK = "heartbeat_ack"     # 心跳响应
-    ERROR = "error"                     # 错误
-    DISCONNECT = "disconnect"           # 断开连接
+    HEARTBEAT = "heartbeat"  # 心跳
+    HEARTBEAT_ACK = "heartbeat_ack"  # 心跳响应
+    ERROR = "error"  # 错误
+    DISCONNECT = "disconnect"  # 断开连接
 
     # ---- 房间管理 (Client → Server) ----
-    ROOM_CREATE = "room_create"         # 创建房间
-    ROOM_JOIN = "room_join"             # 加入房间
-    ROOM_LEAVE = "room_leave"           # 离开房间
-    ROOM_LIST = "room_list"             # 列出房间
-    ROOM_READY = "room_ready"           # 准备
-    ROOM_START = "room_start"           # 开始游戏 (房主)
+    ROOM_CREATE = "room_create"  # 创建房间
+    ROOM_JOIN = "room_join"  # 加入房间
+    ROOM_LEAVE = "room_leave"  # 离开房间
+    ROOM_LIST = "room_list"  # 列出房间
+    ROOM_READY = "room_ready"  # 准备
+    ROOM_START = "room_start"  # 开始游戏 (房主)
 
     # ---- 房间管理 (Server → Client) ----
-    ROOM_CREATED = "room_created"       # 房间已创建
-    ROOM_JOINED = "room_joined"         # 已加入房间
-    ROOM_LEFT = "room_left"             # 已离开房间
-    ROOM_LISTING = "room_listing"       # 房间列表
-    ROOM_UPDATE = "room_update"         # 房间状态更新
-    ROOM_STARTED = "room_started"       # 游戏已开始
+    ROOM_CREATED = "room_created"  # 房间已创建
+    ROOM_JOINED = "room_joined"  # 已加入房间
+    ROOM_LEFT = "room_left"  # 已离开房间
+    ROOM_LISTING = "room_listing"  # 房间列表
+    ROOM_UPDATE = "room_update"  # 房间状态更新
+    ROOM_STARTED = "room_started"  # 游戏已开始
 
     # ---- 游戏流程 (Server → Client) ----
-    GAME_STATE = "game_state"           # 完整游戏状态 (初始/重连)
-    GAME_EVENT = "game_event"           # 增量游戏事件
-    GAME_REQUEST = "game_request"       # 请求玩家输入
-    GAME_OVER = "game_over"             # 游戏结束
+    GAME_STATE = "game_state"  # 完整游戏状态 (初始/重连)
+    GAME_EVENT = "game_event"  # 增量游戏事件
+    GAME_REQUEST = "game_request"  # 请求玩家输入
+    GAME_OVER = "game_over"  # 游戏结束
 
     # ---- 游戏流程 (Client → Server) ----
-    GAME_ACTION = "game_action"         # 玩家操作
-    GAME_RESPONSE = "game_response"     # 玩家响应请求
+    GAME_ACTION = "game_action"  # 玩家操作
+    GAME_RESPONSE = "game_response"  # 玩家响应请求
 
     # ---- 选将 ----
-    HERO_OPTIONS = "hero_options"       # 服务端发送可选武将
-    HERO_CHOSEN = "hero_chosen"         # 客户端选择武将
+    HERO_OPTIONS = "hero_options"  # 服务端发送可选武将
+    HERO_CHOSEN = "hero_chosen"  # 客户端选择武将
 
     # ---- 聊天 ----
-    CHAT = "chat"                       # 聊天消息
-    CHAT_BROADCAST = "chat_broadcast"   # 聊天广播
+    CHAT = "chat"  # 聊天消息
+    CHAT_BROADCAST = "chat_broadcast"  # 聊天广播
 
 
 class RoomState(Enum):
     """房间状态"""
-    WAITING = "waiting"     # 等待中
-    FULL = "full"           # 已满
-    PLAYING = "playing"     # 游戏中
-    FINISHED = "finished"   # 已结束
+
+    WAITING = "waiting"  # 等待中
+    FULL = "full"  # 已满
+    PLAYING = "playing"  # 游戏中
+    FINISHED = "finished"  # 已结束
 
 
 # ==================== 消息数据类 ====================
+
 
 @dataclass
 class ServerMsg:
@@ -83,19 +86,23 @@ class ServerMsg:
         "data": { ... }
     }
     """
+
     type: MsgType
     data: dict[str, Any] = field(default_factory=dict)
-    seq: int = 0                # 消息序号 (用于断线重连)
+    seq: int = 0  # 消息序号 (用于断线重连)
     timestamp: float = field(default_factory=time.time)
 
     def to_json(self) -> str:
         """序列化为 JSON 字符串"""
-        return json.dumps({
-            "type": self.type.value,
-            "seq": self.seq,
-            "timestamp": self.timestamp,
-            "data": self.data,
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "type": self.type.value,
+                "seq": self.seq,
+                "timestamp": self.timestamp,
+                "data": self.data,
+            },
+            ensure_ascii=False,
+        )
 
     @classmethod
     def from_json(cls, raw: str) -> ServerMsg:
@@ -123,23 +130,31 @@ class ServerMsg:
         return cls(type=MsgType.ROOM_CREATED, data={"room_id": room_id, **room_info})
 
     @classmethod
-    def room_joined(cls, room_id: str, player_id: int, player_name: str,
-                    players: list[dict[str, Any]]) -> ServerMsg:
-        return cls(type=MsgType.ROOM_JOINED, data={
-            "room_id": room_id,
-            "player_id": player_id,
-            "player_name": player_name,
-            "players": players,
-        })
+    def room_joined(
+        cls, room_id: str, player_id: int, player_name: str, players: list[dict[str, Any]]
+    ) -> ServerMsg:
+        return cls(
+            type=MsgType.ROOM_JOINED,
+            data={
+                "room_id": room_id,
+                "player_id": player_id,
+                "player_name": player_name,
+                "players": players,
+            },
+        )
 
     @classmethod
-    def room_update(cls, room_id: str, players: list[dict[str, Any]],
-                    state: RoomState) -> ServerMsg:
-        return cls(type=MsgType.ROOM_UPDATE, data={
-            "room_id": room_id,
-            "players": players,
-            "state": state.value,
-        })
+    def room_update(
+        cls, room_id: str, players: list[dict[str, Any]], state: RoomState
+    ) -> ServerMsg:
+        return cls(
+            type=MsgType.ROOM_UPDATE,
+            data={
+                "room_id": room_id,
+                "players": players,
+                "state": state.value,
+            },
+        )
 
     @classmethod
     def room_listing(cls, rooms: list[dict[str, Any]]) -> ServerMsg:
@@ -151,48 +166,66 @@ class ServerMsg:
         return cls(type=MsgType.GAME_STATE, data=state)
 
     @classmethod
-    def game_event(cls, event_type: str, event_data: dict[str, Any],
-                   seq: int = 0) -> ServerMsg:
+    def game_event(cls, event_type: str, event_data: dict[str, Any], seq: int = 0) -> ServerMsg:
         """增量游戏事件"""
-        return cls(type=MsgType.GAME_EVENT, seq=seq, data={
-            "event_type": event_type,
-            **event_data,
-        })
+        return cls(
+            type=MsgType.GAME_EVENT,
+            seq=seq,
+            data={
+                "event_type": event_type,
+                **event_data,
+            },
+        )
 
     @classmethod
-    def game_request(cls, request_type: str, player_id: int,
-                     options: dict[str, Any] = None,
-                     timeout: float = 30.0) -> ServerMsg:
+    def game_request(
+        cls,
+        request_type: str,
+        player_id: int,
+        options: dict[str, Any] = None,
+        timeout: float = 30.0,
+    ) -> ServerMsg:
         """请求玩家输入"""
-        return cls(type=MsgType.GAME_REQUEST, data={
-            "request_type": request_type,
-            "player_id": player_id,
-            "options": options or {},
-            "timeout": timeout,
-        })
+        return cls(
+            type=MsgType.GAME_REQUEST,
+            data={
+                "request_type": request_type,
+                "player_id": player_id,
+                "options": options or {},
+                "timeout": timeout,
+            },
+        )
 
     @classmethod
-    def game_over(cls, winner: str, reason: str,
-                  stats: dict[str, Any] = None) -> ServerMsg:
-        return cls(type=MsgType.GAME_OVER, data={
-            "winner": winner,
-            "reason": reason,
-            "stats": stats or {},
-        })
+    def game_over(cls, winner: str, reason: str, stats: dict[str, Any] = None) -> ServerMsg:
+        return cls(
+            type=MsgType.GAME_OVER,
+            data={
+                "winner": winner,
+                "reason": reason,
+                "stats": stats or {},
+            },
+        )
 
     @classmethod
     def hero_options(cls, player_id: int, heroes: list[dict[str, Any]]) -> ServerMsg:
-        return cls(type=MsgType.HERO_OPTIONS, data={
-            "player_id": player_id,
-            "heroes": heroes,
-        })
+        return cls(
+            type=MsgType.HERO_OPTIONS,
+            data={
+                "player_id": player_id,
+                "heroes": heroes,
+            },
+        )
 
     @classmethod
     def chat_broadcast(cls, player_name: str, message: str) -> ServerMsg:
-        return cls(type=MsgType.CHAT_BROADCAST, data={
-            "player_name": player_name,
-            "message": message,
-        })
+        return cls(
+            type=MsgType.CHAT_BROADCAST,
+            data={
+                "player_name": player_name,
+                "message": message,
+            },
+        )
 
 
 @dataclass
@@ -207,6 +240,7 @@ class ClientMsg:
         "data": { ... }
     }
     """
+
     type: MsgType
     player_id: int = 0
     data: dict[str, Any] = field(default_factory=dict)
@@ -214,12 +248,15 @@ class ClientMsg:
 
     def to_json(self) -> str:
         """序列化为 JSON 字符串"""
-        return json.dumps({
-            "type": self.type.value,
-            "player_id": self.player_id,
-            "timestamp": self.timestamp,
-            "data": self.data,
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "type": self.type.value,
+                "player_id": self.player_id,
+                "timestamp": self.timestamp,
+                "data": self.data,
+            },
+            ensure_ascii=False,
+        )
 
     @classmethod
     def from_json(cls, raw: str) -> ClientMsg:
@@ -239,21 +276,29 @@ class ClientMsg:
         return cls(type=MsgType.HEARTBEAT, player_id=player_id)
 
     @classmethod
-    def room_create(cls, player_id: int, player_name: str,
-                    max_players: int = 4, ai_fill: bool = True) -> ClientMsg:
-        return cls(type=MsgType.ROOM_CREATE, player_id=player_id, data={
-            "player_name": player_name,
-            "max_players": max_players,
-            "ai_fill": ai_fill,
-        })
+    def room_create(
+        cls, player_id: int, player_name: str, max_players: int = 4, ai_fill: bool = True
+    ) -> ClientMsg:
+        return cls(
+            type=MsgType.ROOM_CREATE,
+            player_id=player_id,
+            data={
+                "player_name": player_name,
+                "max_players": max_players,
+                "ai_fill": ai_fill,
+            },
+        )
 
     @classmethod
-    def room_join(cls, player_id: int, player_name: str,
-                  room_id: str) -> ClientMsg:
-        return cls(type=MsgType.ROOM_JOIN, player_id=player_id, data={
-            "player_name": player_name,
-            "room_id": room_id,
-        })
+    def room_join(cls, player_id: int, player_name: str, room_id: str) -> ClientMsg:
+        return cls(
+            type=MsgType.ROOM_JOIN,
+            player_id=player_id,
+            data={
+                "player_name": player_name,
+                "room_id": room_id,
+            },
+        )
 
     @classmethod
     def room_leave(cls, player_id: int) -> ClientMsg:
@@ -272,39 +317,61 @@ class ClientMsg:
         return cls(type=MsgType.ROOM_START, player_id=player_id)
 
     @classmethod
-    def game_action(cls, player_id: int, action_type: str,
-                    action_data: dict[str, Any] = None) -> ClientMsg:
+    def game_action(
+        cls, player_id: int, action_type: str, action_data: dict[str, Any] = None
+    ) -> ClientMsg:
         """玩家主动操作 (出牌/技能/弃牌/结束)"""
-        return cls(type=MsgType.GAME_ACTION, player_id=player_id, data={
-            "action_type": action_type,
-            **(action_data or {}),
-        })
+        return cls(
+            type=MsgType.GAME_ACTION,
+            player_id=player_id,
+            data={
+                "action_type": action_type,
+                **(action_data or {}),
+            },
+        )
 
     @classmethod
-    def game_response(cls, player_id: int, request_type: str,
-                      accepted: bool = False,
-                      response_data: dict[str, Any] = None) -> ClientMsg:
+    def game_response(
+        cls,
+        player_id: int,
+        request_type: str,
+        accepted: bool = False,
+        response_data: dict[str, Any] = None,
+    ) -> ClientMsg:
         """玩家响应请求 (出闪/出杀/出桃等)"""
-        return cls(type=MsgType.GAME_RESPONSE, player_id=player_id, data={
-            "request_type": request_type,
-            "accepted": accepted,
-            **(response_data or {}),
-        })
+        return cls(
+            type=MsgType.GAME_RESPONSE,
+            player_id=player_id,
+            data={
+                "request_type": request_type,
+                "accepted": accepted,
+                **(response_data or {}),
+            },
+        )
 
     @classmethod
     def hero_chosen(cls, player_id: int, hero_id: str) -> ClientMsg:
-        return cls(type=MsgType.HERO_CHOSEN, player_id=player_id, data={
-            "hero_id": hero_id,
-        })
+        return cls(
+            type=MsgType.HERO_CHOSEN,
+            player_id=player_id,
+            data={
+                "hero_id": hero_id,
+            },
+        )
 
     @classmethod
     def chat(cls, player_id: int, message: str) -> ClientMsg:
-        return cls(type=MsgType.CHAT, player_id=player_id, data={
-            "message": message,
-        })
+        return cls(
+            type=MsgType.CHAT,
+            player_id=player_id,
+            data={
+                "message": message,
+            },
+        )
 
 
 # ==================== 工具函数 ====================
+
 
 def parse_message(raw: str) -> tuple[str, dict]:
     """快速解析 JSON 消息，返回 (type_str, full_dict)

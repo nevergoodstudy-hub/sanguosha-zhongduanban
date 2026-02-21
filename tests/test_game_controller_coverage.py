@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from game.card import CardName, CardType
 from game.engine import GamePhase, GameState
 from game.game_controller import GameController
@@ -60,6 +62,7 @@ def _make_player(is_ai=False, hp=4, max_hp=4, hand=None):
 
 # ==================== __init__ ====================
 
+
 class TestInit:
     def test_constructor(self):
         ctrl = _make_controller()
@@ -68,12 +71,14 @@ class TestInit:
 
     def test_constructor_with_difficulty(self):
         from ai.bot import AIDifficulty
+
         ui = _make_ui()
         ctrl = GameController(ui, AIDifficulty.HARD)
         assert ctrl.ai_difficulty == AIDifficulty.HARD
 
 
 # ==================== _check_card_usable ====================
+
 
 class TestCheckCardUsable:
     def test_equipment_always_usable(self):
@@ -192,6 +197,7 @@ class TestCheckCardUsable:
 
 # ==================== _has_usable_cards / _can_do_anything ====================
 
+
 class TestHasUsableCards:
     def test_empty_hand(self):
         ctrl = _make_controller(engine=_make_engine())
@@ -264,6 +270,7 @@ class TestCanDoAnything:
 
 # ==================== get_playable_mask ====================
 
+
 class TestGetPlayableMask:
     def test_returns_correct_mask(self):
         engine = _make_engine()
@@ -278,7 +285,7 @@ class TestGetPlayableMask:
         assert len(mask) == 3
         assert mask[0] is False  # sha can't use
         assert mask[1] is False  # shan passive
-        assert mask[2] is True   # equipment always usable
+        assert mask[2] is True  # equipment always usable
 
 
 class TestUpdatePlayableMask:
@@ -301,6 +308,7 @@ class TestUpdatePlayableMask:
 
 # ==================== _show_turn_header ====================
 
+
 class TestShowTurnHeader:
     def test_shows_header(self):
         engine = _make_engine()
@@ -312,6 +320,7 @@ class TestShowTurnHeader:
 
 
 # ==================== Phase execution helpers ====================
+
 
 class TestPhaseExecution:
     def test_execute_prepare_phase(self):
@@ -370,6 +379,7 @@ class TestPhaseExecution:
 
 
 # ==================== _handle_game_over ====================
+
 
 class TestHandleGameOver:
     def test_no_engine(self):
@@ -449,21 +459,25 @@ class TestHandleGameOver:
 
 # ==================== Edge cases for _run_ai_turn / _run_human_turn ====================
 
+
 class TestRunTurnEdgeCases:
-    def test_run_ai_turn_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_run_ai_turn_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._run_ai_turn(MagicMock())  # should not raise
+        await ctrl._run_ai_turn(MagicMock())  # should not raise
 
-    def test_run_human_turn_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_run_human_turn_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._run_human_turn(MagicMock())  # should not raise
+        await ctrl._run_human_turn(MagicMock())  # should not raise
 
-    def test_game_loop_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_game_loop_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._game_loop()  # should not raise
+        await ctrl._game_loop()  # should not raise
 
     def test_choose_heroes_no_engine(self):
         ctrl = _make_controller()
@@ -475,20 +489,22 @@ class TestRunTurnEdgeCases:
         ctrl.engine = None
         ctrl._setup_ai_bots()  # should not raise
 
-    def test_human_play_phase_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_human_play_phase_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._human_play_phase(MagicMock())  # should not raise
+        await ctrl._human_play_phase(MagicMock())  # should not raise
 
     def test_handle_play_specific_card_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
         ctrl._handle_play_specific_card(MagicMock(), MagicMock())  # should not raise
 
-    def test_handle_use_skill_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_handle_use_skill_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._handle_use_skill(MagicMock())  # should not raise
+        await ctrl._handle_use_skill(MagicMock())  # should not raise
 
     def test_human_discard_phase_no_engine(self):
         ctrl = _make_controller()
@@ -497,6 +513,7 @@ class TestRunTurnEdgeCases:
 
 
 # ==================== _handle_play_specific_card branches ====================
+
 
 class TestHandlePlaySpecificCard:
     def test_equipment(self):

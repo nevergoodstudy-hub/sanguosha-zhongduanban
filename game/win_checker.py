@@ -20,15 +20,17 @@ if TYPE_CHECKING:
 
 class WinResult(Enum):
     """胜利结果"""
+
     NOT_FINISHED = "not_finished"
-    LORD_WIN = "lord_win"       # 主公和忠臣获胜
-    REBEL_WIN = "rebel_win"     # 反贼获胜
-    SPY_WIN = "spy_win"         # 内奸获胜
+    LORD_WIN = "lord_win"  # 主公和忠臣获胜
+    REBEL_WIN = "rebel_win"  # 反贼获胜
+    SPY_WIN = "spy_win"  # 内奸获胜
 
 
 @dataclass(slots=True)
 class GameOverInfo:
     """游戏结束信息"""
+
     is_over: bool
     result: WinResult
     winner_identity: str | None
@@ -70,29 +72,20 @@ class WinConditionChecker:
             return self._check_lord_dead(alive_players)
 
         # 情况2：检查反贼和内奸是否全灭
-        rebel_alive = any(
-            p.identity == Identity.REBEL and p.is_alive
-            for p in players
-        )
-        spy_alive = any(
-            p.identity == Identity.SPY and p.is_alive
-            for p in players
-        )
+        rebel_alive = any(p.identity == Identity.REBEL and p.is_alive for p in players)
+        spy_alive = any(p.identity == Identity.SPY and p.is_alive for p in players)
 
         if not rebel_alive and not spy_alive:
             return GameOverInfo(
                 is_over=True,
                 result=WinResult.LORD_WIN,
                 winner_identity=Identity.LORD.value,
-                message=_t("game.over_lord_wins")
+                message=_t("game.over_lord_wins"),
             )
 
         # 游戏继续
         return GameOverInfo(
-            is_over=False,
-            result=WinResult.NOT_FINISHED,
-            winner_identity=None,
-            message=""
+            is_over=False, result=WinResult.NOT_FINISHED, winner_identity=None, message=""
         )
 
     def _find_lord(self, players: list[Player]) -> Player | None:
@@ -116,10 +109,7 @@ class WinConditionChecker:
         from .player import Identity
 
         # 检查是否只剩内奸
-        spy_count = sum(
-            1 for p in alive_players
-            if p.identity == Identity.SPY
-        )
+        spy_count = sum(1 for p in alive_players if p.identity == Identity.SPY)
 
         if len(alive_players) == spy_count and spy_count > 0:
             # 只剩内奸，内奸获胜
@@ -127,7 +117,7 @@ class WinConditionChecker:
                 is_over=True,
                 result=WinResult.SPY_WIN,
                 winner_identity=Identity.SPY.value,
-                message=_t("game.over_spy_wins")
+                message=_t("game.over_spy_wins"),
             )
         else:
             # 反贼获胜
@@ -135,7 +125,7 @@ class WinConditionChecker:
                 is_over=True,
                 result=WinResult.REBEL_WIN,
                 winner_identity=Identity.REBEL.value,
-                message=_t("game.over_rebel_wins")
+                message=_t("game.over_rebel_wins"),
             )
 
     def get_winner_message(self) -> str:
@@ -169,10 +159,7 @@ def get_identity_win_condition(identity_value: str) -> str:
     return conditions.get(identity_value, _t("win.unknown"))
 
 
-def check_team_win(
-    alive_players: list[Player],
-    team_identities: list[str]
-) -> bool:
+def check_team_win(alive_players: list[Player], team_identities: list[str]) -> bool:
     """检查某一阵营是否获胜
 
     Args:

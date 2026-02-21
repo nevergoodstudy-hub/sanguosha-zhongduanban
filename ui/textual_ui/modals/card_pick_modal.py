@@ -85,7 +85,9 @@ class CardPickModal(AnimatedModalScreen[Optional[int]]):
             # 手牌区（背面，只显示 N 张可选）
             hand_count = target.hand_count if hasattr(target, "hand_count") else len(target.hand)
             if hand_count > 0:
-                yield Static("[bold]📋 手牌区[/bold]（随机抽取）", classes="pick-section", markup=True)
+                yield Static(
+                    "[bold]📋 手牌区[/bold]（随机抽取）", classes="pick-section", markup=True
+                )
                 yield Button(
                     f"🎴 手牌 ({hand_count} 张，随机抽取)",
                     id="pick-hand",
@@ -114,9 +116,9 @@ class CardPickModal(AnimatedModalScreen[Optional[int]]):
                         idx = self._all_cards.index(card)
                     except ValueError:
                         continue
-                    suit_icon = {
-                        "spade": "♠", "heart": "♥", "club": "♣", "diamond": "♦"
-                    }.get(getattr(card.suit, "value", ""), "?")
+                    suit_icon = {"spade": "♠", "heart": "♥", "club": "♣", "diamond": "♦"}.get(
+                        getattr(card.suit, "value", ""), "?"
+                    )
                     yield Button(
                         f"{slot_name}: {suit_icon}{card.number_str} {card.name}",
                         id=f"pick-{idx}",
@@ -131,6 +133,7 @@ class CardPickModal(AnimatedModalScreen[Optional[int]]):
         if btn_id == "pick-hand":
             # 随机选一张手牌
             import random
+
             target = self._target
             if target.hand:
                 card = random.choice(target.hand)

@@ -24,6 +24,7 @@ from game.engine import GameEngine
 @dataclass
 class BattleResult:
     """对局结果"""
+
     battle_id: int
     winner: str | None
     rounds: int
@@ -37,7 +38,7 @@ class BattleResult:
 class StressTester:
     """
     压力测试器
-    
+
     使用 GameEngine 的 headless 接口运行对局，
     确保压测逻辑与正式游戏一致。
     """
@@ -51,10 +52,10 @@ class StressTester:
     def run_single_battle(self, battle_id: int) -> BattleResult:
         """
         运行单场对局（使用正式引擎接口）
-        
+
         Args:
             battle_id: 对局编号
-            
+
         Returns:
             对局结果
         """
@@ -84,7 +85,7 @@ class StressTester:
                 rounds=result["rounds"],
                 players=result["players"],
                 heroes=result["heroes"],
-                duration_ms=int(duration)
+                duration_ms=int(duration),
             )
 
         except Exception as e:
@@ -98,7 +99,7 @@ class StressTester:
                 heroes=[],
                 error=str(e),
                 error_traceback=tb,
-                duration_ms=int(duration)
+                duration_ms=int(duration),
             )
 
     # 以下方法已废弃，保留空实现以兼容旧测试代码
@@ -106,9 +107,9 @@ class StressTester:
 
     def run_all_battles(self) -> None:
         """运行所有对局"""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"  三国杀压力测试 - 共 {self.num_battles} 局对局")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         for i in range(self.num_battles):
             result = self.run_single_battle(i + 1)
@@ -116,38 +117,40 @@ class StressTester:
 
             if result.error:
                 self.errors.append(result)
-                print(f"[{i+1:3d}/{self.num_battles}] ❌ 错误: {result.error[:50]}...")
+                print(f"[{i + 1:3d}/{self.num_battles}] ❌ 错误: {result.error[:50]}...")
             else:
                 status = "✓" if result.winner else "?"
-                print(f"[{i+1:3d}/{self.num_battles}] {status} 胜者: {result.winner:<6} "
-                      f"| 回合: {result.rounds:3d} | 耗时: {result.duration_ms:4d}ms "
-                      f"| 武将: {', '.join(result.heroes[:2])}...")
+                print(
+                    f"[{i + 1:3d}/{self.num_battles}] {status} 胜者: {result.winner:<6} "
+                    f"| 回合: {result.rounds:3d} | 耗时: {result.duration_ms:4d}ms "
+                    f"| 武将: {', '.join(result.heroes[:2])}..."
+                )
 
         self._print_summary()
 
     def _print_summary(self) -> None:
         """打印测试总结"""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("  测试总结")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         total = len(self.results)
         errors = len(self.errors)
         success = total - errors
 
         print(f"\n总对局数: {total}")
-        print(f"成功: {success} ({success/total*100:.1f}%)")
-        print(f"错误: {errors} ({errors/total*100:.1f}%)")
+        print(f"成功: {success} ({success / total * 100:.1f}%)")
+        print(f"错误: {errors} ({errors / total * 100:.1f}%)")
 
         if self.errors:
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print("  错误详情")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
 
             # 统计错误类型
             error_types: dict[str, int] = {}
             for err in self.errors:
-                err_key = err.error.split('\n')[0][:80] if err.error else "Unknown"
+                err_key = err.error.split("\n")[0][:80] if err.error else "Unknown"
                 error_types[err_key] = error_types.get(err_key, 0) + 1
 
             for err_type, count in sorted(error_types.items(), key=lambda x: -x[1]):
@@ -159,9 +162,9 @@ class StressTester:
                 print(self.errors[0].error_traceback)
 
         # 统计胜率
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("  胜率统计")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         winners: dict[str, int] = {}
         for r in self.results:
@@ -169,7 +172,11 @@ class StressTester:
                 winners[r.winner] = winners.get(r.winner, 0) + 1
 
         for winner, count in sorted(winners.items(), key=lambda x: -x[1]):
-            print(f"  {winner}: {count} 局 ({count/success*100:.1f}%)" if success > 0 else f"  {winner}: {count} 局")
+            print(
+                f"  {winner}: {count} 局 ({count / success * 100:.1f}%)"
+                if success > 0
+                else f"  {winner}: {count} 局"
+            )
 
         # 平均回合数
         rounds = [r.rounds for r in self.results if not r.error]

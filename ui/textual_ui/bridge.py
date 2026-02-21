@@ -122,9 +122,8 @@ class TextualUIBridge:
         if not shan_cards:
             return None
         from ui.textual_ui.modals.response_modal import ShanResponseModal
-        result = self._push_modal_and_wait(
-            lambda: ShanResponseModal(cards=shan_cards), timeout=20
-        )
+
+        result = self._push_modal_and_wait(lambda: ShanResponseModal(cards=shan_cards), timeout=20)
         if result:
             return shan_cards[0]
         return None
@@ -135,9 +134,8 @@ class TextualUIBridge:
         if not sha_cards:
             return None
         from ui.textual_ui.modals.response_modal import ShaResponseModal
-        result = self._push_modal_and_wait(
-            lambda: ShaResponseModal(cards=sha_cards), timeout=20
-        )
+
+        result = self._push_modal_and_wait(lambda: ShaResponseModal(cards=sha_cards), timeout=20)
         if result:
             return sha_cards[0]
         return None
@@ -148,6 +146,7 @@ class TextualUIBridge:
         if not tao_cards:
             return None
         from ui.textual_ui.modals.response_modal import TaoResponseModal
+
         result = self._push_modal_and_wait(
             lambda: TaoResponseModal(dying_name=dying.name, cards=tao_cards),
             timeout=25,
@@ -162,6 +161,7 @@ class TextualUIBridge:
         if not wuxie_cards:
             return None
         from ui.textual_ui.modals.wuxie_modal import WuxieResponseModal
+
         trick_name = str(trick_card.name) if trick_card else "锦囊"
         source_name = source.name if source else "?"
         target_name = target.name if target else "全体"
@@ -185,6 +185,7 @@ class TextualUIBridge:
         if not all_cards:
             return None
         from ui.textual_ui.modals.card_pick_modal import CardPickModal
+
         result = self._push_modal_and_wait(
             lambda: CardPickModal(target=target, all_cards=all_cards),
             timeout=30,
@@ -198,9 +199,8 @@ class TextualUIBridge:
         """选择花色 → SuitSelectModal"""
         from game.card import CardSuit
         from ui.textual_ui.modals.suit_modal import SuitSelectModal
-        result = self._push_modal_and_wait(
-            lambda: SuitSelectModal(), timeout=30
-        )
+
+        result = self._push_modal_and_wait(lambda: SuitSelectModal(), timeout=30)
         if result:
             # result 是 "spade"/"heart"/"club"/"diamond" 字符串
             suit_map = {s.value: s for s in CardSuit}
@@ -214,6 +214,7 @@ class TextualUIBridge:
     def choose_target(self, player, targets, prompt="选择目标"):
         """选择目标 → TargetSelectModal"""
         from ui.textual_ui.modals.target_modal import TargetSelectModal
+
         result = self._push_modal_and_wait(
             lambda: TargetSelectModal(targets=targets, prompt=prompt),
             timeout=60,

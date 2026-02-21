@@ -19,7 +19,7 @@ class ReplayTool:
 
     def __init__(self, log_path: str):
         """初始化回放工具
-        
+
         Args:
             log_path: action_log JSON 文件路径
         """
@@ -31,7 +31,7 @@ class ReplayTool:
     def load_log(self) -> bool:
         """加载日志文件"""
         try:
-            with open(self.log_path, encoding='utf-8') as f:
+            with open(self.log_path, encoding="utf-8") as f:
                 self.log_data = json.load(f)
             print(f"✓ 日志已加载: {self.log_path}")
             print(f"  版本: {self.log_data.get('version', 'unknown')}")
@@ -52,13 +52,13 @@ class ReplayTool:
 
         try:
             # 设置随机种子
-            seed = self.log_data.get('game_seed')
+            seed = self.log_data.get("game_seed")
             if seed is not None:
                 random.seed(seed)
                 print(f"✓ 随机种子已设置: {seed}")
 
             # 创建引擎
-            player_count = self.log_data.get('player_count', 4)
+            player_count = self.log_data.get("player_count", 4)
             self.engine = GameEngine()
             self.engine.setup_headless_game(player_count, seed=seed)
 
@@ -68,15 +68,16 @@ class ReplayTool:
         except Exception as e:
             self.errors.append(f"设置游戏失败: {e}")
             import traceback
+
             self.errors.append(traceback.format_exc())
             return False
 
     def replay_actions(self, step_by_step: bool = False) -> bool:
         """回放动作
-        
+
         Args:
             step_by_step: 是否逐步执行（等待用户输入）
-            
+
         Returns:
             是否成功回放
         """
@@ -84,15 +85,15 @@ class ReplayTool:
             self.errors.append("引擎或日志未准备好")
             return False
 
-        actions = self.log_data.get('actions', [])
+        actions = self.log_data.get("actions", [])
         print(f"\n开始回放 {len(actions)} 个动作...")
 
         for i, action in enumerate(actions):
             try:
-                action_type = action.get('action_type', 'UNKNOWN')
-                player_id = action.get('player_id', -1)
+                action_type = action.get("action_type", "UNKNOWN")
+                player_id = action.get("player_id", -1)
 
-                print(f"[{i+1}/{len(actions)}] {action_type} by Player {player_id}")
+                print(f"[{i + 1}/{len(actions)}] {action_type} by Player {player_id}")
 
                 if step_by_step:
                     input("按 Enter 继续...")
@@ -101,7 +102,7 @@ class ReplayTool:
                 # 目前仅记录和验证
 
             except Exception as e:
-                self.errors.append(f"回放动作 {i+1} 失败: {e}")
+                self.errors.append(f"回放动作 {i + 1} 失败: {e}")
                 return False
 
         print(f"\n✓ 回放完成，共 {len(actions)} 个动作")
@@ -112,7 +113,7 @@ class ReplayTool:
         if not self.engine or not self.log_data:
             return False
 
-        expected_winner = self.log_data.get('winner')
+        expected_winner = self.log_data.get("winner")
         actual_winner = self.engine.winner_identity.value if self.engine.winner_identity else None
 
         if expected_winner == actual_winner:
@@ -124,38 +125,34 @@ class ReplayTool:
 
     def run(self, step_by_step: bool = False) -> dict[str, Any]:
         """运行完整回放
-        
+
         Args:
             step_by_step: 是否逐步执行
-            
+
         Returns:
             回放结果
         """
-        result = {
-            'success': False,
-            'errors': [],
-            'verified': False
-        }
+        result = {"success": False, "errors": [], "verified": False}
 
         # 加载日志
         if not self.load_log():
-            result['errors'] = self.errors
+            result["errors"] = self.errors
             return result
 
         # 设置游戏
         if not self.setup_game():
-            result['errors'] = self.errors
+            result["errors"] = self.errors
             return result
 
         # 回放动作
         if not self.replay_actions(step_by_step):
-            result['errors'] = self.errors
+            result["errors"] = self.errors
             return result
 
         # 验证结果
-        result['verified'] = self.verify_result()
-        result['success'] = True
-        result['errors'] = self.errors
+        result["verified"] = self.verify_result()
+        result["success"] = True
+        result["errors"] = self.errors
 
         return result
 
@@ -175,9 +172,9 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="三国杀对局回放工具")
-    parser.add_argument('log_file', nargs='?', help='日志文件路径')
-    parser.add_argument('-l', '--list', action='store_true', help='列出可用日志')
-    parser.add_argument('-s', '--step', action='store_true', help='逐步执行')
+    parser.add_argument("log_file", nargs="?", help="日志文件路径")
+    parser.add_argument("-l", "--list", action="store_true", help="列出可用日志")
+    parser.add_argument("-s", "--step", action="store_true", help="逐步执行")
 
     args = parser.parse_args()
 
@@ -205,11 +202,11 @@ def main():
     tool = ReplayTool(args.log_file)
     result = tool.run(step_by_step=args.step)
 
-    if result['success']:
+    if result["success"]:
         print("\n✓ 回放成功完成")
     else:
         print("\n✗ 回放失败")
-        for err in result['errors']:
+        for err in result["errors"]:
             print(f"  - {err}")
 
 

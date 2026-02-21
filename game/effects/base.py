@@ -1,5 +1,4 @@
-"""卡牌效果基类（M1-T02）
-"""
+"""卡牌效果基类（M1-T02）"""
 
 from __future__ import annotations
 
@@ -20,8 +19,9 @@ class CardEffect(ABC):
     """
 
     @abstractmethod
-    def can_use(self, engine: GameEngine, player: Player,
-                card: Card, targets: list[Player]) -> tuple[bool, str]:
+    def can_use(
+        self, engine: GameEngine, player: Player, card: Card, targets: list[Player]
+    ) -> tuple[bool, str]:
         """检查是否可以使用此卡牌
 
         Returns:
@@ -30,8 +30,9 @@ class CardEffect(ABC):
         pass
 
     @abstractmethod
-    def resolve(self, engine: GameEngine, player: Player,
-                card: Card, targets: list[Player]) -> bool:
+    def resolve(
+        self, engine: GameEngine, player: Player, card: Card, targets: list[Player]
+    ) -> bool:
         """执行卡牌效果
 
         Returns:

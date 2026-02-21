@@ -29,6 +29,7 @@ def _make_card(name=CardName.SHA, suit=CardSuit.SPADE):
 
 # ==================== request_shan ====================
 
+
 class TestRequestShan:
     def test_no_shan_cards(self):
         engine = _make_engine()
@@ -67,6 +68,7 @@ class TestRequestShan:
 
 # ==================== request_sha ====================
 
+
 class TestRequestSha:
     def test_no_sha_cards(self):
         engine = _make_engine()
@@ -104,6 +106,7 @@ class TestRequestSha:
 
 
 # ==================== request_tao ====================
+
 
 class TestRequestTao:
     def test_no_tao_cards(self):
@@ -157,6 +160,7 @@ class TestRequestTao:
 
 # ==================== request_wuxie ====================
 
+
 class TestRequestWuxie:
     def test_no_wuxie_cards(self):
         engine = _make_engine()
@@ -207,6 +211,7 @@ class TestRequestWuxie:
 
 # ==================== choose_card_from_player ====================
 
+
 class TestChooseCardFromPlayer:
     def test_no_cards(self):
         engine = _make_engine()
@@ -250,6 +255,7 @@ class TestChooseCardFromPlayer:
 
 # ==================== choose_card_to_show ====================
 
+
 class TestChooseCardToShow:
     def test_no_hand(self):
         engine = _make_engine()
@@ -284,6 +290,7 @@ class TestChooseCardToShow:
 
 
 # ==================== choose_card_to_discard_for_huogong ====================
+
 
 class TestChooseCardToDiscardForHuogong:
     def test_no_matching(self):
@@ -321,6 +328,7 @@ class TestChooseCardToDiscardForHuogong:
 
 # ==================== choose_suit ====================
 
+
 class TestChooseSuit:
     def test_ai(self):
         engine = _make_engine()
@@ -347,6 +355,7 @@ class TestChooseSuit:
 
 
 # ==================== guanxing_selection ====================
+
 
 class TestGuanxingSelection:
     def test_ai_sorts_by_priority(self):
@@ -383,6 +392,7 @@ class TestGuanxingSelection:
 
 # ==================== ask_zhuque_convert ====================
 
+
 class TestAskZhuqueConvert:
     def test_ai_always_true(self):
         engine = _make_engine()
@@ -407,6 +417,7 @@ class TestAskZhuqueConvert:
 
 
 # ==================== ask_for_jijiang ====================
+
 
 class TestAskForJijiang:
     def test_no_sha_cards(self):
@@ -444,6 +455,7 @@ class TestAskForJijiang:
 
 
 # ==================== ask_for_hujia ====================
+
 
 class TestAskForHujia:
     def test_no_shan_cards(self):

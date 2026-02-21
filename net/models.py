@@ -20,8 +20,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 #  客户端 → 服务端 消息校验模型                                             #
 # ====================================================================== #
 
+
 class ClientMsgModel(BaseModel):
     """客户端消息校验模型"""
+
     model_config = ConfigDict(extra="forbid")
 
     type: str
@@ -39,6 +41,7 @@ class ClientMsgModel(BaseModel):
 
 class RoomCreateData(BaseModel):
     """room_create 消息的 data 校验"""
+
     model_config = ConfigDict(extra="forbid")
 
     player_name: str = Field(min_length=1, max_length=20)
@@ -48,6 +51,7 @@ class RoomCreateData(BaseModel):
 
 class RoomJoinData(BaseModel):
     """room_join 消息的 data 校验"""
+
     model_config = ConfigDict(extra="forbid")
 
     player_name: str = Field(min_length=1, max_length=20)
@@ -58,6 +62,7 @@ class RoomJoinData(BaseModel):
 
 class RoomReadyData(BaseModel):
     """room_ready 消息的 data 校验"""
+
     model_config = ConfigDict(extra="forbid")
 
     ready: bool = True
@@ -65,6 +70,7 @@ class RoomReadyData(BaseModel):
 
 class GameActionData(BaseModel):
     """game_action 消息的 data 校验"""
+
     model_config = ConfigDict(extra="ignore")
 
     action_type: str = Field(min_length=1)
@@ -72,6 +78,7 @@ class GameActionData(BaseModel):
 
 class GameResponseData(BaseModel):
     """game_response 消息的 data 校验"""
+
     model_config = ConfigDict(extra="ignore")
 
     request_type: str = Field(min_length=1)
@@ -80,6 +87,7 @@ class GameResponseData(BaseModel):
 
 class HeroChosenData(BaseModel):
     """hero_chosen 消息的 data 校验"""
+
     model_config = ConfigDict(extra="forbid")
 
     hero_id: str = Field(min_length=1, max_length=50)
@@ -87,6 +95,7 @@ class HeroChosenData(BaseModel):
 
 class ChatData(BaseModel):
     """chat 消息的 data 校验"""
+
     model_config = ConfigDict(extra="forbid")
 
     message: str = Field(min_length=1, max_length=500)

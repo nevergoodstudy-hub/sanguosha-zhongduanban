@@ -3,7 +3,6 @@
 Uses app.run_test() to actually drive screens headlessly with Pilot.
 """
 
-
 import pytest
 from textual.widgets import Button, Select, Static
 
@@ -16,6 +15,7 @@ from ui.textual_ui.widgets.hp_bar import HPBar
 from ui.textual_ui.widgets.phase_indicator import PHASES, PhaseIndicator
 
 # ==================== App Smoke Test ====================
+
 
 class TestAppSmoke:
     """SanguoshaApp 基本启动测试"""
@@ -59,6 +59,7 @@ class TestAppSmoke:
 
 
 # ==================== MainMenuScreen ====================
+
 
 class TestMainMenuScreen:
     """主菜单界面测试"""
@@ -111,6 +112,7 @@ class TestMainMenuScreen:
 
 # ==================== RulesScreen ====================
 
+
 class TestRulesScreen:
     """规则界面测试"""
 
@@ -153,6 +155,7 @@ class TestRulesScreen:
 
 # ==================== GameSetupScreen ====================
 
+
 class TestGameSetupScreen:
     """游戏设置界面测试"""
 
@@ -193,6 +196,7 @@ class TestGameSetupScreen:
 
 
 # ==================== GameOverScreen ====================
+
 
 class TestGameOverScreen:
     """游戏结束界面测试"""
@@ -242,6 +246,7 @@ class TestGameOverScreen:
 
 
 # ==================== Widget Unit Tests ====================
+
 
 class TestHPBarWidget:
     """HPBar 组件测试"""

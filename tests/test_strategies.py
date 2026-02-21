@@ -2,9 +2,6 @@
 
 from unittest.mock import MagicMock
 
-from game.card import Card, CardName, CardSubtype, CardSuit, CardType
-from game.player import Identity
-
 from ai.strategy import (
     card_priority,
     count_useless_cards,
@@ -13,6 +10,8 @@ from ai.strategy import (
     pick_least_valuable,
     smart_discard,
 )
+from game.card import Card, CardName, CardSubtype, CardSuit, CardType
+from game.player import Identity
 
 
 def _mock_player(identity=Identity.LORD, alive=True, hand=None):

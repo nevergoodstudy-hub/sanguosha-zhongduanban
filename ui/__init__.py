@@ -4,4 +4,4 @@
 
 from .textual_ui import SanguoshaApp
 
-__all__ = ['SanguoshaApp']
+__all__ = ["SanguoshaApp"]

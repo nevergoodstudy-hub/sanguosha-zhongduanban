@@ -13,7 +13,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Dict
 
 from . import qun as _qun  # noqa: F401
 

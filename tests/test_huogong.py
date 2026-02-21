@@ -35,7 +35,7 @@ class TestHuogong:
             card_type=CardType.TRICK,
             subtype=CardSubtype.SINGLE_TARGET,
             suit=CardSuit.HEART,
-            number=2
+            number=2,
         )
 
     def test_huogong_basic(self, engine, huogong_card):
@@ -51,7 +51,7 @@ class TestHuogong:
             card_type=CardType.BASIC,
             subtype=CardSubtype.HEAL,
             suit=CardSuit.HEART,
-            number=3
+            number=3,
         )
         target.hand.append(target_card)
 
@@ -66,7 +66,7 @@ class TestHuogong:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.HEART,  # 与目标手牌同花色
-            number=5
+            number=5,
         )
         player.hand.append(matching_card)
 
@@ -92,7 +92,7 @@ class TestHuogong:
             card_type=CardType.BASIC,
             subtype=CardSubtype.DODGE,
             suit=CardSuit.CLUB,  # 梅花
-            number=3
+            number=3,
         )
         target.hand.append(target_card)
 
@@ -107,7 +107,7 @@ class TestHuogong:
             card_type=CardType.BASIC,
             subtype=CardSubtype.ATTACK,
             suit=CardSuit.SPADE,
-            number=5
+            number=5,
         )
         player.hand.append(diff_card)
 
@@ -148,7 +148,7 @@ class TestHuogong:
             card_type=CardType.BASIC,
             subtype=CardSubtype.HEAL,
             suit=CardSuit.HEART,
-            number=3
+            number=3,
         )
         target.hand.clear()
         target.draw_cards([heart_card])
@@ -162,7 +162,7 @@ class TestHuogong:
             card_type=CardType.BASIC,
             subtype=CardSubtype.DODGE,
             suit=CardSuit.HEART,
-            number=2
+            number=2,
         )
         player.draw_cards([matching])
 
@@ -172,7 +172,9 @@ class TestHuogong:
         engine.card_resolver.use_huogong(player, huogong_card, [target])
 
         # 检查日志中是否有火焰伤害相关记录
-        damage_logs = [e for e in engine.event_log if 'damage' in e.event_type.lower() or '伤害' in e.message]
+        damage_logs = [
+            e for e in engine.event_log if "damage" in e.event_type.lower() or "伤害" in e.message
+        ]
         assert len(damage_logs) > 0 or target.hp < target.max_hp
 
 

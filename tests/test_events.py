@@ -24,6 +24,7 @@ class TestEventBus:
 
     def test_subscribe_and_publish(self):
         """测试订阅和发布事件"""
+
         def handler(event):
             self.received_events.append(event)
 
@@ -52,6 +53,7 @@ class TestEventBus:
 
     def test_cancel_event(self):
         """测试取消事件"""
+
         def canceller(event):
             event.cancel()
 
@@ -68,6 +70,7 @@ class TestEventBus:
 
     def test_modify_event_data(self):
         """测试修改事件数据"""
+
         def modifier(event):
             event.modify_damage(5)
 
@@ -79,6 +82,7 @@ class TestEventBus:
 
     def test_unsubscribe(self):
         """测试取消订阅"""
+
         def handler(event):
             self.received_events.append(event)
 
@@ -92,6 +96,7 @@ class TestEventBus:
 
     def test_global_handler(self):
         """测试全局处理器"""
+
         def global_handler(event):
             self.received_events.append(event)
 
@@ -114,6 +119,7 @@ class TestEventBus:
 
     def test_once_fires_only_once(self):
         """测试 once() 仅触发一次"""
+
         def handler(event):
             self.received_events.append(event)
 
@@ -132,12 +138,7 @@ class TestGameEvent:
         """测试事件属性"""
         event = GameEvent(
             event_type=EventType.DAMAGE_INFLICTED,
-            data={
-                "source": "player1",
-                "target": "player2",
-                "damage": 2,
-                "message": "造成伤害"
-            }
+            data={"source": "player1", "target": "player2", "damage": 2, "message": "造成伤害"},
         )
 
         assert event.source == "player1"

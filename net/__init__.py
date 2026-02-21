@@ -7,7 +7,12 @@ from .protocol import ClientMsg, MsgType, RoomState, ServerMsg
 from .server import ConnectedPlayer, GameServer, Room
 
 __all__ = [
-    "MsgType", "ServerMsg", "ClientMsg", "RoomState",
-    "GameServer", "Room", "ConnectedPlayer",
+    "MsgType",
+    "ServerMsg",
+    "ClientMsg",
+    "RoomState",
+    "GameServer",
+    "Room",
+    "ConnectedPlayer",
     "GameClient",
 ]

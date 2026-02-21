@@ -44,9 +44,14 @@ def two_player_engine():
     return eng
 
 
-def make_card(name, suit=CardSuit.SPADE, number=1,
-              card_type=CardType.BASIC, subtype=CardSubtype.ATTACK,
-              card_id="test_card"):
+def make_card(
+    name,
+    suit=CardSuit.SPADE,
+    number=1,
+    card_type=CardType.BASIC,
+    subtype=CardSubtype.ATTACK,
+    card_id="test_card",
+):
     """快速创建测试卡牌"""
     return Card(
         id=card_id,
@@ -116,7 +121,9 @@ class TestCombatSystem:
     def test_use_juedou_no_targets(self, engine):
         """决斗无目标返回 False"""
         player = engine.players[0]
-        card = make_card(CardName.JUEDOU, card_type=CardType.TRICK, subtype=CardSubtype.SINGLE_TARGET)
+        card = make_card(
+            CardName.JUEDOU, card_type=CardType.TRICK, subtype=CardSubtype.SINGLE_TARGET
+        )
         result = engine.combat.use_juedou(player, card, [])
         assert result is False
 
@@ -124,7 +131,9 @@ class TestCombatSystem:
         """决斗对有效目标执行"""
         player = engine.players[0]
         target = engine.players[1]
-        card = make_card(CardName.JUEDOU, card_type=CardType.TRICK, subtype=CardSubtype.SINGLE_TARGET)
+        card = make_card(
+            CardName.JUEDOU, card_type=CardType.TRICK, subtype=CardSubtype.SINGLE_TARGET
+        )
         hp_before = target.hp
         engine.combat.use_juedou(player, card, [target])
         # 决斗应导致某方受伤
@@ -146,8 +155,10 @@ class TestEquipmentSystem:
         """装备武器"""
         player = engine.players[0]
         weapon = make_card(
-            CardName.ZHUGENU, card_type=CardType.EQUIPMENT,
-            subtype=CardSubtype.WEAPON, card_id="zhuge_test"
+            CardName.ZHUGENU,
+            card_type=CardType.EQUIPMENT,
+            subtype=CardSubtype.WEAPON,
+            card_id="zhuge_test",
         )
         result = engine.equipment_sys.equip(player, weapon)
         assert result is True
@@ -157,8 +168,10 @@ class TestEquipmentSystem:
         """装备防具"""
         player = engine.players[0]
         armor = make_card(
-            CardName.BAGUA, card_type=CardType.EQUIPMENT,
-            subtype=CardSubtype.ARMOR, card_id="bagua_test"
+            CardName.BAGUA,
+            card_type=CardType.EQUIPMENT,
+            subtype=CardSubtype.ARMOR,
+            card_id="bagua_test",
         )
         result = engine.equipment_sys.equip(player, armor)
         assert result is True
@@ -168,8 +181,10 @@ class TestEquipmentSystem:
         """移除装备"""
         player = engine.players[0]
         weapon = make_card(
-            CardName.ZHUGENU, card_type=CardType.EQUIPMENT,
-            subtype=CardSubtype.WEAPON, card_id="zhuge_remove"
+            CardName.ZHUGENU,
+            card_type=CardType.EQUIPMENT,
+            subtype=CardSubtype.WEAPON,
+            card_id="zhuge_remove",
         )
         engine.equipment_sys.equip(player, weapon)
         assert player.equipment.weapon is not None
@@ -215,9 +230,12 @@ class TestJudgeSystem:
         player = engine.players[0]
         player.judge_area.clear()
         lebu = make_card(
-            CardName.LEBUSISHU, card_type=CardType.TRICK,
-            subtype=CardSubtype.DELAY, suit=CardSuit.SPADE,
-            number=6, card_id="lebu_judge_test"
+            CardName.LEBUSISHU,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.DELAY,
+            suit=CardSuit.SPADE,
+            number=6,
+            card_id="lebu_judge_test",
         )
         player.judge_area.append(lebu)
         engine.judge_sys.phase_judge(player)
@@ -229,9 +247,12 @@ class TestJudgeSystem:
         player = engine.players[0]
         player.judge_area.clear()
         bl = make_card(
-            CardName.BINGLIANG, card_type=CardType.TRICK,
-            subtype=CardSubtype.DELAY, suit=CardSuit.CLUB,
-            number=4, card_id="bl_judge_test"
+            CardName.BINGLIANG,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.DELAY,
+            suit=CardSuit.CLUB,
+            number=4,
+            card_id="bl_judge_test",
         )
         player.judge_area.append(bl)
         engine.judge_sys.phase_judge(player)
@@ -272,8 +293,7 @@ class TestCardResolver:
         player = engine.players[0]
         hand_before = len(player.hand)
         wz = make_card(
-            CardName.WUZHONG, card_type=CardType.TRICK,
-            subtype=CardSubtype.SELF, card_id="wz_test"
+            CardName.WUZHONG, card_type=CardType.TRICK, subtype=CardSubtype.SELF, card_id="wz_test"
         )
         result = engine.card_resolver.use_wuzhong(player, wz)
         assert result is True
@@ -285,8 +305,11 @@ class TestCardResolver:
         player.alcohol_used = False
         player.is_dying = False
         jiu = make_card(
-            CardName.JIU, card_type=CardType.BASIC,
-            subtype=CardSubtype.ALCOHOL, suit=CardSuit.SPADE, card_id="jiu_test"
+            CardName.JIU,
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ALCOHOL,
+            suit=CardSuit.SPADE,
+            card_id="jiu_test",
         )
         result = engine.card_resolver.use_jiu(player, jiu)
         assert result is True
@@ -298,8 +321,11 @@ class TestCardResolver:
         player.alcohol_used = True
         player.is_dying = False
         jiu = make_card(
-            CardName.JIU, card_type=CardType.BASIC,
-            subtype=CardSubtype.ALCOHOL, suit=CardSuit.SPADE, card_id="jiu_test2"
+            CardName.JIU,
+            card_type=CardType.BASIC,
+            subtype=CardSubtype.ALCOHOL,
+            suit=CardSuit.SPADE,
+            card_id="jiu_test2",
         )
         result = engine.card_resolver.use_jiu(player, jiu)
         assert result is False
@@ -310,8 +336,10 @@ class TestCardResolver:
         target = engine.players[1]
         target.judge_area.clear()
         lebu = make_card(
-            CardName.LEBUSISHU, card_type=CardType.TRICK,
-            subtype=CardSubtype.DELAY, card_id="lebu_use_test"
+            CardName.LEBUSISHU,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.DELAY,
+            card_id="lebu_use_test",
         )
         result = engine.card_resolver.use_lebusishu(player, lebu, [target])
         assert result is True
@@ -322,8 +350,10 @@ class TestCardResolver:
         player = engine.players[0]
         player.judge_area.clear()
         lebu = make_card(
-            CardName.LEBUSISHU, card_type=CardType.TRICK,
-            subtype=CardSubtype.DELAY, card_id="lebu_self_test"
+            CardName.LEBUSISHU,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.DELAY,
+            card_id="lebu_self_test",
         )
         result = engine.card_resolver.use_lebusishu(player, lebu, [player])
         assert result is False
@@ -333,8 +363,10 @@ class TestCardResolver:
         player = engine.players[0]
         hand_before = len(player.hand)
         tiesuo = make_card(
-            CardName.TIESUO, card_type=CardType.TRICK,
-            subtype=CardSubtype.CHAIN, card_id="tiesuo_reforge"
+            CardName.TIESUO,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.CHAIN,
+            card_id="tiesuo_reforge",
         )
         result = engine.card_resolver.use_tiesuo(player, tiesuo, targets=None)
         assert result is True
@@ -346,8 +378,10 @@ class TestCardResolver:
         target = engine.players[1]
         was_chained = target.is_chained
         tiesuo = make_card(
-            CardName.TIESUO, card_type=CardType.TRICK,
-            subtype=CardSubtype.CHAIN, card_id="tiesuo_chain"
+            CardName.TIESUO,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.CHAIN,
+            card_id="tiesuo_chain",
         )
         result = engine.card_resolver.use_tiesuo(player, tiesuo, targets=[target])
         assert result is True
@@ -358,8 +392,10 @@ class TestCardResolver:
         player = engine.players[0]
         player.judge_area.clear()
         sd = make_card(
-            CardName.SHANDIAN, card_type=CardType.TRICK,
-            subtype=CardSubtype.DELAY, card_id="sd_test"
+            CardName.SHANDIAN,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.DELAY,
+            card_id="sd_test",
         )
         result = engine.card_resolver.use_shandian(player, sd)
         assert result is True
@@ -375,8 +411,10 @@ class TestCardResolver:
         target.equipment.horse_plus = None
         target.equipment.horse_minus = None
         guohe = make_card(
-            CardName.GUOHE, card_type=CardType.TRICK,
-            subtype=CardSubtype.SINGLE_TARGET, card_id="guohe_test"
+            CardName.GUOHE,
+            card_type=CardType.TRICK,
+            subtype=CardSubtype.SINGLE_TARGET,
+            card_id="guohe_test",
         )
         result = engine.card_resolver.use_guohe(player, guohe, [target])
         assert result is False
@@ -388,8 +426,7 @@ class TestCardResolver:
                 p.hp = max(1, p.hp - 1)  # 扣 1 血
         player = engine.players[0]
         ty = make_card(
-            CardName.TAOYUAN, card_type=CardType.TRICK,
-            subtype=CardSubtype.AOE, card_id="ty_test"
+            CardName.TAOYUAN, card_type=CardType.TRICK, subtype=CardSubtype.AOE, card_id="ty_test"
         )
         engine.card_resolver.use_taoyuan(player, ty)
         # 存活角色应有人回血
@@ -407,7 +444,7 @@ class TestEngineDelegation:
         """通过 combat.use_sha 直接调用"""
         player = engine.players[0]
         sha = make_card(CardName.SHA)
-        with patch.object(engine.combat, 'use_sha', return_value=True) as mock:
+        with patch.object(engine.combat, "use_sha", return_value=True) as mock:
             engine.combat.use_sha(player, sha, [])
             mock.assert_called_once_with(player, sha, [])
 
@@ -415,15 +452,17 @@ class TestEngineDelegation:
         """通过 card_resolver.use_tao 直接调用"""
         player = engine.players[0]
         tao = make_card(CardName.TAO, subtype=CardSubtype.HEAL)
-        with patch.object(engine.card_resolver, 'use_tao', return_value=True) as mock:
+        with patch.object(engine.card_resolver, "use_tao", return_value=True) as mock:
             engine.card_resolver.use_tao(player, tao)
             mock.assert_called_once_with(player, tao)
 
     def test_engine_equipment_sys_equip(self, engine):
         """通过 equipment_sys.equip 直接调用"""
         player = engine.players[0]
-        weapon = make_card(CardName.ZHUGENU, card_type=CardType.EQUIPMENT, subtype=CardSubtype.WEAPON)
-        with patch.object(engine.equipment_sys, 'equip', return_value=True) as mock:
+        weapon = make_card(
+            CardName.ZHUGENU, card_type=CardType.EQUIPMENT, subtype=CardSubtype.WEAPON
+        )
+        with patch.object(engine.equipment_sys, "equip", return_value=True) as mock:
             engine.equipment_sys.equip(player, weapon)
             mock.assert_called_once_with(player, weapon)
 
@@ -431,28 +470,28 @@ class TestEngineDelegation:
         """engine.phase_judge 委托给 turn_manager → judge_sys"""
         player = engine.players[0]
         player.judge_area.clear()
-        with patch.object(engine.judge_sys, 'phase_judge') as mock:
+        with patch.object(engine.judge_sys, "phase_judge") as mock:
             engine.phase_judge(player)
             mock.assert_called_once_with(player)
 
     def test_engine_phase_prepare_delegates(self, engine):
         """engine.phase_prepare 委托给 turn_manager"""
         player = engine.players[0]
-        with patch.object(engine.turn_manager, '_execute_prepare_phase') as mock:
+        with patch.object(engine.turn_manager, "_execute_prepare_phase") as mock:
             engine.phase_prepare(player)
             mock.assert_called_once_with(player)
 
     def test_engine_phase_draw_delegates(self, engine):
         """engine.phase_draw 委托给 turn_manager"""
         player = engine.players[0]
-        with patch.object(engine.turn_manager, '_execute_draw_phase') as mock:
+        with patch.object(engine.turn_manager, "_execute_draw_phase") as mock:
             engine.phase_draw(player)
             mock.assert_called_once_with(player)
 
     def test_engine_phase_discard_delegates(self, engine):
         """engine.phase_discard 委托给 turn_manager"""
         player = engine.players[0]
-        with patch.object(engine.turn_manager, '_execute_discard_phase') as mock:
+        with patch.object(engine.turn_manager, "_execute_discard_phase") as mock:
             engine.phase_discard(player)
             mock.assert_called_once_with(player)
 
@@ -466,26 +505,58 @@ class TestSkillRegistry:
     def test_registry_contains_all_factions(self):
         """注册表包含蜀魏吴群全部技能"""
         from game.skills.registry import get_registry
+
         reg = get_registry()
         expected = {
             # 蜀 13
-            "rende", "jijiang", "wusheng", "paoxiao", "guanxing",
-            "kongcheng", "longdan", "mashu", "tieji", "jizhi",
-            "qicai", "liegong", "kuanggu",
+            "rende",
+            "jijiang",
+            "wusheng",
+            "paoxiao",
+            "guanxing",
+            "kongcheng",
+            "longdan",
+            "mashu",
+            "tieji",
+            "jizhi",
+            "qicai",
+            "liegong",
+            "kuanggu",
             # 魏 9
-            "jianxiong", "hujia", "fankui", "guicai", "ganglie",
-            "tuxi", "duanliang", "jushou", "shensu",
+            "jianxiong",
+            "hujia",
+            "fankui",
+            "guicai",
+            "ganglie",
+            "tuxi",
+            "duanliang",
+            "jushou",
+            "shensu",
             # 吴 11
-            "zhiheng", "jiuyuan", "yingzi", "fanjian", "guose",
-            "liuli", "qixi", "keji", "kurou", "jieyin", "xiaoji",
+            "zhiheng",
+            "jiuyuan",
+            "yingzi",
+            "fanjian",
+            "guose",
+            "liuli",
+            "qixi",
+            "keji",
+            "kurou",
+            "jieyin",
+            "xiaoji",
             # 群 5
-            "wushuang", "qingnang", "jijiu", "lijian", "biyue",
+            "wushuang",
+            "qingnang",
+            "jijiu",
+            "lijian",
+            "biyue",
         }
         assert expected.issubset(reg.keys()), f"Missing: {expected - reg.keys()}"
 
     def test_registry_handlers_are_callable(self):
         """注册的 handler 均为可调用对象"""
         from game.skills.registry import get_registry
+
         for sid, fn in get_registry().items():
             assert callable(fn), f"{sid} handler not callable"
 
@@ -493,6 +564,7 @@ class TestSkillRegistry:
         """get_all_skill_handlers 优先返回装饰器注册表"""
         from game.skills import get_all_skill_handlers
         from game.skills.registry import get_registry
+
         handlers = get_all_skill_handlers()
         registry = get_registry()
         # 装饰器注册表非空时，两者应一致
@@ -503,6 +575,7 @@ class TestSkillRegistry:
     def test_registry_returns_copy(self):
         """get_registry 返回副本，外部修改不影响全局注册表"""
         from game.skills.registry import get_registry
+
         copy = get_registry()
         copy["__test_fake__"] = lambda: None
         assert "__test_fake__" not in get_registry()
@@ -511,8 +584,10 @@ class TestSkillRegistry:
         """装饰器不改变原始函数引用"""
         from game.skills.registry import _SKILL_REGISTRY
         from game.skills.registry import skill_handler as sh
+
         def _dummy(player, engine, **kw):
             return True
+
         decorated = sh("__test_dummy__")(_dummy)
         assert decorated is _dummy
         assert _SKILL_REGISTRY["__test_dummy__"] is _dummy
@@ -522,6 +597,7 @@ class TestSkillRegistry:
     def test_engine_skill_system_uses_registry(self, engine):
         """SkillSystem._skill_handlers 与装饰器注册表一致"""
         from game.skills.registry import get_registry
+
         registry = get_registry()
         for sid, fn in registry.items():
             assert engine.skill_system._skill_handlers[sid] is fn

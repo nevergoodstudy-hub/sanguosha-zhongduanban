@@ -159,6 +159,7 @@ class TestMainPyNetArgs:
 
     def test_argparse_server_flag(self):
         import argparse
+
         parser = argparse.ArgumentParser()
         parser.add_argument("--server", nargs="?", const="0.0.0.0:8765", default=None)
         parser.add_argument("--connect", default=None)
@@ -172,6 +173,7 @@ class TestMainPyNetArgs:
 
     def test_argparse_connect_flag(self):
         import argparse
+
         parser = argparse.ArgumentParser()
         parser.add_argument("--server", nargs="?", const="0.0.0.0:8765", default=None)
         parser.add_argument("--connect", default=None)
@@ -183,6 +185,7 @@ class TestMainPyNetArgs:
 
     def test_no_net_args(self):
         import argparse
+
         parser = argparse.ArgumentParser()
         parser.add_argument("--server", nargs="?", const="0.0.0.0:8765", default=None)
         parser.add_argument("--connect", default=None)

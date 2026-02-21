@@ -11,7 +11,12 @@ from .normal_strategy import NormalStrategy
 from .strategy import AIStrategy
 
 __all__ = [
-    'AIBot', 'AIDifficulty', 'AIStrategy',
-    'EasyStrategy', 'NormalStrategy', 'HardStrategy',
-    'ThreatEvaluator', 'IdentityPredictor',
+    "AIBot",
+    "AIDifficulty",
+    "AIStrategy",
+    "EasyStrategy",
+    "NormalStrategy",
+    "HardStrategy",
+    "ThreatEvaluator",
+    "IdentityPredictor",
 ]

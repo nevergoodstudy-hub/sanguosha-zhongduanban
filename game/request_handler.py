@@ -52,9 +52,7 @@ class RequestHandler(ABC):
         ...
 
     @abstractmethod
-    def choose_card_from_player(
-        self, chooser: Player, target: Player
-    ) -> Card | None:
+    def choose_card_from_player(self, chooser: Player, target: Player) -> Card | None:
         """选择目标角色的一张牌（过河拆桥/顺手牵羊）"""
         ...
 
@@ -64,9 +62,7 @@ class RequestHandler(ABC):
         ...
 
     @abstractmethod
-    def choose_card_to_discard_for_huogong(
-        self, player: Player, suit: CardSuit
-    ) -> Card | None:
+    def choose_card_to_discard_for_huogong(self, player: Player, suit: CardSuit) -> Card | None:
         """选择一张指定花色的手牌弃置（火攻后续）"""
         ...
 
@@ -97,6 +93,22 @@ class RequestHandler(ABC):
         """护驾：请求魏国角色代打闪"""
         ...
 
+    @abstractmethod
+    def request_skill_card(
+        self, player: Player, skill_name: str, candidates: list[Card]
+    ) -> Card | None:
+        """请求玩家为技能选择一张牌（如龙胆、武圣转化）。
+
+        Args:
+            player: 使用技能的玩家。
+            skill_name: 技能标识 (如 "longdan_as_shan", "wusheng_as_sha")。
+            candidates: 可选牌列表。
+
+        Returns:
+            选中的牌, 或 None 表示放弃。
+        """
+        ...
+
 
 class DefaultRequestHandler(RequestHandler):
     """默认请求处理器
@@ -117,6 +129,7 @@ class DefaultRequestHandler(RequestHandler):
 
     def request_shan(self, player: Player) -> Card | None:
         from .card import CardName
+
         shan_cards = player.get_cards_by_name(CardName.SHAN)
         if not shan_cards:
             return None
@@ -135,6 +148,7 @@ class DefaultRequestHandler(RequestHandler):
 
     def request_sha(self, player: Player) -> Card | None:
         from .card import CardName
+
         sha_cards = player.get_cards_by_name(CardName.SHA)
         if not sha_cards:
             return None
@@ -152,6 +166,7 @@ class DefaultRequestHandler(RequestHandler):
 
     def request_tao(self, savior: Player, dying: Player) -> Card | None:
         from .card import CardName
+
         tao_cards = savior.get_cards_by_name(CardName.TAO)
         if not tao_cards:
             return None
@@ -177,6 +192,7 @@ class DefaultRequestHandler(RequestHandler):
         is_cancelled: bool,
     ) -> Card | None:
         from .card import CardName
+
         wuxie_cards = responder.get_cards_by_name(CardName.WUXIE)
         if not wuxie_cards:
             return None
@@ -195,9 +211,7 @@ class DefaultRequestHandler(RequestHandler):
 
     # ---------- 选牌 ----------
 
-    def choose_card_from_player(
-        self, chooser: Player, target: Player
-    ) -> Card | None:
+    def choose_card_from_player(self, chooser: Player, target: Player) -> Card | None:
         all_cards = target.get_all_cards()
         if not all_cards:
             return None
@@ -219,14 +233,12 @@ class DefaultRequestHandler(RequestHandler):
             return random.choice(player.hand)
 
         ui = self._get_ui()
-        if ui and hasattr(ui, 'choose_card_to_show'):
+        if ui and hasattr(ui, "choose_card_to_show"):
             return ui.choose_card_to_show(player)
 
         return player.hand[0]
 
-    def choose_card_to_discard_for_huogong(
-        self, player: Player, suit: CardSuit
-    ) -> Card | None:
+    def choose_card_to_discard_for_huogong(self, player: Player, suit: CardSuit) -> Card | None:
         matching = [c for c in player.hand if c.suit == suit]
         if not matching:
             return None
@@ -235,7 +247,7 @@ class DefaultRequestHandler(RequestHandler):
             return matching[0]
 
         ui = self._get_ui()
-        if ui and hasattr(ui, 'choose_card_to_discard_for_huogong'):
+        if ui and hasattr(ui, "choose_card_to_discard_for_huogong"):
             return ui.choose_card_to_discard_for_huogong(player, suit)
 
         return matching[0]
@@ -249,7 +261,7 @@ class DefaultRequestHandler(RequestHandler):
             return random.choice(list(CardSuit))
 
         ui = self._get_ui()
-        if ui and hasattr(ui, 'choose_suit'):
+        if ui and hasattr(ui, "choose_suit"):
             return ui.choose_suit(player)
 
         return random.choice(list(CardSuit))
@@ -262,6 +274,7 @@ class DefaultRequestHandler(RequestHandler):
         from .card import CardName
 
         if player.is_ai:
+
             def card_priority(c) -> int:
                 if c.name == CardName.TAO:
                     return 0
@@ -275,15 +288,15 @@ class DefaultRequestHandler(RequestHandler):
 
             sorted_cards = sorted(cards, key=card_priority)
             half = len(sorted_cards) // 2
-            return sorted_cards[:half + 1], sorted_cards[half + 1:]
+            return sorted_cards[: half + 1], sorted_cards[half + 1 :]
 
         ui = self._get_ui()
-        if ui and hasattr(ui, 'guanxing_selection'):
+        if ui and hasattr(ui, "guanxing_selection"):
             return ui.guanxing_selection(player, cards)
 
         # 无 UI 回退
         half = len(cards) // 2
-        return cards[:half + 1], cards[half + 1:]
+        return cards[: half + 1], cards[half + 1 :]
 
     # ---------- 朱雀羽扇 ----------
 
@@ -292,7 +305,7 @@ class DefaultRequestHandler(RequestHandler):
             return True  # AI 总是转火杀
 
         ui = self._get_ui()
-        if ui and hasattr(ui, 'ask_zhuque_convert'):
+        if ui and hasattr(ui, "ask_zhuque_convert"):
             return ui.ask_zhuque_convert(player)
 
         return False
@@ -301,6 +314,7 @@ class DefaultRequestHandler(RequestHandler):
 
     def ask_for_jijiang(self, player: Player) -> Card | None:
         from .card import CardName
+
         sha_cards = player.get_cards_by_name(CardName.SHA)
         if not sha_cards:
             return None
@@ -309,7 +323,7 @@ class DefaultRequestHandler(RequestHandler):
             return sha_cards[0]
 
         ui = self._get_ui()
-        if ui and hasattr(ui, 'ask_for_jijiang'):
+        if ui and hasattr(ui, "ask_for_jijiang"):
             return ui.ask_for_jijiang(player)
 
         return None
@@ -318,6 +332,7 @@ class DefaultRequestHandler(RequestHandler):
 
     def ask_for_hujia(self, player: Player) -> Card | None:
         from .card import CardName
+
         shan_cards = player.get_cards_by_name(CardName.SHAN)
         if not shan_cards:
             return None
@@ -326,7 +341,23 @@ class DefaultRequestHandler(RequestHandler):
             return shan_cards[0]
 
         ui = self._get_ui()
-        if ui and hasattr(ui, 'ask_for_hujia'):
+        if ui and hasattr(ui, "ask_for_hujia"):
             return ui.ask_for_hujia(player)
 
         return None
+
+    def request_skill_card(
+        self, player: Player, skill_name: str, candidates: list[Card]
+    ) -> Card | None:
+        if not candidates:
+            return None
+
+        if player.is_ai:
+            return candidates[0]  # AI 自动选第一张
+
+        ui = self._get_ui()
+        if ui and hasattr(ui, "request_skill_card"):
+            return ui.request_skill_card(player, skill_name, candidates)
+
+        # 无 UI 回退：自动选第一张
+        return candidates[0]

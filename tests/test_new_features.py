@@ -31,8 +31,15 @@ class TestGudingdao(unittest.TestCase):
         target = self.engine.players[1]
 
         # 装备古锭刀
-        gudingdao = Card("test_gudingdao", "古锭刀", CardType.EQUIPMENT,
-                        CardSubtype.WEAPON, CardSuit.SPADE, 1, range=2)
+        gudingdao = Card(
+            "test_gudingdao",
+            "古锭刀",
+            CardType.EQUIPMENT,
+            CardSubtype.WEAPON,
+            CardSuit.SPADE,
+            1,
+            range=2,
+        )
         attacker.equipment.weapon = gudingdao
 
         # 清空目标手牌
@@ -58,14 +65,20 @@ class TestGudingdao(unittest.TestCase):
         target = self.engine.players[1]
 
         # 装备古锭刀
-        gudingdao = Card("test_gudingdao", "古锭刀", CardType.EQUIPMENT,
-                        CardSubtype.WEAPON, CardSuit.SPADE, 1, range=2)
+        gudingdao = Card(
+            "test_gudingdao",
+            "古锭刀",
+            CardType.EQUIPMENT,
+            CardSubtype.WEAPON,
+            CardSuit.SPADE,
+            1,
+            range=2,
+        )
         attacker.equipment.weapon = gudingdao
 
         # 确保目标有手牌
         if not target.hand:
-            test_card = Card("test_card", "桃", CardType.BASIC,
-                           CardSubtype.HEAL, CardSuit.HEART, 2)
+            test_card = Card("test_card", "桃", CardType.BASIC, CardSubtype.HEAL, CardSuit.HEART, 2)
             target.draw_cards([test_card])
 
         # 给攻击者一张杀
@@ -95,8 +108,9 @@ class TestBaiyinshizi(unittest.TestCase):
         source = self.engine.players[0]
 
         # 装备白银狮子
-        baiyinshizi = Card("test_baiyinshizi", "白银狮子", CardType.EQUIPMENT,
-                          CardSubtype.ARMOR, CardSuit.CLUB, 1)
+        baiyinshizi = Card(
+            "test_baiyinshizi", "白银狮子", CardType.EQUIPMENT, CardSubtype.ARMOR, CardSuit.CLUB, 1
+        )
         target.equipment.armor = baiyinshizi
 
         initial_hp = target.hp
@@ -106,8 +120,11 @@ class TestBaiyinshizi(unittest.TestCase):
 
         # 白银狮子效果：受到大于1点伤害时，只受1点
         expected_hp = initial_hp - 1
-        self.assertEqual(target.hp, expected_hp,
-                        f"白银狮子伤害削减失败: 期望HP={expected_hp}, 实际HP={target.hp}")
+        self.assertEqual(
+            target.hp,
+            expected_hp,
+            f"白银狮子伤害削减失败: 期望HP={expected_hp}, 实际HP={target.hp}",
+        )
         print(f"✓ 白银狮子伤害削减测试通过: {initial_hp} -> {target.hp}")
 
 
@@ -129,13 +146,13 @@ class TestHuogong(unittest.TestCase):
 
         # 确保目标有手牌
         if not target.hand:
-            test_card = Card("test_card", "桃", CardType.BASIC,
-                           CardSubtype.HEAL, CardSuit.HEART, 2)
+            test_card = Card("test_card", "桃", CardType.BASIC, CardSubtype.HEAL, CardSuit.HEART, 2)
             target.draw_cards([test_card])
 
         # 创建火攻牌
-        huogong = Card("test_huogong", "火攻", CardType.TRICK,
-                      CardSubtype.SINGLE_TARGET, CardSuit.HEART, 12)
+        huogong = Card(
+            "test_huogong", "火攻", CardType.TRICK, CardSubtype.SINGLE_TARGET, CardSuit.HEART, 12
+        )
         user.draw_cards([huogong])
 
         # 使用火攻
@@ -169,7 +186,7 @@ class TestActionLogExport(unittest.TestCase):
         import json
         import tempfile
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             filepath = f.name
 
         exported_path = self.engine.export_action_log(filepath)
@@ -178,13 +195,13 @@ class TestActionLogExport(unittest.TestCase):
         self.assertTrue(Path(exported_path).exists(), "导出文件不存在")
 
         # 验证内容
-        with open(exported_path, encoding='utf-8') as f:
+        with open(exported_path, encoding="utf-8") as f:
             data = json.load(f)
 
-        self.assertIn('version', data)
-        self.assertIn('game_seed', data)
-        self.assertIn('players', data)
-        self.assertEqual(data['game_seed'], 12345)
+        self.assertIn("version", data)
+        self.assertIn("game_seed", data)
+        self.assertIn("players", data)
+        self.assertEqual(data["game_seed"], 12345)
 
         # 清理
         Path(exported_path).unlink()
@@ -229,10 +246,10 @@ class TestAIDecisionEnhancement(unittest.TestCase):
         # 评估局势
         evaluation = bot.evaluate_game_state(engine)
 
-        self.assertIn('lord_advantage', evaluation)
-        self.assertIn('rebel_advantage', evaluation)
-        self.assertIn('my_power', evaluation)
-        self.assertIn('danger_level', evaluation)
+        self.assertIn("lord_advantage", evaluation)
+        self.assertIn("rebel_advantage", evaluation)
+        self.assertIn("my_power", evaluation)
+        self.assertIn("danger_level", evaluation)
 
         print("✓ 局势评估测试通过:")
         print(f"  主公优势: {evaluation['lord_advantage']:.2f}")
@@ -269,7 +286,9 @@ class TestChainDamage(unittest.TestCase):
         self.engine.deal_damage(source, target1, 1, damage_type="fire")
 
         # 验证连环传导
-        print(f"✓ 连环传导测试: target1 HP {initial_hp1}->{target1.hp}, target2 HP {initial_hp2}->{target2.hp}")
+        print(
+            f"✓ 连环传导测试: target1 HP {initial_hp1}->{target1.hp}, target2 HP {initial_hp2}->{target2.hp}"
+        )
 
 
 if __name__ == "__main__":

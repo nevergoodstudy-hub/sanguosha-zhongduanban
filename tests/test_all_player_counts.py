@@ -46,6 +46,7 @@ def _make_engine(pc: int, seed: int = 42, diff: str = "normal") -> GameEngine:
 
 # ==================== 1. 设置与初始化 (7 tests) ====================
 
+
 class TestSetupValidation:
     """验证各玩家数量的 headless 设置正确性"""
 
@@ -97,6 +98,7 @@ class TestSetupValidation:
 
 # ==================== 2. 身份分配 (7 tests) ====================
 
+
 class TestIdentityDistribution:
     """验证各人数下身份配比正确"""
 
@@ -110,9 +112,7 @@ class TestIdentityDistribution:
             counts[key] = counts.get(key, 0) + 1
         expected = EXPECTED_IDENTITIES[pc]
         for role, n in expected.items():
-            assert counts.get(role, 0) == n, (
-                f"{pc}人局: {role} 应为{n}, 实际{counts.get(role, 0)}"
-            )
+            assert counts.get(role, 0) == n, f"{pc}人局: {role} 应为{n}, 实际{counts.get(role, 0)}"
 
     @pytest.mark.parametrize("pc", ALL_PLAYER_COUNTS)
     def test_lord_always_exists(self, pc):
@@ -129,6 +129,7 @@ class TestIdentityDistribution:
 
 
 # ==================== 3. 完整对局 — 参数化矩阵 (28 tests: 7 pc × 4 seeds) ====================
+
 
 class TestFullBattleMatrix:
     """对每种玩家数量 × 多个种子跑完整对局"""
@@ -154,6 +155,7 @@ class TestFullBattleMatrix:
 
 # ==================== 4. 确定性 (7 tests) ====================
 
+
 class TestDeterminism:
     """相同种子 → 相同结果"""
 
@@ -165,9 +167,7 @@ class TestDeterminism:
             engine = _make_engine(pc, seed=12345)
             r = engine.run_headless_battle(max_rounds=80)
             results.append(r["rounds"])
-        assert results[0] == results[1], (
-            f"{pc}人局: 相同种子回合数不一致 {results}"
-        )
+        assert results[0] == results[1], f"{pc}人局: 相同种子回合数不一致 {results}"
 
     @pytest.mark.parametrize("pc", ALL_PLAYER_COUNTS)
     def test_same_seed_same_winner(self, pc):
@@ -181,6 +181,7 @@ class TestDeterminism:
 
 
 # ==================== 5. 胜负条件 (7 tests) ====================
+
 
 class TestWinConditions:
     """验证胜负判定逻辑"""
@@ -234,6 +235,7 @@ class TestWinConditions:
 
 # ==================== 6. 距离计算 (parametrized, 14 tests) ====================
 
+
 class TestDistanceCalculation:
     """验证距离计算在不同人数下正确"""
 
@@ -257,6 +259,7 @@ class TestDistanceCalculation:
 
 
 # ==================== 7. 卡牌与牌堆 (7 tests) ====================
+
 
 class TestDeckAndCards:
     """验证牌堆在不同人数下正常工作"""
@@ -293,6 +296,7 @@ class TestDeckAndCards:
 
 # ==================== 8. 事件系统集成 (7 tests) ====================
 
+
 class TestEventSystemIntegration:
     """验证事件总线在各人数下正常工作"""
 
@@ -310,15 +314,13 @@ class TestEventSystemIntegration:
         """回合开始事件数 ≥ 1"""
         engine = _make_engine(pc, seed=42)
         turn_events = []
-        engine.event_bus.subscribe(
-            EventType.TURN_START,
-            lambda e: turn_events.append(e)
-        )
+        engine.event_bus.subscribe(EventType.TURN_START, lambda e: turn_events.append(e))
         engine.run_headless_battle(max_rounds=3)
         assert len(turn_events) >= 1
 
 
 # ==================== 9. AI 难度 × 玩家数 矩阵 (21 tests) ====================
+
 
 class TestAIDifficultyMatrix:
     """所有 AI 难度 × 所有玩家数量"""
@@ -329,12 +331,11 @@ class TestAIDifficultyMatrix:
         """各难度各人数对局均可完成"""
         engine = _make_engine(pc, seed=5000, diff=diff)
         result = engine.run_headless_battle(max_rounds=100)
-        assert result["rounds"] > 0, (
-            f"{pc}人局 难度{diff} 未开始"
-        )
+        assert result["rounds"] > 0, f"{pc}人局 难度{diff} 未开始"
 
 
 # ==================== 10. 边界与异常 (8 tests) ====================
+
 
 class TestEdgeCases:
     """边界条件和异常处理"""
@@ -377,6 +378,7 @@ class TestEdgeCases:
 
 # ==================== 11. 多局稳定性 per player count (7 tests) ====================
 
+
 class TestStabilityPerPlayerCount:
     """每种人数各跑若干局，验证错误率 < 5%"""
 
@@ -394,12 +396,11 @@ class TestStabilityPerPlayerCount:
             except Exception:
                 errors += 1
         error_rate = errors / total
-        assert error_rate < 0.05, (
-            f"{pc}人局: {total}局中{errors}局出错 ({error_rate:.1%})"
-        )
+        assert error_rate < 0.05, f"{pc}人局: {total}局中{errors}局出错 ({error_rate:.1%})"
 
 
 # ==================== 12. 回合阶段流转 (7 tests) ====================
+
 
 class TestTurnPhaseFlow:
     """验证回合阶段在各人数下正常流转"""
@@ -427,6 +428,7 @@ class TestTurnPhaseFlow:
 
 # ==================== 13. 牌堆完整性 & 摸牌 (parametrized) ====================
 
+
 class TestDrawMechanics:
     """摸牌机制在各人数下正确"""
 
@@ -443,6 +445,7 @@ class TestDrawMechanics:
 
 # ==================== 14. 武将系统 (7 tests) ====================
 
+
 class TestHeroSystem:
     """验证武将分配在各人数下正确"""
 
@@ -450,10 +453,7 @@ class TestHeroSystem:
     def test_heroes_have_skills(self, pc):
         """至少有一个武将有技能"""
         engine = _make_engine(pc, seed=42)
-        heroes_with_skills = [
-            p for p in engine.players
-            if p.hero and p.hero.skills
-        ]
+        heroes_with_skills = [p for p in engine.players if p.hero and p.hero.skills]
         assert len(heroes_with_skills) > 0
 
     @pytest.mark.parametrize("pc", ALL_PLAYER_COUNTS)
@@ -467,6 +467,7 @@ class TestHeroSystem:
 
 # ==================== 15. 跨局随机性验证 ====================
 
+
 class TestRandomnessAcrossGames:
     """不同种子的对局应产生多样性结果"""
 
@@ -478,9 +479,7 @@ class TestRandomnessAcrossGames:
             engine = _make_engine(pc, seed=seed)
             r = engine.run_headless_battle(max_rounds=80)
             rounds_set.add(r["rounds"])
-        assert len(rounds_set) >= 2, (
-            f"{pc}人局 10 种子的回合数完全相同: {rounds_set}"
-        )
+        assert len(rounds_set) >= 2, f"{pc}人局 10 种子的回合数完全相同: {rounds_set}"
 
     @pytest.mark.parametrize("pc", [4, 6, 8])
     def test_different_seeds_produce_varied_winners(self, pc):
@@ -495,6 +494,7 @@ class TestRandomnessAcrossGames:
 
 
 # ==================== 16. WinConditionChecker 单元 (5 tests) ====================
+
 
 class TestWinConditionChecker:
     """WinConditionChecker 独立单元测试"""
@@ -543,6 +543,7 @@ class TestWinConditionChecker:
 
 # ==================== 17. 大规模批量压力 (1 test, 内部循环) ====================
 
+
 class TestBulkStress:
     """跨人数批量压力测试"""
 
@@ -566,6 +567,4 @@ class TestBulkStress:
                     errors += 1
 
         error_rate = errors / total
-        assert error_rate < 0.05, (
-            f"{total}局中{errors}局出错 ({error_rate:.1%})"
-        )
+        assert error_rate < 0.05, f"{total}局中{errors}局出错 ({error_rate:.1%})"

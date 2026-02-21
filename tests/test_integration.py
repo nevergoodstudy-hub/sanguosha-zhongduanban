@@ -89,8 +89,7 @@ class TestEventBusIntegration:
 
         log_messages = []
         engine.event_bus.subscribe(
-            EventType.LOG_MESSAGE,
-            lambda e: log_messages.append(e.data.get("message", ""))
+            EventType.LOG_MESSAGE, lambda e: log_messages.append(e.data.get("message", ""))
         )
 
         engine.run_headless_battle(max_rounds=5)

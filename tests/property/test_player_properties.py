@@ -32,6 +32,7 @@ from game.player import Player
 # 辅助策略
 # ---------------------------------------------------------------------------
 
+
 def _make_player(hp: int = 4, max_hp: int = 4) -> Player:
     """创建一个测试玩家。"""
     return Player(id=0, name="测试", is_ai=True, seat=0, hp=hp, max_hp=max_hp)
@@ -40,15 +41,19 @@ def _make_player(hp: int = 4, max_hp: int = 4) -> Player:
 def _make_card(idx: int) -> Card:
     """创建一张测试手牌。"""
     return Card(
-        id=f"h_{idx}", name="测试杀",
-        card_type=CardType.BASIC, subtype=CardSubtype.ATTACK,
-        suit=CardSuit.HEART, number=(idx % 13) + 1,
+        id=f"h_{idx}",
+        name="测试杀",
+        card_type=CardType.BASIC,
+        subtype=CardSubtype.ATTACK,
+        suit=CardSuit.HEART,
+        number=(idx % 13) + 1,
     )
 
 
 # ---------------------------------------------------------------------------
 # 性质 1: heal 后 hp ≤ max_hp
 # ---------------------------------------------------------------------------
+
 
 @given(
     max_hp=st.integers(min_value=1, max_value=10),
@@ -66,6 +71,7 @@ def test_heal_respects_max_hp(max_hp: int, current_hp: int, heal_amount: int) ->
 # ---------------------------------------------------------------------------
 # 性质 2: take_damage 使 hp 减少，hp ≤ 0 时进入濒死
 # ---------------------------------------------------------------------------
+
 
 @given(
     hp=st.integers(min_value=1, max_value=10),
@@ -86,6 +92,7 @@ def test_take_damage_dying_threshold(hp: int, damage: int) -> None:
 # 性质 3: heal 返回实际回复量
 # ---------------------------------------------------------------------------
 
+
 @given(
     max_hp=st.integers(min_value=1, max_value=10),
     current_hp=st.integers(min_value=-3, max_value=10),
@@ -105,6 +112,7 @@ def test_heal_returns_actual_amount(max_hp: int, current_hp: int, heal_amount: i
 # 性质 4: hand_limit == max(0, hp)
 # ---------------------------------------------------------------------------
 
+
 @given(hp=st.integers(min_value=-5, max_value=10))
 @settings(max_examples=100)
 def test_hand_limit_equals_max_zero_hp(hp: int) -> None:
@@ -115,6 +123,7 @@ def test_hand_limit_equals_max_zero_hp(hp: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 5: need_discard 不变量
 # ---------------------------------------------------------------------------
+
 
 @given(
     hp=st.integers(min_value=0, max_value=10),
@@ -132,6 +141,7 @@ def test_need_discard_invariant(hp: int, n_cards: int) -> None:
 # 性质 6: draw_cards 增加 hand_count 恰好 len(cards)
 # ---------------------------------------------------------------------------
 
+
 @given(
     initial=st.integers(min_value=0, max_value=10),
     add_count=st.integers(min_value=0, max_value=20),
@@ -148,6 +158,7 @@ def test_draw_cards_increases_hand_count(initial: int, add_count: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 7: remove_card 成功时 hand_count 减 1
 # ---------------------------------------------------------------------------
+
 
 @given(
     n_cards=st.integers(min_value=1, max_value=20),
@@ -171,6 +182,7 @@ def test_remove_card_decreases_count(n_cards: int, remove_idx: st.DataObject) ->
 # 性质 8: remove_card 对不存在的牌返回 False，hand_count 不变
 # ---------------------------------------------------------------------------
 
+
 @given(n_cards=st.integers(min_value=0, max_value=10))
 @settings(max_examples=50)
 def test_remove_nonexistent_card_noop(n_cards: int) -> None:
@@ -187,6 +199,7 @@ def test_remove_nonexistent_card_noop(n_cards: int) -> None:
 # 性质 9: die() 后状态
 # ---------------------------------------------------------------------------
 
+
 def test_die_sets_flags() -> None:
     p = _make_player()
     p.is_dying = True
@@ -199,6 +212,7 @@ def test_die_sets_flags() -> None:
 # 性质 10: reset_turn 清零回合状态
 # ---------------------------------------------------------------------------
 
+
 @given(
     sha_count=st.integers(min_value=0, max_value=10),
     is_drunk=st.booleans(),
@@ -208,8 +222,11 @@ def test_die_sets_flags() -> None:
 )
 @settings(max_examples=100)
 def test_reset_turn_clears_all(
-    sha_count: int, is_drunk: bool, alcohol_used: bool,
-    skip_play: bool, skip_draw: bool,
+    sha_count: int,
+    is_drunk: bool,
+    alcohol_used: bool,
+    skip_play: bool,
+    skip_draw: bool,
 ) -> None:
     p = _make_player()
     p.sha_count = sha_count
@@ -233,6 +250,7 @@ def test_reset_turn_clears_all(
 # 性质 11: toggle_chain 是对合映射（两次恢复原状）
 # ---------------------------------------------------------------------------
 
+
 @given(initial_chained=st.booleans())
 @settings(max_examples=10)
 def test_toggle_chain_involution(initial_chained: bool) -> None:
@@ -249,6 +267,7 @@ def test_toggle_chain_involution(initial_chained: bool) -> None:
 # ---------------------------------------------------------------------------
 # 性质 12: toggle_flip 也是对合映射
 # ---------------------------------------------------------------------------
+
 
 @given(initial_flipped=st.booleans())
 @settings(max_examples=10)
@@ -267,6 +286,7 @@ def test_toggle_flip_involution(initial_flipped: bool) -> None:
 # 性质 13: get_all_cards = 手牌 + 装备牌
 # ---------------------------------------------------------------------------
 
+
 @given(
     n_hand=st.integers(min_value=0, max_value=10),
     has_weapon=st.booleans(),
@@ -274,22 +294,36 @@ def test_toggle_flip_involution(initial_flipped: bool) -> None:
 )
 @settings(max_examples=50)
 def test_get_all_cards_is_hand_plus_equipment(
-    n_hand: int, has_weapon: bool, has_armor: bool,
+    n_hand: int,
+    has_weapon: bool,
+    has_armor: bool,
 ) -> None:
     p = _make_player()
     p.hand = [_make_card(i) for i in range(n_hand)]
     n_equip = 0
     if has_weapon:
-        p.equipment.equip(Card(
-            id="w", name="武器", card_type=CardType.EQUIPMENT,
-            subtype=CardSubtype.WEAPON, suit=CardSuit.SPADE, number=1,
-        ))
+        p.equipment.equip(
+            Card(
+                id="w",
+                name="武器",
+                card_type=CardType.EQUIPMENT,
+                subtype=CardSubtype.WEAPON,
+                suit=CardSuit.SPADE,
+                number=1,
+            )
+        )
         n_equip += 1
     if has_armor:
-        p.equipment.equip(Card(
-            id="a", name="防具", card_type=CardType.EQUIPMENT,
-            subtype=CardSubtype.ARMOR, suit=CardSuit.HEART, number=1,
-        ))
+        p.equipment.equip(
+            Card(
+                id="a",
+                name="防具",
+                card_type=CardType.EQUIPMENT,
+                subtype=CardSubtype.ARMOR,
+                suit=CardSuit.HEART,
+                number=1,
+            )
+        )
         n_equip += 1
 
     all_cards = p.get_all_cards()
@@ -300,6 +334,7 @@ def test_get_all_cards_is_hand_plus_equipment(
 # 性质 14: has_any_card 当且仅当 手牌>0 或 有装备
 # ---------------------------------------------------------------------------
 
+
 @given(
     n_hand=st.integers(min_value=0, max_value=5),
     has_equip=st.booleans(),
@@ -309,9 +344,15 @@ def test_has_any_card_iff(n_hand: int, has_equip: bool) -> None:
     p = _make_player()
     p.hand = [_make_card(i) for i in range(n_hand)]
     if has_equip:
-        p.equipment.equip(Card(
-            id="w", name="武器", card_type=CardType.EQUIPMENT,
-            subtype=CardSubtype.WEAPON, suit=CardSuit.SPADE, number=1,
-        ))
+        p.equipment.equip(
+            Card(
+                id="w",
+                name="武器",
+                card_type=CardType.EQUIPMENT,
+                subtype=CardSubtype.WEAPON,
+                suit=CardSuit.SPADE,
+                number=1,
+            )
+        )
 
     assert p.has_any_card() == (n_hand > 0 or has_equip)

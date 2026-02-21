@@ -29,10 +29,15 @@ if TYPE_CHECKING:
 
 # ==================== 刘备 ====================
 
+
 @skill_handler("rende")
-def handle_rende(player: Player, engine: GameEngine,
-                 targets: list[Player] | None = None,
-                 cards: list[Card] | None = None, **kwargs) -> bool:
+def handle_rende(
+    player: Player,
+    engine: GameEngine,
+    targets: list[Player] | None = None,
+    cards: list[Card] | None = None,
+    **kwargs,
+) -> bool:
     """仁德：将任意数量的手牌交给其他角色，每回合给出第二张牌时回复1点体力"""
     if not targets or not cards:
         return False
@@ -51,7 +56,9 @@ def handle_rende(player: Player, engine: GameEngine,
     target.draw_cards(transferred_cards)
 
     cards_str = ", ".join(c.display_name for c in transferred_cards)
-    engine.log_event("skill", _t("skill_msg.rende", name=player.name, cards=cards_str, target=target.name))
+    engine.log_event(
+        "skill", _t("skill_msg.rende", name=player.name, cards=cards_str, target=target.name)
+    )
 
     rende_count = player.skill_used.get("rende_cards", 0)
     for card in transferred_cards:
@@ -97,14 +104,15 @@ def handle_jijiang(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 # ==================== 关羽 ====================
 
+
 @skill_handler("wusheng")
-def handle_wusheng(player: Player, engine: GameEngine,
-                   card: Card | None = None, **kwargs) -> bool:
+def handle_wusheng(player: Player, engine: GameEngine, card: Card | None = None, **kwargs) -> bool:
     """武圣：可以将红色牌当杀使用或打出（转化技能，在请求杀/闪时自动检查）"""
     return True
 
 
 # ==================== 张飞 ====================
+
 
 @skill_handler("paoxiao")
 def handle_paoxiao(player: Player, engine: GameEngine, **kwargs) -> bool:
@@ -113,6 +121,7 @@ def handle_paoxiao(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 
 # ==================== 诸葛亮 ====================
+
 
 @skill_handler("guanxing")
 def handle_guanxing(player: Player, engine: GameEngine, **kwargs) -> bool:
@@ -149,6 +158,7 @@ def handle_kongcheng(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 # ==================== 赵云 ====================
 
+
 @skill_handler("longdan")
 def handle_longdan(player: Player, engine: GameEngine, **kwargs) -> bool:
     """龙胆：可以将杀当闪使用或打出，或将闪当杀使用或打出（转化技能）"""
@@ -157,6 +167,7 @@ def handle_longdan(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 # ==================== 马超 ====================
 
+
 @skill_handler("mashu")
 def handle_mashu(player: Player, engine: GameEngine, **kwargs) -> bool:
     """马术：锁定技，计算与其他角色的距离-1（在距离计算时自动生效）"""
@@ -164,8 +175,7 @@ def handle_mashu(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 
 @skill_handler("tieji")
-def handle_tieji(player: Player, engine: GameEngine,
-                 target: Player = None, **kwargs) -> bool:
+def handle_tieji(player: Player, engine: GameEngine, target: Player = None, **kwargs) -> bool:
     """铁骑：使用杀指定目标后，可以进行判定，若结果为红色，目标不能使用闪"""
     if target is None:
         return False
@@ -182,6 +192,7 @@ def handle_tieji(player: Player, engine: GameEngine,
 
 
 # ==================== 黄月英 ====================
+
 
 @skill_handler("jizhi")
 def handle_jizhi(player: Player, engine: GameEngine, **kwargs) -> bool:
@@ -200,9 +211,9 @@ def handle_qicai(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 # ==================== 黄忠 ====================
 
+
 @skill_handler("liegong")
-def handle_liegong(player: Player, engine: GameEngine,
-                   target: Player = None, **kwargs) -> bool:
+def handle_liegong(player: Player, engine: GameEngine, target: Player = None, **kwargs) -> bool:
     """烈弓：使用杀时，若目标手牌数>=你体力值或<=你攻击范围，其不能闪避"""
     if not target:
         return False
@@ -219,9 +230,11 @@ def handle_liegong(player: Player, engine: GameEngine,
 
 # ==================== 魏延 ====================
 
+
 @skill_handler("kuanggu")
-def handle_kuanggu(player: Player, engine: GameEngine,
-                   target: Player = None, damage: int = 1, **kwargs) -> bool:
+def handle_kuanggu(
+    player: Player, engine: GameEngine, target: Player = None, damage: int = 1, **kwargs
+) -> bool:
     """狂骨：对距离1以内的角色造成伤害后回复1点体力"""
     if not target:
         return False

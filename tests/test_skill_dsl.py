@@ -52,18 +52,12 @@ class TestSkillDslValidation:
     """测试 DSL 验证"""
 
     def test_valid_dsl(self):
-        dsl = SkillDsl.from_dict({
-            "trigger": "active",
-            "steps": [{"draw": 1}]
-        })
+        dsl = SkillDsl.from_dict({"trigger": "active", "steps": [{"draw": 1}]})
         errors = dsl.validate()
         assert errors == []
 
     def test_invalid_trigger(self):
-        dsl = SkillDsl.from_dict({
-            "trigger": "bogus",
-            "steps": []
-        })
+        dsl = SkillDsl.from_dict({"trigger": "bogus", "steps": []})
         errors = dsl.validate()
         assert len(errors) > 0
         assert "unknown trigger" in errors[0]
@@ -89,10 +83,7 @@ class TestSkillInterpreter:
         player = engine.players[0]
         initial = len(player.hand)
 
-        dsl = SkillDsl.from_dict({
-            "trigger": "active",
-            "steps": [{"draw": 2}]
-        })
+        dsl = SkillDsl.from_dict({"trigger": "active", "steps": [{"draw": 2}]})
         result = interp.execute(dsl, player, "测试技能")
         assert result is True
         assert len(player.hand) == initial + 2
@@ -103,10 +94,7 @@ class TestSkillInterpreter:
         player = engine.players[0]
         player.hp = 1
 
-        dsl = SkillDsl.from_dict({
-            "trigger": "active",
-            "steps": [{"heal": 1}]
-        })
+        dsl = SkillDsl.from_dict({"trigger": "active", "steps": [{"heal": 1}]})
         result = interp.execute(dsl, player, "测试技能")
         assert result is True
         assert player.hp == 2
@@ -117,10 +105,7 @@ class TestSkillInterpreter:
         player = engine.players[0]
         old_hp = player.hp
 
-        dsl = SkillDsl.from_dict({
-            "trigger": "active",
-            "steps": [{"lose_hp": 1}]
-        })
+        dsl = SkillDsl.from_dict({"trigger": "active", "steps": [{"lose_hp": 1}]})
         result = interp.execute(dsl, player, "测试技能")
         assert result is True
         assert player.hp == old_hp - 1
@@ -130,11 +115,9 @@ class TestSkillInterpreter:
         interp = SkillInterpreter(engine)
         player = engine.players[0]
 
-        dsl = SkillDsl.from_dict({
-            "trigger": "active",
-            "condition": [{"check": "hp_below_max"}],
-            "steps": [{"heal": 1}]
-        })
+        dsl = SkillDsl.from_dict(
+            {"trigger": "active", "condition": [{"check": "hp_below_max"}], "steps": [{"heal": 1}]}
+        )
 
         player.hp = player.max_hp
         result = interp.execute(dsl, player, "测试")
@@ -149,14 +132,20 @@ class TestSkillInterpreter:
         interp = SkillInterpreter(engine)
         player = engine.players[0]
 
-        dsl = SkillDsl.from_dict({
-            "trigger": "active",
-            "steps": [{"judge": {
-                "success_if": {"color": "red"},
-                "success": [{"draw": 1}],
-                "fail": []
-            }}]
-        })
+        dsl = SkillDsl.from_dict(
+            {
+                "trigger": "active",
+                "steps": [
+                    {
+                        "judge": {
+                            "success_if": {"color": "red"},
+                            "success": [{"draw": 1}],
+                            "fail": [],
+                        }
+                    }
+                ],
+            }
+        )
         initial = len(player.hand)
         result = interp.execute(dsl, player, "测试判定")
         assert result is True
@@ -179,7 +168,7 @@ class TestSkillInterpreter:
         interp = SkillInterpreter(engine)
         player = engine.players[0]
         initial = len(player.hand)
-        initial_flip = getattr(player, 'flipped', False)
+        initial_flip = getattr(player, "flipped", False)
 
         dsl = engine.skill_system.get_dsl("jushou")
         assert dsl is not None
@@ -232,14 +221,13 @@ class TestDataDrivenHero:
         ss = engine.skill_system
 
         # 动态添加一个 DSL 技能
-        custom_dsl = SkillDsl.from_dict({
-            "trigger": "active",
-            "phase": "play",
-            "steps": [
-                {"draw": 3},
-                {"log": "{player} 发动了自定义技能"}
-            ]
-        })
+        custom_dsl = SkillDsl.from_dict(
+            {
+                "trigger": "active",
+                "phase": "play",
+                "steps": [{"draw": 3}, {"log": "{player} 发动了自定义技能"}],
+            }
+        )
         ss._dsl_registry["custom_test_skill"] = custom_dsl
 
         player = engine.players[0]

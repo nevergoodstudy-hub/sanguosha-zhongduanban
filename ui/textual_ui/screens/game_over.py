@@ -47,6 +47,7 @@ class GameOverScreen(Screen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-back":
             from .main_menu import MainMenuScreen
+
             self.app.switch_screen(MainMenuScreen())
         elif event.button.id == "btn-quit":
             self.app.exit()

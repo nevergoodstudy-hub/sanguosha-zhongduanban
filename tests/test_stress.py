@@ -16,8 +16,7 @@ STRESS_COUNT = int(os.environ.get("STRESS_COUNT", "100"))
 class TestStressBattle:
     """批量随机对局压力测试"""
 
-    def _run_one(self, seed: int, player_count: int,
-                 difficulty: str = "normal") -> dict:
+    def _run_one(self, seed: int, player_count: int, difficulty: str = "normal") -> dict:
         """运行单场对局，返回结果 dict"""
         engine = GameEngine()
         engine.setup_headless_game(player_count, ai_difficulty=difficulty, seed=seed)
@@ -43,9 +42,7 @@ class TestStressBattle:
                 errors += 1
 
         error_rate = errors / STRESS_COUNT
-        assert error_rate < 0.05, (
-            f"{STRESS_COUNT} 局中 {errors} 局出错 (错误率 {error_rate:.1%})"
-        )
+        assert error_rate < 0.05, f"{STRESS_COUNT} 局中 {errors} 局出错 (错误率 {error_rate:.1%})"
 
     def test_stress_all_player_counts(self):
         """2-4人各跑 20 局"""

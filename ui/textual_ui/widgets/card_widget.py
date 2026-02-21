@@ -1,8 +1,7 @@
-"""CardWidget — 可视化卡牌组件 (M-A)
+"""CardWidget — 三国杀OL风格卡牌组件
 
-box-drawing 卡面渲染，红/黑花色颜色，
-:hover 高亮，.selected 上移，tooltip 显示效果描述，
-on_click 发布 CardClicked Message。
+花色色差、类型色框、序号标签、键盘交互、
+tooltip 效果描述，on_click / on_key 发布 CardClicked Message。
 """
 
 from __future__ import annotations
@@ -21,11 +20,16 @@ if TYPE_CHECKING:
 SUIT_ICONS = {"spade": "♠", "heart": "♥", "club": "♣", "diamond": "♦"}
 SUIT_COLORS = {"spade": "#ecf0f1", "heart": "#e74c3c", "club": "#ecf0f1", "diamond": "#e74c3c"}
 
-# 卡牌类型 emoji
+# 卡牌类型图标和边框色
 CARD_TYPE_ICONS = {
-    "basic": "",
+    "basic": "⚔",
     "trick": "📜",
     "equipment": "⚙",
+}
+CARD_TYPE_BORDER_COLORS = {
+    "basic": "#e74c3c",  # 红色 - 基本牌
+    "trick": "#3498db",  # 蓝色 - 锦囊牌
+    "equipment": "#f39c12",  # 黄色 - 装备牌
 }
 
 # 卡牌效果描述映射
@@ -67,12 +71,12 @@ CARD_EFFECT_DESC = {
 
 
 class CardWidget(Static, can_focus=True):
-    """可视化卡牌 Widget"""
+    """三国杀OL风格卡牌 Widget"""
 
     DEFAULT_CSS = """
     CardWidget {
         width: 18;
-        height: 5;
+        height: 6;
         border: round $primary;
         padding: 0 1;
         content-align: center middle;
@@ -93,7 +97,11 @@ class CardWidget(Static, can_focus=True):
         text-style: bold;
     }
     CardWidget.playable {
-        border: round $warning;
+        border: heavy $warning;
+        background: $warning-darken-3;
+    }
+    CardWidget.playable:hover {
+        background: $warning-darken-2;
     }
     CardWidget.disabled {
         opacity: 40%;
@@ -105,6 +113,7 @@ class CardWidget(Static, can_focus=True):
 
     class CardClicked(Message):
         """卡牌被点击"""
+
         def __init__(self, index: int, card=None) -> None:
             super().__init__()
             self.index = index
@@ -152,7 +161,7 @@ class CardWidget(Static, can_focus=True):
         return "\n".join(parts)
 
     def render(self) -> str:
-        """渲染卡面"""
+        """渲染三国杀OL风格卡面"""
         c = self._card
         suit_val = getattr(c.suit, "value", "") if hasattr(c, "suit") else ""
         suit_icon = SUIT_ICONS.get(suit_val, "?")
@@ -169,16 +178,30 @@ class CardWidget(Static, can_focus=True):
             type_icon = CARD_TYPE_ICONS.get(getattr(c.card_type, "value", ""), "")
 
         # 选中标记
-        sel = "✓" if self.selected else " "
+        sel = "[bold green]✓[/bold green]" if self.selected else ""
+
+        # 序号标签（快捷键提示）
+        idx_label = ""
+        if self.card_index >= 0:
+            key = str(self.card_index + 1) if self.card_index < 9 else "0"
+            if self.card_index < 10:
+                idx_label = f"[dim]『{key}』[/dim] "
 
         return (
-            f"[{suit_color}]{suit_icon}[/{suit_color}] {number}\n"
+            f"{idx_label}[{suit_color}]{suit_icon}[/{suit_color}] {number}\n"
             f"[bold]{name}[/bold]\n"
             f"{type_icon} {sel}"
         )
 
     def on_click(self) -> None:
         self.post_message(self.CardClicked(self.card_index, self._card))
+
+    def on_key(self, event) -> None:
+        """键盘交互：Enter/Space 等同于点击"""
+        if event.key in ("enter", "space"):
+            self.post_message(self.CardClicked(self.card_index, self._card))
+            event.prevent_default()
+            event.stop()
 
     def watch_selected(self, value: bool) -> None:
         if value:

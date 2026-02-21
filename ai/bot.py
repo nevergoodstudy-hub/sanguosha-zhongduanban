@@ -30,9 +30,10 @@ if TYPE_CHECKING:
 
 class AIDifficulty(Enum):
     """AI难度枚举"""
-    EASY = "easy"       # 简单：随机出牌
-    NORMAL = "normal"   # 普通：基础策略
-    HARD = "hard"       # 困难：深度策略 + 嘲讽值系统
+
+    EASY = "easy"  # 简单：随机出牌
+    NORMAL = "normal"  # 普通：基础策略
+    HARD = "hard"  # 困难：深度策略 + 嘲讽值系统
 
 
 def _create_strategy(player: Player, difficulty: AIDifficulty) -> AIStrategy:
@@ -51,8 +52,7 @@ class AIBot:
     通过策略模式委托决策逻辑，自身不包含任何出牌算法。
     """
 
-    def __init__(self, player: Player,
-                 difficulty: AIDifficulty = AIDifficulty.NORMAL):
+    def __init__(self, player: Player, difficulty: AIDifficulty = AIDifficulty.NORMAL):
         """初始化AI机器人
 
         Args:
@@ -74,15 +74,13 @@ class AIBot:
         """出牌阶段决策 — 委托给策略"""
         self._strategy.play_phase(player, engine)
 
-    def choose_discard(self, player: Player, count: int,
-                       engine: GameEngine) -> list[Card]:
+    def choose_discard(self, player: Player, count: int, engine: GameEngine) -> list[Card]:
         """选择弃牌 — 委托给策略"""
         if not player.hand:
             return []
         return self._strategy.choose_discard(player, count, engine)
 
-    def should_use_qinglong(self, player: Player, target: Player,
-                            engine: GameEngine) -> bool:
+    def should_use_qinglong(self, player: Player, target: Player, engine: GameEngine) -> bool:
         """决定是否使用青龙偃月刀继续攻击 — 委托给策略"""
         return self._strategy.should_use_qinglong(player, target, engine)
 
@@ -98,14 +96,18 @@ class AIBot:
             return self._strategy.evaluate_game_state(engine)
         # 非 HARD 模式返回空状态
         return {
-            'lord_advantage': 0.0, 'rebel_advantage': 0.0,
-            'spy_advantage': 0.0, 'lord_alive': False,
-            'rebel_count': 0, 'loyalist_count': 0, 'spy_count': 0,
-            'my_power': 0.0, 'danger_level': 0.0
+            "lord_advantage": 0.0,
+            "rebel_advantage": 0.0,
+            "spy_advantage": 0.0,
+            "lord_alive": False,
+            "rebel_count": 0,
+            "loyalist_count": 0,
+            "spy_count": 0,
+            "my_power": 0.0,
+            "danger_level": 0.0,
         }
 
-    def infer_identity(self, target: Player,
-                       engine: GameEngine) -> dict[str, float]:
+    def infer_identity(self, target: Player, engine: GameEngine) -> dict[str, float]:
         """基于行为推断目标身份概率（仅 HARD 模式有效）
 
         Returns:
@@ -113,10 +115,11 @@ class AIBot:
         """
         if isinstance(self._strategy, HardStrategy):
             return self._strategy.identity_predictor.infer_identity(target, engine)
-        return {'lord': 0.0, 'loyalist': 0.25, 'rebel': 0.50, 'spy': 0.25}
+        return {"lord": 0.0, "loyalist": 0.25, "rebel": 0.50, "spy": 0.25}
 
-    def record_behavior(self, actor: Player, action_type: str,
-                        target: Player | None = None) -> None:
+    def record_behavior(
+        self, actor: Player, action_type: str, target: Player | None = None
+    ) -> None:
         """记录玩家行为用于身份推断（仅 HARD 模式有效）
 
         Args:
@@ -125,15 +128,12 @@ class AIBot:
             target: 行为目标
         """
         if isinstance(self._strategy, HardStrategy):
-            self._strategy.identity_predictor.record_behavior(
-                actor, action_type, target)
+            self._strategy.identity_predictor.record_behavior(actor, action_type, target)
 
-    def get_highest_threat_enemy(self, player: Player,
-                                 engine: GameEngine) -> Player | None:
+    def get_highest_threat_enemy(self, player: Player, engine: GameEngine) -> Player | None:
         """获取威胁值最高的敌人（仅 HARD 模式有效）"""
         if isinstance(self._strategy, HardStrategy):
-            return self._strategy.threat_evaluator.get_highest_threat_enemy(
-                player, engine)
+            return self._strategy.threat_evaluator.get_highest_threat_enemy(player, engine)
         return None
 
     # ==================== 向后兼容属性 ====================

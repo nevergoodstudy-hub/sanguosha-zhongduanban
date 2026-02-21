@@ -1,6 +1,6 @@
 [project]
 name = "sanguosha"
-version = "3.0.0"
+version = "4.0.0"
 description = "三国杀命令行终端游戏"
 readme = "README.md"
 license = {text = "MIT"}

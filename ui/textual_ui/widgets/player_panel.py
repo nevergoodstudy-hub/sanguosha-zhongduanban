@@ -21,10 +21,10 @@ if TYPE_CHECKING:
 
 # 国籍颜色
 KINGDOM_COLORS = {
-    "wei": "#3498db",    # 魏 蓝
-    "shu": "#e74c3c",    # 蜀 红
-    "wu": "#27ae60",    # 吴 绿
-    "qun": "#f39c12",    # 群 黄
+    "wei": "#3498db",  # 魏 蓝
+    "shu": "#e74c3c",  # 蜀 红
+    "wu": "#27ae60",  # 吴 绿
+    "qun": "#f39c12",  # 群 黄
 }
 
 
@@ -67,6 +67,7 @@ class PlayerPanel(Static, can_focus=True):
 
     class PlayerClicked(Message):
         """玩家面板被点击"""
+
         def __init__(self, index: int, player=None) -> None:
             super().__init__()
             self.index = index
@@ -76,9 +77,9 @@ class PlayerPanel(Static, can_focus=True):
         super().__init__(**kwargs)
         self._player = player
         self.player_index = index
-        self._distance: int = -1       # 与人类玩家的距离
-        self._in_range: bool = False   # 是否在攻击范围内
-        self._prev_hp: int = player.hp if hasattr(player, 'hp') else 0  # P2-1
+        self._distance: int = -1  # 与人类玩家的距离
+        self._in_range: bool = False  # 是否在攻击范围内
+        self._prev_hp: int = player.hp if hasattr(player, "hp") else 0  # P2-1
         self._pulse_timer: Timer | None = None  # P1-3: 呼吸脉冲
         self._pulse_dim: bool = False
         self._update_tooltip()
@@ -94,95 +95,97 @@ class PlayerPanel(Static, can_focus=True):
             self.tooltip = "\n".join(lines)
 
     def render(self) -> str:
-        """渲染玩家面板"""
+        """渲染三国杀OL风格玩家面板"""
         p = self._player
         hero_name = p.hero.name if p.hero else "?"
         kingdom = p.hero.kingdom.value if p.hero else ""
         kingdom_color = KINGDOM_COLORS.get(kingdom, "white")
 
-        # 身份显示规则：
-        # - 主公身份始终公开（三国杀规则）
-        # - 死亡玩家揭示真实身份
-        # - 其他存活玩家身份隐藏
+        # 身份显示规则
         identity_str = ""
         if hasattr(p, "identity"):
             from game.player import Identity
+
             if p.identity == Identity.LORD:
-                identity_str = " [bold red]👑主公[/bold red]"
+                identity_str = "[bold red]👑[/bold red]"
             elif not p.is_alive:
-                identity_str = f" ({p.identity.chinese_name})"
+                identity_str = f"[dim]({p.identity.chinese_name})[/dim]"
             else:
-                identity_str = " [❓]"
+                identity_str = "[dim]❓[/dim]"
 
-        # HP 条
+        # HP 条（视觉进度条风格）
         if p.is_alive:
-            hp_dots = "[green]●[/green]" * p.hp + "[dim]○[/dim]" * (p.max_hp - p.hp)
             if p.hp <= 1:
-                hp_dots = "[red]●[/red]" * p.hp + "[dim]○[/dim]" * (p.max_hp - p.hp)
+                hp_color = "red"
             elif p.hp <= p.max_hp // 2:
-                hp_dots = "[yellow]●[/yellow]" * p.hp + "[dim]○[/dim]" * (p.max_hp - p.hp)
+                hp_color = "yellow"
+            else:
+                hp_color = "green"
+            hp_filled = f"[{hp_color}]█[/{hp_color}]" * p.hp
+            hp_empty = "[dim]░[/dim]" * (p.max_hp - p.hp)
+            hp_bar = f"{hp_filled}{hp_empty} {p.hp}/{p.max_hp}"
         else:
-            hp_dots = "[dim strike]💀[/dim strike]"
+            hp_bar = "[dim]💀 已阵亡[/dim]"
 
-        # 装备
-        equip_parts = []
+        # 装备图标（紧凑单行）
+        equip_icons = []
         if hasattr(p, "equipment"):
             if p.equipment.weapon:
-                equip_parts.append(f"⚔{p.equipment.weapon.name}")
+                equip_icons.append(f"[bold]⚔[/bold]{p.equipment.weapon.name}")
             if p.equipment.armor:
-                equip_parts.append(f"🛡{p.equipment.armor.name}")
-            if p.equipment.horse_plus:
-                equip_parts.append("+🐎")
+                equip_icons.append(f"[bold]🛡[/bold]{p.equipment.armor.name}")
             if p.equipment.horse_minus:
-                equip_parts.append("-🐎")
-        equip_str = " ".join(equip_parts)
+                equip_icons.append("[red]-🐎[/red]")
+            if p.equipment.horse_plus:
+                equip_icons.append("[green]+🐎[/green]")
+        equip_str = " ".join(equip_icons)
 
-        # 特殊状态标记
+        # 状态标记
         status_parts = []
         if getattr(p, "is_chained", False):
-            status_parts.append("[yellow]🔗连环[/yellow]")
+            status_parts.append("[yellow]🔗[/yellow]")
         if getattr(p, "flipped", False):
-            status_parts.append("[dim]🔄翻面[/dim]")
-        status_str = " ".join(status_parts)
-
-        # 判定区延时锦囊
-        judge_parts = []
+            status_parts.append("[dim]🔄[/dim]")
+        # 判定区
         if hasattr(p, "judge_area") and p.judge_area:
             for jc in p.judge_area:
-                judge_parts.append(f"[red]⚠{jc.name}[/red]")
-        judge_str = " ".join(judge_parts)
+                status_parts.append(f"[red]⚠{jc.name}[/red]")
+        status_str = " ".join(status_parts)
 
-        # 距离标记
+        # 距离/攻击范围标记
         dist_str = ""
         if self._distance >= 0 and p.is_alive:
-            range_icon = "⚔" if self._in_range else "✖"
+            range_icon = "[⚔]" if self._in_range else "[✖]"
             range_color = "green" if self._in_range else "red"
-            dist_str = f" [{range_color}]│距{self._distance} {range_icon}[/{range_color}]"
+            dist_str = f"[{range_color}]距{self._distance}{range_icon}[/{range_color}]"
 
-        # 组装显示
+        # 组装两行显示
         line1 = (
-            f"[{kingdom_color}]▌[/{kingdom_color}] "
-            f"[bold]{p.name}[/bold] {hero_name}{identity_str}  "
-            f"{hp_dots} {p.hp}/{p.max_hp}  "
-            f"🃏{p.hand_count}{dist_str}  {equip_str}"
+            f"[{kingdom_color}]█▌[/{kingdom_color}] "
+            f"{identity_str} [bold]{p.name}[/bold] {hero_name}  "
+            f"{hp_bar}  "
+            f"🃏[bold]{p.hand_count}[/bold]"
         )
-        extras = []
+        if dist_str:
+            line1 += f"  {dist_str}"
+
+        line2_parts = []
+        if equip_str:
+            line2_parts.append(equip_str)
         if status_str:
-            extras.append(status_str)
-        if judge_str:
-            extras.append(f"📜{judge_str}")
-        if extras:
-            line1 += "  " + "  ".join(extras)
+            line2_parts.append(status_str)
+        if line2_parts:
+            line1 += "\n    " + "  ".join(line2_parts)
+
         return line1
 
     def on_click(self) -> None:
         self.post_message(self.PlayerClicked(self.player_index, self._player))
 
-    def update_player(self, player, distance: int = -1,
-                       in_range: bool = False) -> None:
+    def update_player(self, player, distance: int = -1, in_range: bool = False) -> None:
         """更新玩家数据并刷新，带 HP 变化动画 (P2-1)"""
         old_hp = self._prev_hp
-        new_hp = player.hp if hasattr(player, 'hp') else 0
+        new_hp = player.hp if hasattr(player, "hp") else 0
         self._player = player
         self._distance = distance
         self._in_range = in_range
@@ -198,7 +201,9 @@ class PlayerPanel(Static, can_focus=True):
             css_cls = "pulse-damage" if new_hp < old_hp else "pulse-heal"
             self.add_class(css_cls)
             self.styles.animate(
-                "opacity", value=0.4, duration=0.2,
+                "opacity",
+                value=0.4,
+                duration=0.2,
                 easing="out_cubic",
                 on_complete=lambda: self._hp_flash_restore(css_cls),
             )
@@ -209,7 +214,9 @@ class PlayerPanel(Static, can_focus=True):
         """恢复 HP 闪烁 (P2-1)"""
         try:
             self.styles.animate(
-                "opacity", value=1.0, duration=0.3,
+                "opacity",
+                value=1.0,
+                duration=0.3,
                 easing="in_out_cubic",
                 on_complete=lambda: self.remove_class(css_cls),
             )
@@ -250,7 +257,9 @@ class PlayerPanel(Static, can_focus=True):
             self.styles.offset = (0, 0)
             self.add_class("dead")
             self.styles.animate(
-                "opacity", value=0.4, duration=0.4,
+                "opacity",
+                value=0.4,
+                duration=0.4,
                 easing="out_cubic",
             )
         except Exception:
@@ -276,7 +285,6 @@ class PlayerPanel(Static, can_focus=True):
         target = 0.6 if not self._pulse_dim else 1.0
         self._pulse_dim = not self._pulse_dim
         try:
-            self.styles.animate("opacity", value=target, duration=0.6,
-                                easing="in_out_cubic")
+            self.styles.animate("opacity", value=target, duration=0.6, easing="in_out_cubic")
         except Exception:
             pass

@@ -8,4 +8,4 @@ from .base import CardEffect
 from .data_driven import DataDrivenCardEffect
 from .registry import CardEffectRegistry
 
-__all__ = ['CardEffect', 'CardEffectRegistry', 'DataDrivenCardEffect']
+__all__ = ["CardEffect", "CardEffectRegistry", "DataDrivenCardEffect"]

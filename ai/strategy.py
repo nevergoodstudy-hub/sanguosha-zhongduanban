@@ -24,21 +24,19 @@ class AIStrategy(Protocol):
         """出牌阶段决策"""
         ...
 
-    def choose_discard(self, player: Player, count: int,
-                       engine: GameEngine) -> list[Card]:
+    def choose_discard(self, player: Player, count: int, engine: GameEngine) -> list[Card]:
         """选择弃牌"""
         ...
 
-    def should_use_qinglong(self, player: Player, target: Player,
-                            engine: GameEngine) -> bool:
+    def should_use_qinglong(self, player: Player, target: Player, engine: GameEngine) -> bool:
         """决定是否使用青龙偃月刀继续攻击"""
         ...
 
 
 # ==================== 共享工具函数 ====================
 
-def is_enemy(player: Player, target: Player,
-             *, engine: GameEngine | None = None) -> bool:
+
+def is_enemy(player: Player, target: Player, *, engine: GameEngine | None = None) -> bool:
     """判断目标是否为敌人
 
     Args:
@@ -109,6 +107,7 @@ def smart_discard(player: Player, count: int) -> list[Card]:
 
 def pick_least_valuable(cards: list, player: Player) -> Card:
     """从候选牌中选价值最低的牌作为转化素材"""
+
     def card_value(card: Card) -> int:
         if card.name == CardName.TAO:
             return 100
@@ -121,6 +120,7 @@ def pick_least_valuable(cards: list, player: Player) -> Card:
         elif card.card_type == CardType.EQUIPMENT:
             return 25
         return 50
+
     cards_sorted = sorted(cards, key=card_value)
     return cards_sorted[0]
 

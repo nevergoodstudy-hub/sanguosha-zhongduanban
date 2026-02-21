@@ -31,6 +31,7 @@ from game.card import (
 # 辅助：构造一个最小的 Deck（不依赖外部 JSON 文件）
 # ---------------------------------------------------------------------------
 
+
 def _make_card(idx: int) -> Card:
     """生成一张确定性测试卡牌。"""
     suits = list(CardSuit)
@@ -57,6 +58,7 @@ def _make_deck(n_cards: int) -> Deck:
 # 性质 1: draw(n) 返回牌数 ≤ n，且 ≤ 牌堆总量
 # ---------------------------------------------------------------------------
 
+
 @given(
     total=st.integers(min_value=0, max_value=200),
     draw_n=st.integers(min_value=0, max_value=300),
@@ -73,6 +75,7 @@ def test_draw_returns_at_most_n_cards(total: int, draw_n: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 2: draw + discard 循环后，总牌数不变
 # ---------------------------------------------------------------------------
+
 
 @given(
     total=st.integers(min_value=1, max_value=200),
@@ -101,14 +104,13 @@ def test_total_cards_conserved(total: int, ops: list) -> None:
             deck.discard(to_discard)
 
     total_now = len(deck.draw_pile) + len(deck.discard_pile) + len(hand)
-    assert total_now == total, (
-        f"Card conservation violated: {total_now} != {total}"
-    )
+    assert total_now == total, f"Card conservation violated: {total_now} != {total}"
 
 
 # ---------------------------------------------------------------------------
 # 性质 3: draw 不返回重复对象引用（在同一次 draw 调用中）
 # ---------------------------------------------------------------------------
+
 
 @given(
     total=st.integers(min_value=2, max_value=200),
@@ -127,6 +129,7 @@ def test_draw_no_duplicate_references(total: int, draw_n: int) -> None:
 # ---------------------------------------------------------------------------
 # 性质 4: reset 后，牌堆恢复到初始状态的数量
 # ---------------------------------------------------------------------------
+
 
 @given(total=st.integers(min_value=0, max_value=200))
 @settings(max_examples=100)

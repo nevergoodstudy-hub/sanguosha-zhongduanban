@@ -6,10 +6,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import logging
 import random
-import time
 from typing import TYPE_CHECKING
 
 from i18n import t as _t
@@ -53,13 +53,13 @@ class GameController:
 
     # ==================== 主循环 ====================
 
-    def run(self) -> None:
+    async def run(self) -> None:
         """运行游戏主循环（菜单 → 新游戏 → 回合 → 结算）"""
         while self.is_running:
             choice = self.ui.show_main_menu()
 
             if choice == 1:
-                self.start_new_game()
+                await self.start_new_game()
             elif choice == 2:
                 self.ui.show_rules()
             elif choice == 3:
@@ -67,7 +67,7 @@ class GameController:
                 self.ui.show_log(_t("controller.thanks"))
                 logger.info("User exited game via main menu")
 
-    def start_new_game(self) -> None:
+    async def start_new_game(self) -> None:
         """开始新游戏"""
         # 选择玩家数量
         player_count = self.ui.show_player_count_menu()
@@ -75,6 +75,7 @@ class GameController:
         # 选择AI难度
         difficulty_str = self.ui.show_difficulty_menu()
         from ai.bot import AIDifficulty
+
         self.ai_difficulty = AIDifficulty(difficulty_str)
 
         # 初始化游戏引擎
@@ -99,7 +100,7 @@ class GameController:
         self.engine.start_game()
 
         # 进入游戏主循环
-        self._game_loop()
+        await self._game_loop()
 
     # ==================== 武将选择 ====================
 
@@ -142,7 +143,13 @@ class GameController:
                 used_heroes.append(hero.id)
 
                 if is_lord:
-                    self.ui.show_log(_t("controller.hero_chosen", player=self.engine.human_player.name, hero=hero.name))
+                    self.ui.show_log(
+                        _t(
+                            "controller.hero_chosen",
+                            player=self.engine.human_player.name,
+                            hero=hero.name,
+                        )
+                    )
 
         # AI玩家自动选择武将（避免重复）
         ai_choices = self._auto_choose_heroes_for_ai(used_heroes)
@@ -160,7 +167,9 @@ class GameController:
                     hero = self._select_hero_for_ai(player, available)
                     ai_choices[player.id] = hero.id
                     available.remove(hero)
-                    self.ui.show_log(_t("controller.hero_chosen", player=player.name, hero=hero.name))
+                    self.ui.show_log(
+                        _t("controller.hero_chosen", player=player.name, hero=hero.name)
+                    )
 
         return ai_choices
 
@@ -176,7 +185,9 @@ class GameController:
         elif identity == Identity.LOYALIST:
             preferred = [h for h in available if h.max_hp >= 4]
         elif identity == Identity.REBEL:
-            preferred = [h for h in available if any(s.skill_type == SkillType.ACTIVE for s in h.skills)]
+            preferred = [
+                h for h in available if any(s.skill_type == SkillType.ACTIVE for s in h.skills)
+            ]
         elif identity == Identity.SPY:
             preferred = [h for h in available if h.max_hp >= 4 or len(h.skills) >= 2]
 
@@ -190,6 +201,7 @@ class GameController:
             return
 
         from ai.bot import AIBot
+
         for player in self.engine.players:
             if player.is_ai:
                 bot = AIBot(player, self.ai_difficulty)
@@ -197,7 +209,7 @@ class GameController:
 
     # ==================== 回合流程 ====================
 
-    def _game_loop(self) -> None:
+    async def _game_loop(self) -> None:
         """游戏主循环"""
         if not self.engine:
             return
@@ -208,9 +220,9 @@ class GameController:
             self.ui.show_game_state(self.engine, current_player)
 
             if current_player.is_ai:
-                self._run_ai_turn(current_player)
+                await self._run_ai_turn(current_player)
             else:
-                self._run_human_turn(current_player)
+                await self._run_human_turn(current_player)
 
             if self.engine.is_game_over():
                 break
@@ -224,7 +236,14 @@ class GameController:
         assert self.engine is not None  # mypy type narrowing
         self.ui.show_log("")
         self.ui.show_log("════════════════════════")
-        self.ui.show_log(_t("controller.round_header", round=self.engine.round_count, player=player.name, hero=player.hero.name))
+        self.ui.show_log(
+            _t(
+                "controller.round_header",
+                round=self.engine.round_count,
+                player=player.name,
+                hero=player.hero.name,
+            )
+        )
         self.ui.show_log("════════════════════════")
 
     def _execute_prepare_phase(self, player: Player) -> None:
@@ -242,9 +261,13 @@ class GameController:
         new_cards = player.hand_count - old_count
         if show_count:
             if player.is_ai:
-                self.ui.show_log(_t("controller.drew_cards_ai", player=player.name, count=new_cards))
+                self.ui.show_log(
+                    _t("controller.drew_cards_ai", player=player.name, count=new_cards)
+                )
             else:
-                self.ui.show_log(_t("controller.drew_cards_human", count=new_cards, hand_count=player.hand_count))
+                self.ui.show_log(
+                    _t("controller.drew_cards_human", count=new_cards, hand_count=player.hand_count)
+                )
         return new_cards
 
     def _execute_discard_phase(self, player: Player) -> None:
@@ -255,7 +278,9 @@ class GameController:
             if player.is_ai:
                 self.ui.show_log(_t("controller.need_discard", count=player.need_discard))
             else:
-                self.ui.show_log(_t("controller.need_discard_limit", count=player.need_discard, limit=player.hp))
+                self.ui.show_log(
+                    _t("controller.need_discard_limit", count=player.need_discard, limit=player.hp)
+                )
                 self.engine.phase = GamePhase.DISCARD
                 self.ui.show_game_state(self.engine, player)
                 self._human_discard_phase(player)
@@ -267,10 +292,14 @@ class GameController:
         assert self.engine is not None  # mypy type narrowing
         self.ui.show_log(_t("controller.phase_end"))
         self.engine.phase_end(player)
-        turn_end_msg = _t("controller.turn_end_ai", player=player.name) if player.is_ai else _t("controller.turn_end_human")
+        turn_end_msg = (
+            _t("controller.turn_end_ai", player=player.name)
+            if player.is_ai
+            else _t("controller.turn_end_human")
+        )
         self.ui.show_log(turn_end_msg)
 
-    def _run_ai_turn(self, player: Player) -> None:
+    async def _run_ai_turn(self, player: Player) -> None:
         """执行AI回合"""
         if not self.engine:
             return
@@ -285,7 +314,7 @@ class GameController:
         self.ui.show_game_state(self.engine, player)
         cfg = get_config()
         if cfg.ai_turn_delay > 0:
-            time.sleep(cfg.ai_turn_delay)
+            await asyncio.sleep(cfg.ai_turn_delay)
 
         self.ui.show_log(_t("controller.phase_play"))
         self.engine.phase = GamePhase.PLAY
@@ -294,14 +323,14 @@ class GameController:
             bot.play_phase(player, self.engine)
         self.ui.show_game_state(self.engine, player)
         if cfg.ai_turn_delay > 0:
-            time.sleep(cfg.ai_turn_delay)
+            await asyncio.sleep(cfg.ai_turn_delay)
 
         self._execute_discard_phase(player)
         self._execute_end_phase(player)
         if cfg.ai_turn_delay > 0:
-            time.sleep(cfg.ai_turn_delay)
+            await asyncio.sleep(cfg.ai_turn_delay)
 
-    def _run_human_turn(self, player: Player) -> None:
+    async def _run_human_turn(self, player: Player) -> None:
         """执行人类玩家回合"""
         if not self.engine:
             return
@@ -317,14 +346,14 @@ class GameController:
 
         self.ui.show_log(_t("controller.phase_play"))
         self.engine.phase = GamePhase.PLAY
-        self._human_play_phase(player)
+        await self._human_play_phase(player)
 
         self._execute_discard_phase(player)
         self._execute_end_phase(player)
 
     # ==================== 出牌交互 ====================
 
-    def _human_play_phase(self, player: Player) -> None:
+    async def _human_play_phase(self, player: Player) -> None:
         """人类玩家出牌阶段 - 默认直接进入出牌模式"""
         if not self.engine:
             return
@@ -336,7 +365,7 @@ class GameController:
             self.ui.show_log(_t("controller.auto_skip_detail"))
             cfg = get_config()
             if cfg.ai_turn_delay > 0:
-                time.sleep(cfg.ai_turn_delay * 3)  # 稍长一点让玩家看到提示
+                await asyncio.sleep(cfg.ai_turn_delay * 3)  # 稍长一点让玩家看到提示
             return
 
         while True:
@@ -345,17 +374,17 @@ class GameController:
 
             action = self.ui.get_player_action()
 
-            if action == 'E':
+            if action == "E":
                 self.ui.show_log(_t("controller.end_play"))
                 break
-            elif action == 'H':
+            elif action == "H":
                 self.ui.show_help()
-            elif action == 'Q':
-                if self._confirm_quit():
+            elif action == "Q":
+                if await self._confirm_quit():
                     self.engine.state = GameState.FINISHED
                     return
-            elif action == 'S':
-                self._handle_use_skill(player)
+            elif action == "S":
+                await self._handle_use_skill(player)
             elif action.isdigit():
                 card_idx = int(action) - 1
                 if 0 <= card_idx < len(player.hand):
@@ -372,7 +401,7 @@ class GameController:
                 self.ui.show_log(_t("controller.auto_skip_detail"))
                 cfg = get_config()
                 if cfg.ai_turn_delay > 0:
-                    time.sleep(cfg.ai_turn_delay * 1.5)
+                    await asyncio.sleep(cfg.ai_turn_delay * 1.5)
                 break
 
     def _check_card_usable(self, player: Player, card: Card) -> bool:
@@ -390,8 +419,11 @@ class GameController:
             return False
         if card.name == CardName.SHUNSHOU:
             others = self.engine.get_other_players(player)
-            valid = [t for t in others
-                     if self.engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
+            valid = [
+                t
+                for t in others
+                if self.engine.calculate_distance(player, t) <= 1 and t.has_any_card()
+            ]
             return len(valid) > 0
         if card.name == CardName.GUOHE:
             others = self.engine.get_other_players(player)
@@ -506,8 +538,11 @@ class GameController:
 
         elif card.name == CardName.SHUNSHOU:
             others = self.engine.get_other_players(player)
-            valid = [t for t in others
-                     if self.engine.calculate_distance(player, t) <= 1 and t.has_any_card()]
+            valid = [
+                t
+                for t in others
+                if self.engine.calculate_distance(player, t) <= 1 and t.has_any_card()
+            ]
             if not valid:
                 self.ui.show_log(_t("controller.no_shunshou_targets"))
                 return
@@ -518,7 +553,7 @@ class GameController:
         else:
             self.engine.use_card(player, card)
 
-    def _handle_use_skill(self, player: Player) -> None:
+    async def _handle_use_skill(self, player: Player) -> None:
         """处理使用技能"""
         if not self.engine or not self.engine.skill_system:
             return
@@ -532,38 +567,45 @@ class GameController:
         if skill_id == "zhiheng":
             if player.hand:
                 self.ui.show_log(_t("controller.choose_discard_cards"))
-                cards = self._select_cards_for_skill(player, 1, len(player.hand))
+                cards = await self._select_cards_for_skill(player, 1, len(player.hand))
                 if cards:
                     self.engine.skill_system.use_skill(skill_id, player, cards=cards)
         elif skill_id == "rende":
             if player.hand:
-                cards = self._select_cards_for_skill(player, 1, len(player.hand))
+                cards = await self._select_cards_for_skill(player, 1, len(player.hand))
                 if cards:
                     others = self.engine.get_other_players(player)
-                    target = self.ui.choose_target(player, others, _t("controller.choose_give_target"))
+                    target = self.ui.choose_target(
+                        player, others, _t("controller.choose_give_target")
+                    )
                     if target:
-                        self.engine.skill_system.use_skill(skill_id, player,
-                                                           targets=[target], cards=cards)
+                        self.engine.skill_system.use_skill(
+                            skill_id, player, targets=[target], cards=cards
+                        )
         elif skill_id == "fanjian":
             if player.hand:
                 self.ui.show_log(_t("controller.choose_show_card"))
                 card = self.ui.choose_card_to_play(player)
                 if card:
                     others = self.engine.get_other_players(player)
-                    target = self.ui.choose_target(player, others, _t("controller.choose_fanjian_target"))
+                    target = self.ui.choose_target(
+                        player, others, _t("controller.choose_fanjian_target")
+                    )
                     if target:
-                        self.engine.skill_system.use_skill(skill_id, player,
-                                                           targets=[target], cards=[card])
+                        self.engine.skill_system.use_skill(
+                            skill_id, player, targets=[target], cards=[card]
+                        )
 
-    def _select_cards_for_skill(self, player: Player,
-                                min_count: int, max_count: int) -> list[Card]:
+    async def _select_cards_for_skill(
+        self, player: Player, min_count: int, max_count: int
+    ) -> list[Card]:
         """为技能选择卡牌"""
         self.ui.show_log(_t("controller.select_cards", min=min_count, max=max_count))
         for i, card in enumerate(player.hand, 1):
             self.ui.show_log(f"  [{i}] {card.display_name}")
 
         while True:
-            choice = input(_t("controller.input_prompt")).strip()
+            choice = (await asyncio.to_thread(input, _t("controller.input_prompt"))).strip()
             if not choice:
                 return []
 
@@ -614,7 +656,7 @@ class GameController:
 
         self.ui.show_game_over(winner_message, is_victory)
 
-    def _confirm_quit(self) -> bool:
+    async def _confirm_quit(self) -> bool:
         """确认退出"""
-        choice = input(_t("controller.confirm_quit")).strip().upper()
-        return choice == 'Y'
+        choice = (await asyncio.to_thread(input, _t("controller.confirm_quit"))).strip().upper()
+        return choice == "Y"

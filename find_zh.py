@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Find remaining hardcoded Chinese strings in Python files."""
+
 import os
 import re
 

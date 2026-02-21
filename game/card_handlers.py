@@ -18,15 +18,17 @@ if TYPE_CHECKING:
 
 class CardHandlerType(Enum):
     """卡牌处理器类型"""
-    BASIC = auto()          # 基本牌（杀、闪、桃）
-    TRICK = auto()          # 普通锦囊
-    DELAY_TRICK = auto()    # 延时锦囊
-    EQUIPMENT = auto()      # 装备牌
+
+    BASIC = auto()  # 基本牌（杀、闪、桃）
+    TRICK = auto()  # 普通锦囊
+    DELAY_TRICK = auto()  # 延时锦囊
+    EQUIPMENT = auto()  # 装备牌
 
 
 @dataclass(slots=True)
 class CardHandlerInfo:
     """卡牌处理器信息"""
+
     card_name: str
     handler_type: CardHandlerType
     handler: Callable
@@ -50,7 +52,7 @@ class CardHandlerRegistry:
         handler: Callable,
         handler_type: CardHandlerType = CardHandlerType.BASIC,
         requires_target: bool = False,
-        target_count: int = 1
+        target_count: int = 1,
     ) -> None:
         """注册卡牌处理器
 
@@ -66,7 +68,7 @@ class CardHandlerRegistry:
             handler=handler,
             handler_type=handler_type,
             requires_target=requires_target,
-            target_count=target_count
+            target_count=target_count,
         )
 
     def get_handler(self, card_name: str) -> Callable | None:
@@ -93,10 +95,7 @@ class CardHandlerRegistry:
         """
         if handler_type is None:
             return list(self._handlers.keys())
-        return [
-            name for name, info in self._handlers.items()
-            if info.handler_type == handler_type
-        ]
+        return [name for name, info in self._handlers.items() if info.handler_type == handler_type]
 
 
 def init_default_handlers(registry: CardHandlerRegistry, engine: GameEngine) -> None:
@@ -111,63 +110,58 @@ def init_default_handlers(registry: CardHandlerRegistry, engine: GameEngine) -> 
     from .card import CardName
 
     # 基本牌
-    registry.register(
-        CardName.SHA, engine._use_sha,
-        CardHandlerType.BASIC, requires_target=True
-    )
-    registry.register(
-        CardName.TAO, engine._use_tao,
-        CardHandlerType.BASIC, requires_target=False
-    )
+    registry.register(CardName.SHA, engine._use_sha, CardHandlerType.BASIC, requires_target=True)
+    registry.register(CardName.TAO, engine._use_tao, CardHandlerType.BASIC, requires_target=False)
 
     # 普通锦囊
     registry.register(
-        CardName.JUEDOU, engine._use_juedou,
-        CardHandlerType.TRICK, requires_target=True
+        CardName.JUEDOU, engine._use_juedou, CardHandlerType.TRICK, requires_target=True
     )
     registry.register(
-        CardName.NANMAN, engine._use_nanman,
-        CardHandlerType.TRICK, requires_target=False, target_count=0
+        CardName.NANMAN,
+        engine._use_nanman,
+        CardHandlerType.TRICK,
+        requires_target=False,
+        target_count=0,
     )
     registry.register(
-        CardName.WANJIAN, engine._use_wanjian,
-        CardHandlerType.TRICK, requires_target=False, target_count=0
+        CardName.WANJIAN,
+        engine._use_wanjian,
+        CardHandlerType.TRICK,
+        requires_target=False,
+        target_count=0,
     )
     registry.register(
-        CardName.WUZHONG, engine._use_wuzhong,
-        CardHandlerType.TRICK, requires_target=False
+        CardName.WUZHONG, engine._use_wuzhong, CardHandlerType.TRICK, requires_target=False
     )
     registry.register(
-        CardName.GUOHE, engine._use_guohe,
-        CardHandlerType.TRICK, requires_target=True
+        CardName.GUOHE, engine._use_guohe, CardHandlerType.TRICK, requires_target=True
     )
     registry.register(
-        CardName.SHUNSHOU, engine._use_shunshou,
-        CardHandlerType.TRICK, requires_target=True
+        CardName.SHUNSHOU, engine._use_shunshou, CardHandlerType.TRICK, requires_target=True
     )
     registry.register(
-        CardName.TAOYUAN, engine._use_taoyuan,
-        CardHandlerType.TRICK, requires_target=False, target_count=0
+        CardName.TAOYUAN,
+        engine._use_taoyuan,
+        CardHandlerType.TRICK,
+        requires_target=False,
+        target_count=0,
     )
 
     # 延时锦囊
     registry.register(
-        CardName.LEBUSISHU, engine._use_lebusishu,
-        CardHandlerType.DELAY_TRICK, requires_target=True
+        CardName.LEBUSISHU, engine._use_lebusishu, CardHandlerType.DELAY_TRICK, requires_target=True
     )
     registry.register(
-        CardName.BINGLIANG, engine._use_bingliang,
-        CardHandlerType.DELAY_TRICK, requires_target=True
+        CardName.BINGLIANG, engine._use_bingliang, CardHandlerType.DELAY_TRICK, requires_target=True
     )
     registry.register(
-        CardName.SHANDIAN, engine._use_shandian,
-        CardHandlerType.DELAY_TRICK, requires_target=False
+        CardName.SHANDIAN, engine._use_shandian, CardHandlerType.DELAY_TRICK, requires_target=False
     )
 
     # 军争锦囊
     registry.register(
-        CardName.HUOGONG, engine._use_huogong,
-        CardHandlerType.TRICK, requires_target=True
+        CardName.HUOGONG, engine._use_huogong, CardHandlerType.TRICK, requires_target=True
     )
 
 

@@ -21,21 +21,47 @@ def sample_save(tmp_path):
         "current_player_index": 0,
         "winner_identity": "lord",
         "players": [
-            {"id": 0, "name": "P0", "hp": 3, "max_hp": 4, "is_alive": True,
-             "identity": "lord", "hand": [], "hand_count": 0,
-             "is_ai": False, "seat": 0, "hero_id": "caocao",
-             "hero_name": "曹操", "equipment": {}, "sha_used": 0,
-             "judge_area": [], "is_chained": False, "is_flipped": False},
+            {
+                "id": 0,
+                "name": "P0",
+                "hp": 3,
+                "max_hp": 4,
+                "is_alive": True,
+                "identity": "lord",
+                "hand": [],
+                "hand_count": 0,
+                "is_ai": False,
+                "seat": 0,
+                "hero_id": "caocao",
+                "hero_name": "曹操",
+                "equipment": {},
+                "sha_used": 0,
+                "judge_area": [],
+                "is_chained": False,
+                "is_flipped": False,
+            },
         ],
         "deck_remaining": 50,
         "discard_pile_count": 10,
         "action_log": [
-            {"action_type": "PLAY_CARD", "player_id": 0,
-             "timestamp": 1.0, "data": {"type": "PLAY_CARD", "card_id": "sha_1"}},
-            {"action_type": "USE_SKILL", "player_id": 1,
-             "timestamp": 2.0, "data": {"type": "USE_SKILL", "skill_id": "jianxiong"}},
-            {"action_type": "DISCARD", "player_id": 2,
-             "timestamp": 3.0, "data": {"type": "DISCARD", "card_ids": ["c1", "c2"]}},
+            {
+                "action_type": "PLAY_CARD",
+                "player_id": 0,
+                "timestamp": 1.0,
+                "data": {"type": "PLAY_CARD", "card_id": "sha_1"},
+            },
+            {
+                "action_type": "USE_SKILL",
+                "player_id": 1,
+                "timestamp": 2.0,
+                "data": {"type": "USE_SKILL", "skill_id": "jianxiong"},
+            },
+            {
+                "action_type": "DISCARD",
+                "player_id": 2,
+                "timestamp": 3.0,
+                "data": {"type": "DISCARD", "card_ids": ["c1", "c2"]},
+            },
         ],
     }
     filepath = tmp_path / "test_save.json"
@@ -94,6 +120,7 @@ class TestMainReplayArg:
     def test_argparse_accepts_replay(self):
         """Verify --replay is accepted by argparse."""
         import argparse
+
         # Simulate parsing
         parser = argparse.ArgumentParser()
         parser.add_argument("--replay", default=None)

@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 # ==================== 吕布 ====================
 
+
 @skill_handler("wushuang")
 def handle_wushuang(player: Player, engine: GameEngine, **kwargs) -> bool:
     """无双：锁定技，使用杀需要两张闪，决斗需要两张杀（此技能在杀/决斗结算时自动生效）"""
@@ -31,9 +32,11 @@ def handle_wushuang(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 # ==================== 华佗 ====================
 
+
 @skill_handler("qingnang")
-def handle_qingnang(player: Player, engine: GameEngine,
-                    target: Player = None, cards: list = None, **kwargs) -> bool:
+def handle_qingnang(
+    player: Player, engine: GameEngine, target: Player = None, cards: list = None, **kwargs
+) -> bool:
     """青囊：出牌阶段限一次，弃置一张手牌，令一名角色回复1点体力"""
     if not cards or not target:
         return False
@@ -46,22 +49,25 @@ def handle_qingnang(player: Player, engine: GameEngine,
     engine.deck.discard([card])
 
     healed = target.heal(1)
-    engine.log_event("skill", _t("skill_msg.qingnang", name=player.name, target=target.name, healed=healed))
+    engine.log_event(
+        "skill", _t("skill_msg.qingnang", name=player.name, target=target.name, healed=healed)
+    )
     return True
 
 
 @skill_handler("jijiu")
-def handle_jijiu(player: Player, engine: GameEngine,
-                 card: Card = None, **kwargs) -> bool:
+def handle_jijiu(player: Player, engine: GameEngine, card: Card = None, **kwargs) -> bool:
     """急救：回合外，可以将一张红色牌当【桃】使用（转化技能，在濒死求桃时检查）"""
     return True
 
 
 # ==================== 貂蝉 ====================
 
+
 @skill_handler("lijian")
-def handle_lijian(player: Player, engine: GameEngine,
-                  targets: list[Player] = None, card: Card = None, **kwargs) -> bool:
+def handle_lijian(
+    player: Player, engine: GameEngine, targets: list[Player] = None, card: Card = None, **kwargs
+) -> bool:
     """离间：出牌阶段限一次，弃一牌令两名男性角色决斗"""
     if not card or not targets or len(targets) < 2:
         return False
@@ -70,7 +76,10 @@ def handle_lijian(player: Player, engine: GameEngine,
     engine.deck.discard([card])
 
     target1, target2 = targets[0], targets[1]
-    engine.log_event("skill", _t("skill_msg.lijian", name=player.name, target1=target1.name, target2=target2.name))
+    engine.log_event(
+        "skill",
+        _t("skill_msg.lijian", name=player.name, target1=target1.name, target2=target2.name),
+    )
 
     engine.combat.use_juedou_forced(target1, target2)
     return True

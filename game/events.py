@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import bisect
 import logging
 from collections import defaultdict
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class EventType(Enum):
     """游戏事件类型枚举"""
+
     # 回合相关
     TURN_START = auto()
     TURN_END = auto()
@@ -52,15 +54,15 @@ class EventType(Enum):
 
     # 伤害相关
     DAMAGE_INFLICTING = auto()  # 造成伤害前（可修改）
-    DAMAGE_INFLICTED = auto()   # 造成伤害后
-    DAMAGE_TAKEN = auto()       # 受到伤害后
+    DAMAGE_INFLICTED = auto()  # 造成伤害后
+    DAMAGE_TAKEN = auto()  # 受到伤害后
 
     # 体力相关
     HP_CHANGED = auto()
     HP_LOST = auto()
     HP_RECOVERED = auto()
-    DYING = auto()              # 濒死
-    DEATH = auto()              # 死亡
+    DYING = auto()  # 濒死
+    DEATH = auto()  # 死亡
 
     # 技能相关
     SKILL_USED = auto()
@@ -69,17 +71,20 @@ class EventType(Enum):
     # 装备相关
     EQUIPMENT_EQUIPPED = auto()
     EQUIPMENT_UNEQUIPPED = auto()
+    EQUIPMENT_EFFECT = auto()  # 装备特效触发
+    BEFORE_EQUIP = auto()  # 装备前（可取消）
+    AFTER_EQUIP = auto()  # 装备后
 
     # 攻击相关
-    ATTACK_TARGETING = auto()   # 指定目标时
-    ATTACK_TARGETED = auto()    # 成为目标后
-    ATTACK_HIT = auto()         # 命中
-    ATTACK_DODGED = auto()      # 闪避
+    ATTACK_TARGETING = auto()  # 指定目标时
+    ATTACK_TARGETED = auto()  # 成为目标后
+    ATTACK_HIT = auto()  # 命中
+    ATTACK_DODGED = auto()  # 闪避
 
     # 判定相关
     JUDGE_START = auto()
     JUDGE_RESULT = auto()
-    JUDGE_MODIFIED = auto()     # 判定被修改（如鬼才）
+    JUDGE_MODIFIED = auto()  # 判定被修改（如鬼才）
 
     # 游戏状态
     GAME_START = auto()
@@ -97,6 +102,7 @@ class GameEvent:
     """游戏事件数据类
     携带事件的所有相关信息
     """
+
     event_type: EventType
     data: dict[str, Any] = field(default_factory=dict)
 
@@ -107,27 +113,27 @@ class GameEvent:
     # 常用字段的快捷访问
     @property
     def source(self) -> Player | None:
-        return self.data.get('source')
+        return self.data.get("source")
 
     @property
     def target(self) -> Player | None:
-        return self.data.get('target')
+        return self.data.get("target")
 
     @property
     def targets(self) -> list[Player]:
-        return self.data.get('targets', [])
+        return self.data.get("targets", [])
 
     @property
     def card(self) -> Card | None:
-        return self.data.get('card')
+        return self.data.get("card")
 
     @property
     def damage(self) -> int:
-        return self.data.get('damage', 0)
+        return self.data.get("damage", 0)
 
     @property
     def message(self) -> str:
-        return self.data.get('message', '')
+        return self.data.get("message", "")
 
     def cancel(self) -> None:
         """取消事件"""
@@ -139,7 +145,7 @@ class GameEvent:
 
     def modify_damage(self, new_damage: int) -> None:
         """修改伤害值"""
-        self.data['damage'] = new_damage
+        self.data["damage"] = new_damage
 
 
 # 事件处理器类型
@@ -171,8 +177,7 @@ class EventBus:
         self._seq += 1
         return seq
 
-    def subscribe(self, event_type: EventType, handler: EventHandler,
-                  priority: int = 0) -> None:
+    def subscribe(self, event_type: EventType, handler: EventHandler, priority: int = 0) -> None:
         """订阅事件
 
         Args:
@@ -188,12 +193,13 @@ class EventBus:
         entry = (-priority, self._next_seq(), handler)
         bisect.insort(self._global_handlers, entry)
 
-    def once(self, event_type: EventType, handler: EventHandler,
-             priority: int = 0) -> None:
+    def once(self, event_type: EventType, handler: EventHandler, priority: int = 0) -> None:
         """订阅事件（仅触发一次后自动取消订阅）"""
+
         def _wrapper(event: GameEvent) -> None:
             handler(event)
             self.unsubscribe(event_type, _wrapper)
+
         self.subscribe(event_type, _wrapper, priority)
 
     def unsubscribe(self, event_type: EventType, handler: EventHandler) -> None:
@@ -204,9 +210,7 @@ class EventBus:
 
     def unsubscribe_all(self, handler: EventHandler) -> None:
         """取消订阅所有事件"""
-        self._global_handlers = [
-            entry for entry in self._global_handlers if entry[2] != handler
-        ]
+        self._global_handlers = [entry for entry in self._global_handlers if entry[2] != handler]
         for event_type in self._handlers:
             self.unsubscribe(event_type, handler)
 
@@ -222,7 +226,7 @@ class EventBus:
         # 记录历史
         self._event_history.append(event)
         if len(self._event_history) > self._max_history:
-            self._event_history = self._event_history[-self._max_history:]
+            self._event_history = self._event_history[-self._max_history :]
 
         # 调用全局处理器
         for _, _, handler in self._global_handlers:
@@ -257,6 +261,68 @@ class EventBus:
         """
         event = GameEvent(event_type=event_type, data=kwargs)
         return self.publish(event)
+
+    # ==================== 异步发布 ====================
+
+    async def async_publish(self, event: GameEvent) -> GameEvent:
+        """异步发布事件
+
+        支持 sync 和 async 处理器。async handler 会被 await，
+        sync handler 直接调用。与 sync publish() 完全向后兼容。
+
+        Args:
+            event: 游戏事件
+
+        Returns:
+            处理后的事件（可能被修改或取消）
+        """
+        self._event_history.append(event)
+        if len(self._event_history) > self._max_history:
+            self._event_history = self._event_history[-self._max_history :]
+
+        # 调用全局处理器
+        for _, _, handler in self._global_handlers:
+            if event.cancelled:
+                break
+            try:
+                if asyncio.iscoroutinefunction(handler):
+                    await handler(event)
+                else:
+                    handler(event)
+            except Exception as e:
+                logger.exception("[EventBus] 全局处理器异常 (async): %s", e)
+
+        # 调用特定事件处理器
+        if not event.cancelled:
+            for _, _, handler in self._handlers.get(event.event_type, []):
+                if event.cancelled:
+                    break
+                try:
+                    if asyncio.iscoroutinefunction(handler):
+                        await handler(event)
+                    else:
+                        handler(event)
+                except Exception as e:
+                    logger.exception(
+                        "[EventBus] 事件处理器异常 (async, type=%s): %s",
+                        event.event_type,
+                        e,
+                    )
+
+        return event
+
+    async def async_emit(self, event_type: EventType, **kwargs) -> GameEvent:
+        """快捷异步发布事件
+
+        Args:
+            event_type: 事件类型
+            **kwargs: 事件数据
+
+        Returns:
+            处理后的事件
+        """
+        event = GameEvent(event_type=event_type, data=kwargs)
+        return await self.async_publish(event)
 
     def clear(self) -> None:
         """清除所有订阅"""
