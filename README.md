@@ -256,6 +256,12 @@ python -m mypy game ai net                                                      
 
 ## 📝 版本历史
 
+### v4.1.1 (2026-03-11) — MSIX 打包资源校验加固
+
+- `build_msix.py` 默认拒绝 `Assets/` 中的占位 PNG，避免把占位图误打进正式 MSIX 包
+- 仅在显式传入 `--allow-placeholder-assets` 时才允许开发态继续复用占位资源，并输出警告
+- 补充对应测试与 `MSIX_README.md` 说明
+
 ### v4.1.0 (2026-03-11) — 身份模式内容同步 & AI/Headless 补强
 
 **身份模式同步：**

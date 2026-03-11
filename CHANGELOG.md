@@ -5,6 +5,16 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [4.1.1] - 2026-03-11
+
+### Changed
+- `build_msix.py` 在准备 MSIX 资源时默认拒绝 `Assets/` 中的占位 PNG，避免把占位图误发布到正式安装包
+- 仅在显式启用 `--allow-placeholder-assets` 时才允许继续使用占位资源，并输出警告提示
+
+### Added
+- `tests/test_build_msix.py` 增补占位资源检测、拒绝与显式放行覆盖
+- `MSIX_README.md` 补充 MSIX 占位资源策略说明
+
 ## [4.1.0] - 2026-03-11
 
 ### Added
