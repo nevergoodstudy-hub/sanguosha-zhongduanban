@@ -1,4 +1,4 @@
-"""GameUI 协议 — 接口隔离拆分 (Phase 3.1)
+"""GameUI 协议 — 接口隔离拆分 (Phase 3.1).
 
 遵循接口隔离原则 (ISP)，将原有的单一 GameUI Protocol
 拆分为三个职责明确的子协议：
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 class GameDisplay(Protocol):
-    """纯展示协议 — 只负责向用户输出信息，无需返回有意义的值。"""
+    """纯展示协议 — 只负责向用户输出信息，无需返回有意义的值。."""
 
     def show_title(self) -> None: ...
     def show_rules(self) -> None: ...
@@ -48,7 +48,7 @@ class GameDisplay(Protocol):
 
 
 class GameInput(Protocol):
-    """交互输入协议 — 阻塞等待并返回玩家选择/响应。"""
+    """交互输入协议 — 阻塞等待并返回玩家选择/响应。."""
 
     # ---- 菜单输入 ----
     def show_main_menu(self) -> int: ...
@@ -97,7 +97,7 @@ class GameInput(Protocol):
 
 
 class GameNotify(Protocol):
-    """生命周期与事件通知协议 — 引擎绑定、动画/音效触发等异步通知。"""
+    """生命周期与事件通知协议 — 引擎绑定、动画/音效触发等异步通知。."""
 
     def set_engine(self, engine: GameEngine) -> None: ...
 
@@ -108,7 +108,7 @@ class GameNotify(Protocol):
 
 
 class GameUI(GameDisplay, GameInput, GameNotify, Protocol):
-    """完整 UI 协议 — 组合 Display + Input + Notify，向后兼容。
+    """完整 UI 协议 — 组合 Display + Input + Notify，向后兼容。.
 
     现有代码使用 ``GameUI`` 类型标注的地方无需修改。
     需要更窄接口约束时，可直接使用 ``GameDisplay`` / ``GameInput`` /

@@ -1,5 +1,5 @@
 """卡牌处理器模块
-负责注册和管理各类卡牌的处理逻辑
+负责注册和管理各类卡牌的处理逻辑.
 
 本模块将卡牌处理逻辑从 GameEngine 中解耦，
 使用注册表模式支持扩展性更强的卡牌系统。
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class CardHandlerType(Enum):
-    """卡牌处理器类型"""
+    """卡牌处理器类型."""
 
     BASIC = auto()  # 基本牌（杀、闪、桃）
     TRICK = auto()  # 普通锦囊
@@ -27,7 +27,7 @@ class CardHandlerType(Enum):
 
 @dataclass(slots=True)
 class CardHandlerInfo:
-    """卡牌处理器信息"""
+    """卡牌处理器信息."""
 
     card_name: str
     handler_type: CardHandlerType
@@ -37,7 +37,7 @@ class CardHandlerInfo:
 
 
 class CardHandlerRegistry:
-    """卡牌处理器注册表
+    """卡牌处理器注册表.
 
     用于注册和查找卡牌的处理函数，
     支持动态注册新的卡牌类型。
@@ -54,7 +54,7 @@ class CardHandlerRegistry:
         requires_target: bool = False,
         target_count: int = 1,
     ) -> None:
-        """注册卡牌处理器
+        """注册卡牌处理器.
 
         Args:
             card_name: 卡牌名称
@@ -72,20 +72,20 @@ class CardHandlerRegistry:
         )
 
     def get_handler(self, card_name: str) -> Callable | None:
-        """获取卡牌处理器"""
+        """获取卡牌处理器."""
         info = self._handlers.get(card_name)
         return info.handler if info else None
 
     def get_handler_info(self, card_name: str) -> CardHandlerInfo | None:
-        """获取卡牌处理器信息"""
+        """获取卡牌处理器信息."""
         return self._handlers.get(card_name)
 
     def has_handler(self, card_name: str) -> bool:
-        """检查是否有对应处理器"""
+        """检查是否有对应处理器."""
         return card_name in self._handlers
 
     def list_handlers(self, handler_type: CardHandlerType | None = None) -> list[str]:
-        """列出所有已注册的卡牌名称
+        """列出所有已注册的卡牌名称.
 
         Args:
             handler_type: 筛选特定类型，None 则返回所有
@@ -99,7 +99,7 @@ class CardHandlerRegistry:
 
 
 def init_default_handlers(registry: CardHandlerRegistry, engine: GameEngine) -> None:
-    """初始化默认的卡牌处理器
+    """初始化默认的卡牌处理器.
 
     将 GameEngine 中的处理方法注册到注册表
 
@@ -170,7 +170,7 @@ _global_registry: CardHandlerRegistry | None = None
 
 
 def get_global_registry() -> CardHandlerRegistry:
-    """获取全局卡牌处理器注册表"""
+    """获取全局卡牌处理器注册表."""
     global _global_registry
     if _global_registry is None:
         _global_registry = CardHandlerRegistry()

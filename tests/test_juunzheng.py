@@ -72,7 +72,6 @@ class TestAlcohol:
         assert self.player1.alcohol_used is True
 
         # 使用杀（酒加成后伤害为2）
-        initial_hp = self.player2.hp
         self.engine.use_card(self.player1, sha, [self.player2])
 
         # 酒状态应被消耗
@@ -162,7 +161,6 @@ class TestAttributeDamage:
         self.player1.draw_cards([fire_sha])
 
         # 火杀应该正常使用
-        initial_hp = self.player2.hp
         self.engine.use_card(self.player1, fire_sha, [self.player2])
 
         # 验证杀被使用（不管是否命中）
@@ -181,7 +179,6 @@ class TestAttributeDamage:
 
         self.player1.draw_cards([thunder_sha])
 
-        initial_hp = self.player2.hp
         self.engine.use_card(self.player1, thunder_sha, [self.player2])
 
         assert self.player1.sha_count == 1

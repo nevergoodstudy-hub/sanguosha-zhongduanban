@@ -1,4 +1,4 @@
-"""玩家管理器 (P0-4: 引擎分解 Step 1)
+"""玩家管理器 (P0-4: 引擎分解 Step 1).
 
 从 GameEngine 提取的玩家管理逻辑:
 - 玩家列表管理
@@ -15,13 +15,13 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .player import Identity, Player
+    from .player import Player
 
 logger = logging.getLogger(__name__)
 
 
 class PlayerManager:
-    """玩家管理器 — 管理玩家集合、座位顺序和距离计算。"""
+    """玩家管理器 — 管理玩家集合、座位顺序和距离计算。."""
 
     def __init__(self) -> None:
         self.players: list[Player] = []
@@ -32,30 +32,30 @@ class PlayerManager:
 
     @property
     def current_player(self) -> Player:
-        """获取当前回合玩家。"""
+        """获取当前回合玩家。."""
         return self.players[self.current_player_index]
 
     def get_player_by_id(self, player_id: int) -> Player | None:
-        """根据 ID 获取玩家。"""
+        """根据 ID 获取玩家。."""
         for player in self.players:
             if player.id == player_id:
                 return player
         return None
 
     def get_alive_players(self) -> list[Player]:
-        """获取所有存活玩家。"""
+        """获取所有存活玩家。."""
         return [p for p in self.players if p.is_alive]
 
     def get_other_players(self, player: Player) -> list[Player]:
-        """获取除指定玩家外的其他存活玩家。"""
+        """获取除指定玩家外的其他存活玩家。."""
         return [p for p in self.players if p.is_alive and p != player]
 
     def get_all_other_players(self, player: Player) -> list[Player]:
-        """获取除指定玩家外的所有其他玩家（含已死亡），用于 UI 显示。"""
+        """获取除指定玩家外的所有其他玩家（含已死亡），用于 UI 显示。."""
         return [p for p in self.players if p != player]
 
     def get_next_player(self, player: Player | None = None) -> Player:
-        """获取下一个存活玩家（座位顺序）。"""
+        """获取下一个存活玩家（座位顺序）。."""
         if player is None:
             player = self.current_player
 
@@ -69,7 +69,7 @@ class PlayerManager:
 
     @property
     def lord_player(self) -> Player | None:
-        """获取主公玩家。"""
+        """获取主公玩家。."""
         from .player import Identity
 
         for p in self.players:
@@ -79,7 +79,7 @@ class PlayerManager:
 
     @property
     def lord_player_index(self) -> int:
-        """获取主公玩家的座位索引。"""
+        """获取主公玩家的座位索引。."""
         from .player import Identity
 
         for i, p in enumerate(self.players):
@@ -90,7 +90,7 @@ class PlayerManager:
     # ==================== 距离与范围 ====================
 
     def calculate_distance(self, from_player: Player, to_player: Player) -> int:
-        """计算两个玩家之间的距离（含马匹修正）。"""
+        """计算两个玩家之间的距离（含马匹修正）。."""
         if from_player == to_player:
             return 0
 
@@ -116,13 +116,13 @@ class PlayerManager:
         return max(1, base_distance + distance_modifier)
 
     def is_in_attack_range(self, attacker: Player, target: Player) -> bool:
-        """检查目标是否在攻击范围内。"""
+        """检查目标是否在攻击范围内。."""
         distance = self.calculate_distance(attacker, target)
         attack_range = attacker.equipment.attack_range
         return distance <= attack_range
 
     def get_targets_in_range(self, player: Player) -> list[Player]:
-        """获取攻击范围内的所有目标。"""
+        """获取攻击范围内的所有目标。."""
         return [
             other
             for other in self.get_other_players(player)
@@ -132,7 +132,7 @@ class PlayerManager:
     # ==================== 回合推进 ====================
 
     def advance_turn(self) -> None:
-        """推进到下一个存活玩家的回合。"""
+        """推进到下一个存活玩家的回合。."""
         for i in range(1, len(self.players) + 1):
             next_index = (self.current_player_index + i) % len(self.players)
             if self.players[next_index].is_alive:

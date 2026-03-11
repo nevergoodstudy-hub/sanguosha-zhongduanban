@@ -1,5 +1,5 @@
 """事件总线系统
-实现观察者模式，用于解耦游戏各模块
+实现观察者模式，用于解耦游戏各模块.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class EventType(Enum):
-    """游戏事件类型枚举"""
+    """游戏事件类型枚举."""
 
     # 回合相关
     TURN_START = auto()
@@ -100,7 +100,7 @@ class EventType(Enum):
 @dataclass(slots=True)
 class GameEvent:
     """游戏事件数据类
-    携带事件的所有相关信息
+    携带事件的所有相关信息.
     """
 
     event_type: EventType
@@ -118,6 +118,9 @@ class GameEvent:
     @property
     def target(self) -> Player | None:
         return self.data.get("target")
+    @property
+    def player(self) -> Player | None:
+        return self.data.get("player")
 
     @property
     def targets(self) -> list[Player]:
@@ -130,21 +133,24 @@ class GameEvent:
     @property
     def damage(self) -> int:
         return self.data.get("damage", 0)
+    @property
+    def cards(self) -> list[Card]:
+        return self.data.get("cards", [])
 
     @property
     def message(self) -> str:
         return self.data.get("message", "")
 
     def cancel(self) -> None:
-        """取消事件"""
+        """取消事件."""
         self.cancelled = True
 
     def prevent(self) -> None:
-        """阻止事件效果"""
+        """阻止事件效果."""
         self.prevented = True
 
     def modify_damage(self, new_damage: int) -> None:
-        """修改伤害值"""
+        """修改伤害值."""
         self.data["damage"] = new_damage
 
 
@@ -154,7 +160,7 @@ EventHandler = Callable[[GameEvent], None]
 
 class EventBus:
     """事件总线
-    负责事件的发布和订阅
+    负责事件的发布和订阅.
 
     内部存储格式: (-priority, insertion_order, handler)
     使用 bisect.insort 维护有序列表，避免每次 subscribe 全量 sort。
@@ -178,7 +184,7 @@ class EventBus:
         return seq
 
     def subscribe(self, event_type: EventType, handler: EventHandler, priority: int = 0) -> None:
-        """订阅事件
+        """订阅事件.
 
         Args:
             event_type: 事件类型
@@ -189,12 +195,12 @@ class EventBus:
         bisect.insort(self._handlers[event_type], entry)
 
     def subscribe_all(self, handler: EventHandler, priority: int = 0) -> None:
-        """订阅所有事件"""
+        """订阅所有事件."""
         entry = (-priority, self._next_seq(), handler)
         bisect.insort(self._global_handlers, entry)
 
     def once(self, event_type: EventType, handler: EventHandler, priority: int = 0) -> None:
-        """订阅事件（仅触发一次后自动取消订阅）"""
+        """订阅事件（仅触发一次后自动取消订阅）."""
 
         def _wrapper(event: GameEvent) -> None:
             handler(event)
@@ -203,19 +209,19 @@ class EventBus:
         self.subscribe(event_type, _wrapper, priority)
 
     def unsubscribe(self, event_type: EventType, handler: EventHandler) -> None:
-        """取消订阅"""
+        """取消订阅."""
         self._handlers[event_type] = [
             entry for entry in self._handlers[event_type] if entry[2] != handler
         ]
 
     def unsubscribe_all(self, handler: EventHandler) -> None:
-        """取消订阅所有事件"""
+        """取消订阅所有事件."""
         self._global_handlers = [entry for entry in self._global_handlers if entry[2] != handler]
         for event_type in self._handlers:
             self.unsubscribe(event_type, handler)
 
     def publish(self, event: GameEvent) -> GameEvent:
-        """发布事件
+        """发布事件.
 
         Args:
             event: 游戏事件
@@ -250,7 +256,7 @@ class EventBus:
         return event
 
     def emit(self, event_type: EventType, **kwargs) -> GameEvent:
-        """快捷发布事件
+        """快捷发布事件.
 
         Args:
             event_type: 事件类型
@@ -265,7 +271,7 @@ class EventBus:
     # ==================== 异步发布 ====================
 
     async def async_publish(self, event: GameEvent) -> GameEvent:
-        """异步发布事件
+        """异步发布事件.
 
         支持 sync 和 async 处理器。async handler 会被 await，
         sync handler 直接调用。与 sync publish() 完全向后兼容。
@@ -312,7 +318,7 @@ class EventBus:
         return event
 
     async def async_emit(self, event_type: EventType, **kwargs) -> GameEvent:
-        """快捷异步发布事件
+        """快捷异步发布事件.
 
         Args:
             event_type: 事件类型
@@ -325,35 +331,35 @@ class EventBus:
         return await self.async_publish(event)
 
     def clear(self) -> None:
-        """清除所有订阅"""
+        """清除所有订阅."""
         self._handlers.clear()
         self._global_handlers.clear()
 
     def get_history(self, count: int = 10) -> list[GameEvent]:
-        """获取最近的事件历史"""
+        """获取最近的事件历史."""
         return self._event_history[-count:]
 
 
 class EventEmitter:
     """事件发射器混入类
-    可被其他类继承以获得事件发布能力
+    可被其他类继承以获得事件发布能力.
     """
 
     def __init__(self):
         self._event_bus: EventBus | None = None
 
     def set_event_bus(self, event_bus: EventBus) -> None:
-        """设置事件总线"""
+        """设置事件总线."""
         self._event_bus = event_bus
 
     def emit(self, event_type: EventType, **kwargs) -> GameEvent | None:
-        """发布事件"""
+        """发布事件."""
         if self._event_bus:
             return self._event_bus.emit(event_type, **kwargs)
         return None
 
     def emit_log(self, message: str, **kwargs) -> None:
-        """发布日志消息"""
+        """发布日志消息."""
         self.emit(EventType.LOG_MESSAGE, message=message, **kwargs)
 
 
@@ -362,7 +368,7 @@ _global_event_bus: EventBus | None = None
 
 
 def get_event_bus() -> EventBus:
-    """获取全局事件总线"""
+    """获取全局事件总线."""
     global _global_event_bus
     if _global_event_bus is None:
         _global_event_bus = EventBus()
@@ -370,6 +376,6 @@ def get_event_bus() -> EventBus:
 
 
 def reset_event_bus() -> None:
-    """重置全局事件总线"""
+    """重置全局事件总线."""
     global _global_event_bus
     _global_event_bus = None

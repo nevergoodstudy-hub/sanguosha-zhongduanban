@@ -1,6 +1,5 @@
 """Skill resolver tests (P2-2)."""
 
-import pytest
 
 from game.skill_resolver import SkillResolver
 

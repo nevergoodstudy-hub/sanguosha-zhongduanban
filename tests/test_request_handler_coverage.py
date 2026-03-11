@@ -53,7 +53,7 @@ class TestRequestShan:
         handler = DefaultRequestHandler(engine)
         player = _make_player(is_ai=False)
         player.get_cards_by_name.return_value = [shan]
-        result = handler.request_shan(player)
+        handler.request_shan(player)
         engine.ui.ask_for_shan.assert_called_once_with(player)
 
     def test_human_no_ui(self):
@@ -490,3 +490,56 @@ class TestAskForHujia:
         shan = _make_card(CardName.SHAN)
         player.get_cards_by_name.return_value = [shan]
         assert handler.ask_for_hujia(player) is None
+
+
+# ==================== request_discard ====================
+
+
+class TestRequestDiscard:
+    def test_optional_human_discard_without_ui_returns_empty(self):
+        engine = _make_engine()
+        del engine.ui.choose_cards_to_discard
+        handler = DefaultRequestHandler(engine)
+        player = _make_player(is_ai=False, hand=[_make_card(), _make_card(CardName.SHAN)])
+
+        result = handler.request_discard(player, 0, 2)
+
+        assert result == []
+
+
+# ==================== request_skill_card ====================
+
+
+class TestRequestSkillCard:
+    def test_ai_returns_first_candidate(self):
+        engine = _make_engine()
+        handler = DefaultRequestHandler(engine)
+        card = _make_card()
+        player = _make_player(is_ai=True, hand=[card])
+
+        result = handler.request_skill_card(player, "guicai", [card])
+
+        assert result is card
+
+    def test_human_with_ui_attr(self):
+        engine = _make_engine()
+        handler = DefaultRequestHandler(engine)
+        player = _make_player(is_ai=False)
+        card = _make_card()
+        engine.ui.request_skill_card.return_value = card
+
+        result = handler.request_skill_card(player, "guicai", [card])
+
+        assert result is card
+        engine.ui.request_skill_card.assert_called_once_with(player, "guicai", [card])
+
+    def test_human_no_ui_attr_returns_none(self):
+        engine = _make_engine()
+        del engine.ui.request_skill_card
+        handler = DefaultRequestHandler(engine)
+        player = _make_player(is_ai=False)
+        card = _make_card()
+
+        result = handler.request_skill_card(player, "guicai", [card])
+
+        assert result is None

@@ -1,4 +1,4 @@
-"""多目标选择弹窗
+"""多目标选择弹窗.
 
 用于铁索连环等需要选择多个目标(0-N)的场景。
 点击目标按钮切换选中状态，点击确认提交所有选中目标。
@@ -9,7 +9,7 @@ dismiss(None)       → 取消选择
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -22,8 +22,8 @@ if TYPE_CHECKING:
     pass
 
 
-class MultiTargetModal(AnimatedModalScreen[Optional[list[int]]]):
-    """多目标选择弹窗 — 点击切换选中，确认提交"""
+class MultiTargetModal(AnimatedModalScreen[list[int] | None]):
+    """多目标选择弹窗 — 点击切换选中，确认提交."""
 
     DEFAULT_CSS = """
     MultiTargetModal {
@@ -75,7 +75,7 @@ class MultiTargetModal(AnimatedModalScreen[Optional[list[int]]]):
         targets: Player 对象列表
         prompt: 提示文字
         min_count: 最少选择数量
-        max_count: 最多选择数量
+        max_count: 最多选择数量.
         """
         super().__init__()
         self._targets = targets
@@ -115,7 +115,7 @@ class MultiTargetModal(AnimatedModalScreen[Optional[list[int]]]):
             yield Button("❌ 取消", id="btn-mt-cancel", variant="error")
 
     def _update_hint(self) -> None:
-        """更新提示文字"""
+        """更新提示文字."""
         try:
             hint = self.query_one("#mt-hint", Static)
             hint.update(

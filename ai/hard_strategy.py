@@ -1,4 +1,4 @@
-"""困难 AI 策略 — 深度策略 + 嘲讽值系统 + 身份推断
+"""困难 AI 策略 — 深度策略 + 嘲讽值系统 + 身份推断.
 
 实现 AIStrategy 协议，用于 HARD 难度。
 组合 ThreatEvaluator 和 IdentityPredictor 两个独立组件。
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class ThreatEvaluator:
-    """嘲讽值/威胁评估系统
+    """嘲讽值/威胁评估系统.
 
     独立组件，仅在困难模式下使用。
     负责计算各玩家的威胁值和战力评分。
@@ -32,7 +32,7 @@ class ThreatEvaluator:
         self.threat_values: dict[int, float] = {}
 
     def update(self, engine: GameEngine) -> None:
-        """更新所有玩家的嘲讽值"""
+        """更新所有玩家的嘲讽值."""
         for p in engine.players:
             if p.id == self.owner.id:
                 continue
@@ -65,11 +65,11 @@ class ThreatEvaluator:
             self.threat_values[p.id] = threat
 
     def get_threat(self, player_id: int) -> float:
-        """获取指定玩家的嘲讽值"""
+        """获取指定玩家的嘲讽值."""
         return self.threat_values.get(player_id, 0)
 
     def get_highest_threat_enemy(self, player: Player, engine: GameEngine) -> Player | None:
-        """获取威胁值最高的敌人"""
+        """获取威胁值最高的敌人."""
         enemies = [p for p in engine.get_other_players(player) if is_enemy(player, p)]
         if not enemies:
             return None
@@ -77,7 +77,7 @@ class ThreatEvaluator:
         return enemies[0]
 
     def calculate_player_power(self, player: Player, engine: GameEngine) -> float:
-        """计算玩家战力评分"""
+        """计算玩家战力评分."""
         if not player.is_alive:
             return 0.0
 
@@ -112,7 +112,7 @@ class ThreatEvaluator:
         return power
 
     def calculate_danger_level(self, player: Player, engine: GameEngine) -> float:
-        """计算玩家危险等级（0-100）"""
+        """计算玩家危险等级（0-100）."""
         danger = 0.0
 
         # 低血量危险
@@ -141,7 +141,7 @@ class ThreatEvaluator:
 
 
 class IdentityPredictor:
-    """身份推断系统
+    """身份推断系统.
 
     独立组件，仅在困难模式下使用。
     基于玩家行为记录推断身份概率。
@@ -152,7 +152,7 @@ class IdentityPredictor:
         self.identity_guess: dict[int, Identity] = {}
 
     def infer_identity(self, target: Player, engine: GameEngine) -> dict[str, float]:
-        """基于行为推断目标身份概率
+        """基于行为推断目标身份概率.
 
         Returns:
             各身份的概率字典
@@ -185,7 +185,7 @@ class IdentityPredictor:
     def record_behavior(
         self, actor: Player, action_type: str, target: Player | None = None
     ) -> None:
-        """记录玩家行为用于身份推断
+        """记录玩家行为用于身份推断.
 
         Args:
             actor: 行为发起者
@@ -212,13 +212,16 @@ class IdentityPredictor:
                 self.identity_guess[actor.id] = Identity.LOYALIST
 
         # 伤害忠臣 → 可能是反贼
-        elif action_type == "harm" and target.identity == Identity.LOYALIST:
-            if actor.id not in self.identity_guess:
-                self.identity_guess[actor.id] = Identity.REBEL
+        elif (
+            action_type == "harm"
+            and target.identity == Identity.LOYALIST
+            and actor.id not in self.identity_guess
+        ):
+            self.identity_guess[actor.id] = Identity.REBEL
 
 
 class HardStrategy:
-    """困难模式策略：深度策略 + 嘲讽值系统 + 局势评估
+    """困难模式策略：深度策略 + 嘲讽值系统 + 局势评估.
 
     组合 ThreatEvaluator 和 IdentityPredictor 两个组件，
     复用 NormalStrategy 的基础出牌逻辑。
@@ -231,7 +234,7 @@ class HardStrategy:
         self._player = player
 
     def play_phase(self, player: Player, engine: GameEngine) -> None:
-        """困难模式：深度策略 + 嘲讽值系统 + 局势评估"""
+        """困难模式：深度策略 + 嘲讽值系统 + 局势评估."""
         self.threat_evaluator.update(engine)
         state = self.evaluate_game_state(engine)
 
@@ -245,11 +248,11 @@ class HardStrategy:
         self._normal.play_phase(player, engine)
 
     def choose_discard(self, player: Player, count: int, engine: GameEngine) -> list[Card]:
-        """智能弃牌（同普通模式）"""
+        """智能弃牌（同普通模式）."""
         return smart_discard(player, count)
 
     def should_use_qinglong(self, player: Player, target: Player, engine: GameEngine) -> bool:
-        """有杀且是敌人就继续"""
+        """有杀且是敌人就继续."""
         sha_count = len(player.get_cards_by_name(CardName.SHA))
         if sha_count > 1:
             return is_enemy(player, target)
@@ -258,7 +261,7 @@ class HardStrategy:
     # ==================== 局势评估 ====================
 
     def evaluate_game_state(self, engine: GameEngine) -> dict[str, float]:
-        """评估当前局势
+        """评估当前局势.
 
         返回各阵营的综合评分和关键指标
         """
@@ -311,7 +314,7 @@ class HardStrategy:
     def choose_best_target(
         self, player: Player, targets: list[Player], engine: GameEngine
     ) -> Player:
-        """选择最佳攻击目标（困难模式 — 综合评分系统）
+        """选择最佳攻击目标（困难模式 — 综合评分系统）.
 
         综合考虑：嘲讽值、危险等级、战力评分
         """

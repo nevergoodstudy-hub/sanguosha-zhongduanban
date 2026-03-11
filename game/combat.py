@@ -1,4 +1,4 @@
-"""战斗子系统 (Phase 2.2 — 引擎分解)
+"""战斗子系统 (Phase 2.2 — 引擎分解).
 
 从 engine.py 提取的战斗相关逻辑:
 - 杀/闪/决斗 的完整流程
@@ -17,6 +17,7 @@ from i18n import t as _t
 
 from .card import CardName, CardSubtype
 from .constants import SkillId
+from .events import EventType
 
 if TYPE_CHECKING:
     from .card import Card
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class CombatSystem:
-    """战斗子系统 — 处理杀/闪/决斗/无懈可击。"""
+    """战斗子系统 — 处理杀/闪/决斗/无懈可击。."""
 
     def __init__(self, ctx: GameContext) -> None:
         self.ctx = ctx
@@ -35,7 +36,7 @@ class CombatSystem:
     # ==================== 杀 ====================
 
     def use_sha(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用杀 (支持酒加成、火杀/雷杀属性伤害)。"""
+        """使用杀 (支持酒加成、火杀/雷杀属性伤害)。."""
         ctx = self.ctx
         if not targets:
             ctx.deck.discard([card])
@@ -78,20 +79,27 @@ class CombatSystem:
                     ctx.log_event("equipment", _t("combat.zhuque_convert", name=player.name))
 
         # 仁王盾 (只对黑色普通杀有效)
-        if card.is_black and damage_type == "normal" and target.equipment.armor:
-            if target.equipment.armor.name == CardName.RENWANG:
-                ctx.log_event("equipment", _t("combat.renwang_block", name=target.name))
-                player.use_sha()
-                ctx.deck.discard([card])
-                return True
+        if (
+            card.is_black
+            and damage_type == "normal"
+            and target.equipment.armor
+            and target.equipment.armor.name == CardName.RENWANG
+        ):
+            ctx.log_event("equipment", _t("combat.renwang_block", name=target.name))
+            player.use_sha()
+            ctx.deck.discard([card])
+            return True
 
         # 藤甲对普通杀无效
-        if damage_type == "normal" and target.equipment.armor:
-            if target.equipment.armor.name == CardName.TENGJIA:
-                ctx.log_event("equipment", _t("combat.tengjia_block", name=target.name))
-                player.use_sha()
-                ctx.deck.discard([card])
-                return True
+        if (
+            damage_type == "normal"
+            and target.equipment.armor
+            and target.equipment.armor.name == CardName.TENGJIA
+        ):
+            ctx.log_event("equipment", _t("combat.tengjia_block", name=target.name))
+            player.use_sha()
+            ctx.deck.discard([card])
+            return True
 
         # 酒加成
         base_damage = 1
@@ -132,18 +140,36 @@ class CombatSystem:
 
         if shan_count >= required_shan:
             ctx.log_event("dodge", _t("combat.dodge_success", name=target.name))
+            ctx.event_bus.emit(
+                EventType.ATTACK_DODGED,
+                source=player,
+                target=target,
+                card=card,
+                required_shan=required_shan,
+                played_shan=shan_count,
+            )
             # 青龙偃月刀
             if player.equipment.weapon and player.equipment.weapon.name == CardName.QINGLONG:
                 self._trigger_qinglong(player, target)
         else:
+            ctx.event_bus.emit(
+                EventType.ATTACK_HIT,
+                source=player,
+                target=target,
+                card=card,
+                damage=base_damage,
+            )
             # 古锤刀
-            if player.equipment.weapon and player.equipment.weapon.name == CardName.GUDINGDAO:
-                if target.hand_count == 0:
-                    base_damage += 1
-                    ctx.log_event(
-                        "equipment",
-                        _t("combat.gudingdao_bonus", player=player.name, target=target.name),
-                    )
+            if (
+                player.equipment.weapon
+                and player.equipment.weapon.name == CardName.GUDINGDAO
+                and target.hand_count == 0
+            ):
+                base_damage += 1
+                ctx.log_event(
+                    "equipment",
+                    _t("combat.gudingdao_bonus", player=player.name, target=target.name),
+                )
             ctx.deal_damage(player, target, base_damage, damage_type)
 
         ctx.deck.discard([card])
@@ -152,16 +178,19 @@ class CombatSystem:
     # ==================== 闪请求 ====================
 
     def request_shan(self, player: Player, count: int = 1) -> int:
-        """请求玩家出闪，返回实际打出的闪数量。"""
+        """请求玩家出闪，返回实际打出的闪数量。."""
         ctx = self.ctx
         shan_played = 0
 
         for _ in range(count):
             # 八卦阵
-            if player.equipment.armor and player.equipment.armor.name == CardName.BAGUA:
-                if self._trigger_bagua(player):
-                    shan_played += 1
-                    continue
+            if (
+                player.equipment.armor
+                and player.equipment.armor.name == CardName.BAGUA
+                and self._trigger_bagua(player)
+            ):
+                shan_played += 1
+                continue
 
             # 龙胆: 杀当闪
             if player.has_skill(SkillId.LONGDAN):
@@ -183,6 +212,28 @@ class CombatSystem:
                         shan_played += 1
                         continue
 
+            # 重身: 本轮获得的红色牌可当闪
+            if player.has_skill(SkillId.ZHONGSHEN):
+                zhongshen_state = player.get_skill_state(SkillId.ZHONGSHEN)
+                obtained_ids = set(zhongshen_state.get("round_red_card_ids", set()))
+                red_cards = [card for card in player.hand if card.is_red and card.id in obtained_ids]
+                if red_cards:
+                    if player.is_ai:
+                        card = red_cards[0]
+                    else:
+                        card = ctx.request_handler.request_skill_card(
+                            player, "zhongshen_as_shan", red_cards
+                        )
+                    if card:
+                        player.remove_card(card)
+                        ctx.deck.discard([card])
+                        ctx.log_event(
+                            "skill",
+                            f"{player.name}发动【重身】，将{card.display_name}当【闪】使用",
+                        )
+                        shan_played += 1
+                        continue
+
             card = ctx.request_handler.request_shan(player)
             if card:
                 player.remove_card(card)
@@ -196,7 +247,7 @@ class CombatSystem:
     # ==================== 杀请求 ====================
 
     def request_sha(self, player: Player, count: int = 1) -> int:
-        """请求玩家出杀，返回实际打出的杀数量。"""
+        """请求玩家出杀，返回实际打出的杀数量。."""
         ctx = self.ctx
         sha_played = 0
 
@@ -254,7 +305,7 @@ class CombatSystem:
     # ==================== 决斗 ====================
 
     def use_juedou(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用决斗。"""
+        """使用决斗。."""
         ctx = self.ctx
         if not targets:
             ctx.deck.discard([card])
@@ -300,7 +351,7 @@ class CombatSystem:
         return True
 
     def use_juedou_forced(self, source: Player, target: Player) -> None:
-        """强制决斗 (离间等技能, 无需卡牌)。"""
+        """强制决斗 (离间等技能, 无需卡牌)。."""
         ctx = self.ctx
 
         if target.has_skill(SkillId.KONGCHENG) and target.hand_count == 0:
@@ -337,7 +388,7 @@ class CombatSystem:
         target: Player | None = None,
         is_delay: bool = False,
     ) -> bool:
-        """无懂可击响应链。返回 True 表示锯囊被抵消。
+        """无懂可击响应链。返回 True 表示锯囊被抵消。.
 
         规则：所有玩家按座位顺序依次有机会使用无懂可击。
         每次无懂可击打出后，其他玩家可以再使用无懂可击来抵消前一张无懂可击。
@@ -407,7 +458,7 @@ class CombatSystem:
     # ==================== 装备触发 (战斗相关) ====================
 
     def _trigger_bagua(self, player: Player) -> bool:
-        """触发八卦阵判定。"""
+        """触发八卦阵判定。."""
         ctx = self.ctx
         ctx.log_event("equipment", _t("combat.bagua_try", name=player.name))
 
@@ -428,7 +479,7 @@ class CombatSystem:
         return False
 
     def _trigger_qinglong(self, player: Player, target: Player) -> None:
-        """触发青龙偃月刀效果。"""
+        """触发青龙偃月刀效果。."""
         ctx = self.ctx
         sha_cards = player.get_cards_by_name(CardName.SHA)
         if sha_cards:

@@ -1,5 +1,5 @@
 """武将系统模块
-定义武将类、技能类和势力
+定义武将类、技能类和势力.
 """
 
 from __future__ import annotations
@@ -10,13 +10,15 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .constants import SkillTiming
+
 if TYPE_CHECKING:
     from .engine import GameEngine
     from .player import Player
 
 
 class Kingdom(Enum):
-    """势力枚举"""
+    """势力枚举."""
 
     WEI = "wei"  # 魏
     SHU = "shu"  # 蜀
@@ -25,14 +27,14 @@ class Kingdom(Enum):
 
     @property
     def chinese_name(self) -> str:
-        """获取国际化显示名称"""
+        """获取国际化显示名称."""
         from i18n import kingdom_name
 
         return kingdom_name(self.value)
 
     @property
     def color(self) -> str:
-        """获取势力颜色（用于终端显示）"""
+        """获取势力颜色（用于终端显示）."""
         colors = {
             Kingdom.WEI: "blue",
             Kingdom.SHU: "red",
@@ -43,7 +45,7 @@ class Kingdom(Enum):
 
 
 class SkillType(Enum):
-    """技能类型枚举"""
+    """技能类型枚举."""
 
     PASSIVE = "passive"  # 被动技能（锁定技）
     ACTIVE = "active"  # 主动技能
@@ -51,13 +53,10 @@ class SkillType(Enum):
     TRANSFORM = "transform"  # 转化技能
 
 
-# SkillTiming 已移动到 constants.py，作为单一事实来源 (SSOT)
-from .constants import SkillTiming
-
 
 @dataclass
 class Skill:
-    """技能类
+    """技能类.
 
     Attributes:
         id: 技能唯一标识符
@@ -85,14 +84,14 @@ class Skill:
     used_count: int = field(default=0, repr=False)
 
     def __post_init__(self):
-        """初始化后处理"""
+        """初始化后处理."""
         if isinstance(self.skill_type, str):
             self.skill_type = SkillType(self.skill_type)
         if isinstance(self.timing, str):
             self.timing = SkillTiming(self.timing)
 
     def can_use(self, player: Player, game_engine: GameEngine) -> bool:
-        """检查技能是否可以使用
+        """检查技能是否可以使用.
 
         Args:
             player: 使用技能的玩家
@@ -106,21 +105,18 @@ class Skill:
             return False
 
         # 主公技检查 — 避免循环导入，使用字符串值比较
-        if self.is_lord_skill and getattr(player.identity, "value", None) != "lord":
-            return False
-
-        return True
+        return not (self.is_lord_skill and getattr(player.identity, "value", None) != "lord")
 
     def reset_turn(self) -> None:
-        """重置回合状态"""
+        """重置回合状态."""
         self.used_count = 0
 
     def use(self) -> None:
-        """使用技能（增加使用次数）"""
+        """使用技能（增加使用次数）."""
         self.used_count += 1
 
     def to_dict(self) -> dict[str, Any]:
-        """转换为字典"""
+        """转换为字典."""
         return {
             "id": self.id,
             "name": self.name,
@@ -135,7 +131,7 @@ class Skill:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Skill:
-        """从字典创建技能"""
+        """从字典创建技能."""
         timing = None
         if data.get("timing"):
             timing = SkillTiming(data["timing"])
@@ -166,7 +162,7 @@ class Skill:
 
 @dataclass
 class Hero:
-    """武将类
+    """武将类.
 
     Attributes:
         id: 武将唯一标识符
@@ -187,12 +183,12 @@ class Hero:
     skills: list[Skill] = field(default_factory=list)
 
     def __post_init__(self):
-        """初始化后处理"""
+        """初始化后处理."""
         if isinstance(self.kingdom, str):
             self.kingdom = Kingdom(self.kingdom)
 
     def get_skill(self, skill_id: str) -> Skill | None:
-        """根据ID获取技能
+        """根据ID获取技能.
 
         Args:
             skill_id: 技能ID
@@ -206,7 +202,7 @@ class Hero:
         return None
 
     def get_skill_by_name(self, skill_name: str) -> Skill | None:
-        """根据名称获取技能
+        """根据名称获取技能.
 
         Args:
             skill_name: 技能名称
@@ -220,26 +216,26 @@ class Hero:
         return None
 
     def has_skill(self, skill_id: str) -> bool:
-        """检查是否拥有指定技能"""
+        """检查是否拥有指定技能."""
         return self.get_skill(skill_id) is not None
 
     def reset_skills(self) -> None:
-        """重置所有技能的回合状态"""
+        """重置所有技能的回合状态."""
         for skill in self.skills:
             skill.reset_turn()
 
     @property
     def skill_names(self) -> list[str]:
-        """获取所有技能名称列表"""
+        """获取所有技能名称列表."""
         return [skill.name for skill in self.skills]
 
     @property
     def kingdom_name(self) -> str:
-        """获取势力中文名"""
+        """获取势力中文名."""
         return self.kingdom.chinese_name
 
     def to_dict(self) -> dict[str, Any]:
-        """转换为字典"""
+        """转换为字典."""
         return {
             "id": self.id,
             "name": self.name,
@@ -252,7 +248,7 @@ class Hero:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Hero:
-        """从字典创建武将"""
+        """从字典创建武将."""
         skills = [Skill.from_dict(s) for s in data.get("skills", [])]
         return cls(
             id=data["id"],
@@ -274,11 +270,11 @@ class Hero:
 
 class HeroRepository:
     """武将仓库类
-    管理所有武将数据
+    管理所有武将数据.
     """
 
     def __init__(self, data_path: str | None = None):
-        """初始化武将仓库
+        """初始化武将仓库.
 
         Args:
             data_path: 武将数据文件路径
@@ -289,7 +285,7 @@ class HeroRepository:
             self.load_heroes(data_path)
 
     def load_heroes(self, data_path: str) -> None:
-        """从JSON文件加载武将数据
+        """从JSON文件加载武将数据.
 
         Args:
             data_path: JSON文件路径
@@ -308,7 +304,7 @@ class HeroRepository:
             self._heroes[hero.id] = hero
 
     def get_hero(self, hero_id: str) -> Hero | None:
-        """获取武将
+        """获取武将.
 
         Args:
             hero_id: 武将ID
@@ -319,7 +315,7 @@ class HeroRepository:
         return self._heroes.get(hero_id)
 
     def get_hero_by_name(self, name: str) -> Hero | None:
-        """根据名称获取武将
+        """根据名称获取武将.
 
         Args:
             name: 武将名称
@@ -333,11 +329,11 @@ class HeroRepository:
         return None
 
     def get_all_heroes(self) -> list[Hero]:
-        """获取所有武将列表"""
+        """获取所有武将列表."""
         return list(self._heroes.values())
 
     def get_heroes_by_kingdom(self, kingdom: Kingdom) -> list[Hero]:
-        """获取指定势力的所有武将
+        """获取指定势力的所有武将.
 
         Args:
             kingdom: 势力
@@ -348,7 +344,7 @@ class HeroRepository:
         return [h for h in self._heroes.values() if h.kingdom == kingdom]
 
     def get_random_heroes(self, count: int) -> list[Hero]:
-        """随机获取指定数量的武将
+        """随机获取指定数量的武将.
 
         Args:
             count: 数量
@@ -363,7 +359,7 @@ class HeroRepository:
 
     @property
     def hero_count(self) -> int:
-        """获取武将总数"""
+        """获取武将总数."""
         return len(self._heroes)
 
     def __len__(self) -> int:

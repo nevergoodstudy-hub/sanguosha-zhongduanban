@@ -1,4 +1,4 @@
-"""卡牌效果解析器 (Phase 2.5 — 引擎分解)
+"""卡牌效果解析器 (Phase 2.5 — 引擎分解).
 
 从 engine.py 提取的所有 _use_xxx 卡牌效果方法:
 - 锦囊牌: 南蛮入侵/万箭齐发/无中生有/过河拆桥/顺手牵羊/借刀杀人/
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class CardResolver:
-    """卡牌效果解析器 — 处理所有卡牌使用效果。"""
+    """卡牌效果解析器 — 处理所有卡牌使用效果。."""
 
     def __init__(self, ctx: GameContext) -> None:
         self.ctx = ctx
@@ -40,7 +40,7 @@ class CardResolver:
     # ==================== 基本牌 ====================
 
     def use_tao(self, player: Player, card: Card) -> bool:
-        """使用桃"""
+        """使用桃."""
         ctx = self.ctx
         if player.hp >= player.max_hp:
             ctx.log_event("error", _t("resolver.hp_full"))
@@ -58,7 +58,7 @@ class CardResolver:
         return True
 
     def use_jiu(self, player: Player, card: Card) -> bool:
-        """使用酒"""
+        """使用酒."""
         ctx = self.ctx
 
         # 濒死时使用酒回复体力
@@ -89,7 +89,7 @@ class CardResolver:
     # ==================== AOE 锦囊 ====================
 
     def use_nanman(self, player: Player, card: Card) -> bool:
-        """使用南蛮入侵"""
+        """使用南蛮入侵."""
         ctx = self.ctx
         ctx.log_event(
             "use_card", _t("resolver.use_nanman", name=player.name), source=player, card=card
@@ -121,7 +121,7 @@ class CardResolver:
         return True
 
     def use_wanjian(self, player: Player, card: Card) -> bool:
-        """使用万箭齐发"""
+        """使用万箭齐发."""
         ctx = self.ctx
         ctx.log_event(
             "use_card", _t("resolver.use_wanjian", name=player.name), source=player, card=card
@@ -154,7 +154,7 @@ class CardResolver:
         return True
 
     def use_taoyuan(self, player: Player, card: Card) -> bool:
-        """使用桃园结义"""
+        """使用桃园结义."""
         ctx = self.ctx
         ctx.log_event(
             "use_card", _t("resolver.use_taoyuan", name=player.name), source=player, card=card
@@ -183,7 +183,7 @@ class CardResolver:
     # ==================== 单目标锦囊 ====================
 
     def use_wuzhong(self, player: Player, card: Card) -> bool:
-        """使用无中生有"""
+        """使用无中生有."""
         ctx = self.ctx
         ctx.log_event(
             "use_card", _t("resolver.use_wuzhong", name=player.name), source=player, card=card
@@ -197,6 +197,7 @@ class CardResolver:
         cards = ctx.deck.draw(2)
         if cards:
             player.draw_cards(cards)
+            ctx.notify_cards_obtained(player, cards, source=player, reason="wuzhong")
             ctx.log_event("effect", _t("resolver.drew_cards", name=player.name, count=len(cards)))
         else:
             ctx.log_event("error", _t("resolver.deck_empty"))
@@ -205,7 +206,7 @@ class CardResolver:
         return True
 
     def use_guohe(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用过河拆桥"""
+        """使用过河拆桥."""
         ctx = self.ctx
         if not targets:
             ctx.deck.discard([card])
@@ -241,7 +242,7 @@ class CardResolver:
         return True
 
     def use_shunshou(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用顺手牵羊"""
+        """使用顺手牵羊."""
         ctx = self.ctx
         if not targets:
             ctx.deck.discard([card])
@@ -282,7 +283,7 @@ class CardResolver:
         return True
 
     def use_jiedao(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用借刀杀人"""
+        """使用借刀杀人."""
         ctx = self.ctx
         if not targets or len(targets) < 2:
             ctx.deck.discard([card])
@@ -349,7 +350,7 @@ class CardResolver:
         return True
 
     def use_huogong(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用火攻"""
+        """使用火攻."""
         ctx = self.ctx
         if not targets:
             ctx.deck.discard([card])
@@ -411,7 +412,7 @@ class CardResolver:
     # ==================== 延时锦囊 (使用时) ====================
 
     def use_lebusishu(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用乐不思蜀"""
+        """使用乐不思蜀."""
         ctx = self.ctx
         if not targets:
             player.draw_cards([card])
@@ -446,7 +447,7 @@ class CardResolver:
         return True
 
     def use_bingliang(self, player: Player, card: Card, targets: list[Player]) -> bool:
-        """使用兵粮寸断"""
+        """使用兵粮寸断."""
         ctx = self.ctx
         if not targets:
             player.draw_cards([card])
@@ -489,7 +490,7 @@ class CardResolver:
         return True
 
     def use_shandian(self, player: Player, card: Card, targets: list[Player] = None) -> bool:
-        """使用闪电"""
+        """使用闪电."""
         ctx = self.ctx
         for c in player.judge_area:
             if c.name == CardName.SHANDIAN:
@@ -509,7 +510,7 @@ class CardResolver:
         return True
 
     def use_tiesuo(self, player: Player, card: Card, targets: list[Player] | None = None) -> bool:
-        """使用铁索连环"""
+        """使用铁索连环."""
         ctx = self.ctx
         if targets is None:
             targets = []
@@ -522,6 +523,7 @@ class CardResolver:
             ctx.deck.discard([card])
             new_cards = ctx.deck.draw(1)
             player.draw_cards(new_cards)
+            ctx.notify_cards_obtained(player, new_cards, source=player, reason="recast")
             if new_cards:
                 ctx.log_event("effect", _t("resolver.drew_cards", name=player.name, count=1))
             return True
@@ -553,7 +555,7 @@ class CardResolver:
     # ==================== 卡牌操作 ====================
 
     def choose_and_discard_card(self, player: Player, target: Player) -> Card | None:
-        """选择并弃置目标的一张牌"""
+        """选择并弃置目标的一张牌."""
         ctx = self.ctx
         all_cards = target.get_all_cards()
         if not all_cards:
@@ -563,13 +565,14 @@ class CardResolver:
         if card:
             if card in target.hand:
                 target.remove_card(card)
+                ctx.notify_cards_lost(target, [card], source=player, reason="dismantle")
             else:
-                ctx.equipment_sys.remove(target, card)
+                ctx.equipment_sys.remove(target, card, source=player, reason="dismantle")
             ctx.deck.discard([card])
         return card
 
     def choose_and_steal_card(self, player: Player, target: Player) -> Card | None:
-        """选择并获得目标的一张牌"""
+        """选择并获得目标的一张牌."""
         ctx = self.ctx
         all_cards = target.get_all_cards()
         if not all_cards:
@@ -579,7 +582,21 @@ class CardResolver:
         if card:
             if card in target.hand:
                 target.remove_card(card)
+                ctx.notify_cards_lost(target, [card], source=player, to_player=player, reason="steal")
             else:
-                ctx.equipment_sys.remove(target, card)
+                ctx.equipment_sys.remove(
+                    target,
+                    card,
+                    source=player,
+                    to_player=player,
+                    reason="steal",
+                )
             player.draw_cards([card])
+            ctx.notify_cards_obtained(
+                player,
+                [card],
+                source=player,
+                from_player=target,
+                reason="steal",
+            )
         return card

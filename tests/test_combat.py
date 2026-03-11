@@ -1,8 +1,6 @@
 """Tests for game/combat.py — CombatSystem unit tests."""
 
-from unittest.mock import MagicMock, PropertyMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from game.card import Card, CardName, CardSubtype, CardSuit, CardType
 from game.combat import CombatSystem

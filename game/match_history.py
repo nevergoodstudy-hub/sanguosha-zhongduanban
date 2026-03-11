@@ -1,4 +1,4 @@
-"""对战历史记录系统 (P3-3)
+"""对战历史记录系统 (P3-3).
 
 持久化存储每局游戏结果，支持查询和统计分析。
 数据以 JSON 格式存储在 data/match_history.json。
@@ -36,7 +36,7 @@ _DEFAULT_PATH = Path(__file__).parent.parent / "data" / "match_history.json"
 
 @dataclass(slots=True)
 class PlayerStat:
-    """单个玩家的对局统计。"""
+    """单个玩家的对局统计。."""
 
     name: str = ""
     hero: str = ""
@@ -51,7 +51,7 @@ class PlayerStat:
 
 @dataclass(slots=True)
 class MatchResult:
-    """单局游戏结果。"""
+    """单局游戏结果。."""
 
     match_id: str = ""
     timestamp: float = field(default_factory=time.time)
@@ -64,7 +64,7 @@ class MatchResult:
 
 
 class MatchHistory:
-    """对战历史管理器。
+    """对战历史管理器。.
 
     支持记录、查询和统计游戏结果。
     数据持久化为 JSON 文件。
@@ -80,7 +80,7 @@ class MatchHistory:
         return list(self._records)
 
     def load(self) -> None:
-        """从文件加载历史记录。"""
+        """从文件加载历史记录。."""
         if not self._path.exists():
             self._records = []
             return
@@ -98,7 +98,7 @@ class MatchHistory:
             self._records = []
 
     def save(self) -> None:
-        """保存历史记录到文件。"""
+        """保存历史记录到文件。."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "version": "1.0",
@@ -109,7 +109,7 @@ class MatchHistory:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
     def record(self, result: MatchResult) -> str:
-        """记录一局游戏结果。
+        """记录一局游戏结果。.
 
         Args:
             result: 游戏结果数据
@@ -124,18 +124,18 @@ class MatchHistory:
         return result.match_id
 
     def get_recent(self, count: int = 10) -> list[MatchResult]:
-        """获取最近 N 局记录。"""
+        """获取最近 N 局记录。."""
         return list(reversed(self._records[-count:]))
 
     def get_by_id(self, match_id: str) -> MatchResult | None:
-        """按 match_id 查询。"""
+        """按 match_id 查询。."""
         for r in self._records:
             if r.match_id == match_id:
                 return r
         return None
 
     def get_stats(self) -> dict[str, Any]:
-        """生成总体统计摘要。"""
+        """生成总体统计摘要。."""
         if not self._records:
             return {"total_matches": 0}
 
@@ -169,7 +169,7 @@ class MatchHistory:
         }
 
     def get_hero_stats(self) -> dict[str, dict[str, int]]:
-        """按武将统计胜率。
+        """按武将统计胜率。.
 
         Returns:
             {hero_name: {"wins": N, "total": N}}
@@ -185,13 +185,13 @@ class MatchHistory:
         return stats
 
     def clear(self) -> None:
-        """清空所有记录。"""
+        """清空所有记录。."""
         self._records.clear()
         self._next_id = 1
 
     @staticmethod
     def _player_won(identity: str, winner: str) -> bool:
-        """判断玩家身份是否属于获胜方。"""
+        """判断玩家身份是否属于获胜方。."""
         if winner == "lord":
             return identity in ("lord", "loyalist")
         if winner == "rebel":

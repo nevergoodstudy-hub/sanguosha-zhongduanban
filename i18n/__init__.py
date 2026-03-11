@@ -1,4 +1,4 @@
-"""轻量级 i18n 框架 — 零外部依赖。
+"""轻量级 i18n 框架 — 零外部依赖。.
 
 用法::
 
@@ -33,7 +33,7 @@ _tables: dict[str, dict[str, str]] = {}
 
 
 def _load_table(locale: str) -> dict[str, str]:
-    """按需加载翻译表。优先 JSON，回退到旧 .py 模块。"""
+    """按需加载翻译表。优先 JSON，回退到旧 .py 模块。."""
     json_path = _LOCALE_DIR / f"{locale}.json"
     if json_path.exists():
         with open(json_path, encoding="utf-8") as f:
@@ -52,7 +52,7 @@ def _load_table(locale: str) -> dict[str, str]:
 
 
 def set_locale(locale: str) -> None:
-    """设置当前语言。"""
+    """设置当前语言。."""
     global _locale
     # 预加载以确保 locale 有效
     if locale not in _tables:
@@ -61,17 +61,17 @@ def set_locale(locale: str) -> None:
 
 
 def get_locale() -> str:
-    """获取当前语言。"""
+    """获取当前语言。."""
     return _locale
 
 
 def get_available_locales() -> list[str]:
-    """返回所有可用的 locale 列表。"""
+    """返回所有可用的 locale 列表。."""
     return ["zh_CN", "en_US"]
 
 
 def t(key: str, **kwargs: object) -> str:
-    """翻译函数。
+    """翻译函数。.
 
     查找当前 locale 对应的字符串，用 ``kwargs`` 做 format 替换。
     若 key 缺失则回退到 zh_CN，仍缺失则原样返回 key。
@@ -116,12 +116,12 @@ _ = t
 
 
 def _is_missing(key: str, result: str) -> bool:
-    """检查 t() 返回值是否表示 key 缺失。"""
+    """检查 t() 返回值是否表示 key 缺失。."""
     return result == f"[{key}]"
 
 
 def card_name(card_id: str) -> str:
-    """获取卡牌的国际化显示名。
+    """获取卡牌的国际化显示名。.
 
     Args:
         card_id: 卡牌标识符，如 ``"sha"``、``"nanman"``。
@@ -147,7 +147,7 @@ def card_name(card_id: str) -> str:
 
 
 def skill_name(skill_id: str) -> str:
-    """获取技能的国际化显示名。
+    """获取技能的国际化显示名。.
 
     Args:
         skill_id: 技能标识符，如 ``"wusheng"``、``"rende"``。
@@ -158,7 +158,7 @@ def skill_name(skill_id: str) -> str:
 
 
 def kingdom_name(value: str) -> str:
-    """获取势力的国际化显示名。
+    """获取势力的国际化显示名。.
 
     Args:
         value: 势力值，如 ``"wei"``、``"shu"``。
@@ -169,7 +169,7 @@ def kingdom_name(value: str) -> str:
 
 
 def identity_name(value: str) -> str:
-    """获取身份的国际化显示名。
+    """获取身份的国际化显示名。.
 
     Args:
         value: 身份值，如 ``"lord"``、``"rebel"``。

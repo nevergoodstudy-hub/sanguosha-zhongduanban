@@ -1,4 +1,4 @@
-"""CardWidget — 三国杀OL风格卡牌组件
+"""CardWidget — 三国杀OL风格卡牌组件.
 
 花色色差、类型色框、序号标签、键盘交互、
 tooltip 效果描述，on_click / on_key 发布 CardClicked Message。
@@ -71,7 +71,7 @@ CARD_EFFECT_DESC = {
 
 
 class CardWidget(Static, can_focus=True):
-    """三国杀OL风格卡牌 Widget"""
+    """三国杀OL风格卡牌 Widget."""
 
     DEFAULT_CSS = """
     CardWidget {
@@ -112,7 +112,7 @@ class CardWidget(Static, can_focus=True):
     card_index = reactive(-1)
 
     class CardClicked(Message):
-        """卡牌被点击"""
+        """卡牌被点击."""
 
         def __init__(self, index: int, card=None) -> None:
             super().__init__()
@@ -122,7 +122,7 @@ class CardWidget(Static, can_focus=True):
     def __init__(self, card, index: int = -1, **kwargs):
         """Args:
         card: game.card.Card 对象
-        index: 手牌中的索引
+        index: 手牌中的索引.
         """
         super().__init__(**kwargs)
         self._card = card
@@ -131,7 +131,7 @@ class CardWidget(Static, can_focus=True):
         self.tooltip = self._build_tooltip()
 
     def _build_tooltip(self) -> str:
-        """构建 tooltip 文本：包含花色点数、卡类、效果描述"""
+        """构建 tooltip 文本：包含花色点数、卡类、效果描述."""
         c = self._card
         suit_val = getattr(c.suit, "value", "") if hasattr(c, "suit") else ""
         suit_icon = SUIT_ICONS.get(suit_val, "")
@@ -161,7 +161,7 @@ class CardWidget(Static, can_focus=True):
         return "\n".join(parts)
 
     def render(self) -> str:
-        """渲染三国杀OL风格卡面"""
+        """渲染三国杀OL风格卡面."""
         c = self._card
         suit_val = getattr(c.suit, "value", "") if hasattr(c, "suit") else ""
         suit_icon = SUIT_ICONS.get(suit_val, "?")
@@ -197,7 +197,7 @@ class CardWidget(Static, can_focus=True):
         self.post_message(self.CardClicked(self.card_index, self._card))
 
     def on_key(self, event) -> None:
-        """键盘交互：Enter/Space 等同于点击"""
+        """键盘交互：Enter/Space 等同于点击."""
         if event.key in ("enter", "space"):
             self.post_message(self.CardClicked(self.card_index, self._card))
             event.prevent_default()

@@ -1,4 +1,4 @@
-"""数据驱动技能参数解析器 (P2-2)
+"""数据驱动技能参数解析器 (P2-2).
 
 从 data/skill_config.json 加载技能参数配置,
 提供对技能属性的查询接口。与 skill_dsl.json (行为步骤) 互补,
@@ -25,7 +25,7 @@ _DEFAULT_CONFIG_PATH = Path(__file__).parent.parent / "data" / "skill_config.jso
 
 
 class SkillResolver:
-    """数据驱动的技能参数解析器。"""
+    """数据驱动的技能参数解析器。."""
 
     def __init__(self, config_path: str | Path | None = None) -> None:
         path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
@@ -51,29 +51,29 @@ class SkillResolver:
     # ==================== 查询 ====================
 
     def get_config(self, skill_id: str) -> dict[str, Any] | None:
-        """获取技能完整配置字典。"""
+        """获取技能完整配置字典。."""
         return self._config.get(skill_id)
 
     def get_param(self, skill_id: str, key: str, default: Any = None) -> Any:
-        """获取技能的单个参数值。"""
+        """获取技能的单个参数值。."""
         cfg = self._config.get(skill_id)
         if cfg is None:
             return default
         return cfg.get(key, default)
 
     def get_type(self, skill_id: str) -> str | None:
-        """获取技能类型 (convert / trigger / passive / active)。"""
+        """获取技能类型 (convert / trigger / passive / active)。."""
         return self.get_param(skill_id, "type")
 
     @property
     def skill_ids(self) -> list[str]:
-        """所有已配置的技能 ID。"""
+        """所有已配置的技能 ID。."""
         return list(self._config.keys())
 
     # ==================== 转换型技能查询 ====================
 
     def can_convert(self, skill_id: str, from_card: str, to_card: str) -> bool:
-        """检查技能是否允许将 from_card 转换为 to_card。
+        """检查技能是否允许将 from_card 转换为 to_card。.
 
         Args:
             skill_id: 技能 ID
@@ -102,7 +102,7 @@ class SkillResolver:
         return False
 
     def get_convert_targets(self, skill_id: str, from_card: str) -> list[str]:
-        """获取技能能将 from_card 转换成的所有目标。"""
+        """获取技能能将 from_card 转换成的所有目标。."""
         cfg = self._config.get(skill_id)
         if cfg is None or cfg.get("type") != "convert":
             return []
@@ -116,15 +116,15 @@ class SkillResolver:
         return targets
 
     def get_filter(self, skill_id: str) -> str | None:
-        """获取转换型技能的卡牌过滤条件。"""
+        """获取转换型技能的卡牌过滤条件。."""
         return self.get_param(skill_id, "filter")
 
     # ==================== 被动型技能查询 ====================
 
     def get_immune_list(self, skill_id: str) -> list[str]:
-        """获取免疫的卡牌名列表 (如空城免杀/决斗)。"""
+        """获取免疫的卡牌名列表 (如空城免杀/决斗)。."""
         return self.get_param(skill_id, "immune_to", [])
 
     def get_distance_modifier(self, skill_id: str) -> int:
-        """获取距离修正值 (如马术 -1)。"""
+        """获取距离修正值 (如马术 -1)。."""
         return self.get_param(skill_id, "distance_modifier", 0)

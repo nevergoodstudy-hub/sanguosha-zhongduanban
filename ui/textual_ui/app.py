@@ -1,4 +1,4 @@
-"""Textual TUI 主应用（M3-T01 / M3-T02）
+"""Textual TUI 主应用（M3-T01 / M3-T02）.
 
 Screen 切换: MainMenu → GameSetup → GamePlay → GameOver
 各 Screen 已拆分至 screens/ 子包。
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 class SanguoshaApp(App):
-    """三国杀 Textual 主应用"""
+    """三国杀 Textual 主应用."""
 
     TITLE = "三国杀 - 命令行终端版"
     CSS = """

@@ -2,6 +2,13 @@
 Textual TUI 测试（M3）
 """
 
+import importlib
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import pytest
+
+from game.card import CardSuit
 from ui.protocol import GameDisplay, GameInput, GameNotify, GameUI
 from ui.textual_ui.app import (
     GameOverScreen,
@@ -144,6 +151,94 @@ class TestTextualUIBridge:
             assert hasattr(bridge, method), f"Missing method: {method}"
 
 
+class TestTextualUIBridgeSelectionHelpers:
+    """测试 bridge 对共享选牌 helper 的委托。"""
+
+    def test_choose_cards_to_discard_uses_shared_helper(self):
+        cards = [object(), object(), object()]
+        player = SimpleNamespace(hand=cards)
+        screen = MagicMock()
+        screen._select_cards_from_candidates.return_value = cards[:2]
+        bridge = TextualUIBridge(screen)
+
+        result = bridge.choose_cards_to_discard(player, 2)
+
+        assert result == cards[:2]
+        screen._select_cards_from_candidates.assert_called_once_with(
+            cards,
+            2,
+            title="🗑 请选择弃掉 2 张牌",
+            confirm_text="✅ 确认弃牌",
+            countdown=30,
+            timeout=35.0,
+            auto_select_on_timeout=True,
+            description="discard selection",
+        )
+
+    def test_request_skill_card_uses_shared_single_card_helper(self):
+        cards = [object(), object()]
+        screen = MagicMock()
+        screen._select_single_card_from_candidates.return_value = cards[1]
+        bridge = TextualUIBridge(screen)
+
+        result = bridge.request_skill_card(SimpleNamespace(), "guicai", cards)
+
+        assert result is cards[1]
+        screen._select_single_card_from_candidates.assert_called_once_with(
+            cards,
+            title="✨ 鬼才：请选择要替换判定的手牌",
+            confirm_text="✅ 确认选择",
+            cancel_text="❌ 放弃",
+            countdown=30,
+            timeout=35.0,
+            auto_select_on_timeout=False,
+            description="skill card selection",
+        )
+
+    def test_choose_card_to_show_uses_shared_single_card_helper(self):
+        cards = [object(), object()]
+        player = SimpleNamespace(hand=cards)
+        screen = MagicMock()
+        screen._select_single_card_from_candidates.return_value = cards[0]
+        bridge = TextualUIBridge(screen)
+
+        result = bridge.choose_card_to_show(player)
+
+        assert result is cards[0]
+        screen._select_single_card_from_candidates.assert_called_once_with(
+            cards,
+            title="🔥 火攻：请选择要展示的手牌",
+            confirm_text="✅ 确认展示",
+            cancel_text="❌ 放弃",
+            countdown=30,
+            timeout=35.0,
+            auto_select_on_timeout=False,
+            description="card reveal selection",
+        )
+
+    def test_choose_card_to_discard_for_huogong_filters_matching_suit(self):
+        spade_card = SimpleNamespace(suit=CardSuit.SPADE)
+        heart_card = SimpleNamespace(suit=CardSuit.HEART)
+        player = SimpleNamespace(hand=[spade_card, heart_card])
+        screen = MagicMock()
+        screen._select_single_card_from_candidates.return_value = heart_card
+        bridge = TextualUIBridge(screen)
+
+        result = bridge.choose_card_to_discard_for_huogong(player, CardSuit.HEART)
+
+        assert result is heart_card
+        screen._select_single_card_from_candidates.assert_called_once_with(
+            [heart_card],
+            title="🔥 火攻：请选择 1 张 ♥ 花色手牌弃置",
+            confirm_text="✅ 确认弃置",
+            cancel_text="❌ 放弃",
+            countdown=30,
+            timeout=35.0,
+            auto_select_on_timeout=False,
+            description="huogong discard selection",
+        )
+
+
 class TestAnimationCSS:
     """测试 M3-T04 动画相关"""
 
@@ -211,3 +306,19 @@ class TestMainEntry:
         assert args.server is None
         assert args.connect is None
         assert args.replay is None
+
+    def test_sanguosha_game_legacy_alias_is_lazy_and_warns(self):
+        import sys
+
+        sys.modules.pop("main", None)
+        sys.modules.pop("game.game_controller", None)
+
+        main = importlib.import_module("main")
+        assert "game.game_controller" not in sys.modules
+
+        with pytest.warns(DeprecationWarning):
+            alias = main.SanguoshaGame
+
+        from game.game_controller import GameController
+
+        assert alias is GameController

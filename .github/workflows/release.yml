@@ -1,5 +1,5 @@
 # 多平台构建 + 自动 Release 工作流
-# 触发条件: push tag v* (如 v3.4.0)
+# 触发条件: push tag v* (如 v4.1.0)
 # 构建: Windows (.exe) + macOS (binary) + Linux (binary)
 # 发布: 自动创建 GitHub Release 并上传三平台产物
 
@@ -102,7 +102,7 @@ jobs:
             ### ⚙️ 构建信息
             - Python 3.14 + PyInstaller 6.18
             - Textual TUI 跨平台终端界面
-            - v4.0: 异步引擎 / 状态机 / 插件系统 / 1503 测试用例
+            - 详细变更请参见本次自动生成的 Release Notes 与仓库中的 `CHANGELOG.md`
           files: |
             release-assets/**/*
           fail_on_unmatched_files: false

@@ -158,7 +158,7 @@ class TestZhiheng:
             test_cards.append(card)
             player.hand.append(card)
 
-        initial_hand_count = len(player.hand)
+        len(player.hand)
         skill_system = engine.skill_system
 
         result = skill_system._handle_zhiheng(player, engine, cards=test_cards[:2])
@@ -413,7 +413,7 @@ class TestJianxiong:
         )
 
         skill_system = engine.skill_system
-        hand_before = len(player.hand)
+        len(player.hand)
 
         result = skill_system._handle_jianxiong(player, engine, damage_card=damage_card)
 
@@ -940,8 +940,24 @@ class TestShensu:
         """测试神速攻击"""
         player = engine.players[0]
         target = engine.players[1]
-        # BUG-001 fix: 清空目标手牌，防止AI自动出闪导致伤害为0
-        target.hand.clear()
+
+        attacker_hero = engine.hero_repo.get_hero("xiahouyuan")
+        target_hero = engine.hero_repo.get_hero("caocao")
+        assert attacker_hero is not None
+        assert target_hero is not None
+        player.set_hero(attacker_hero)
+        target.set_hero(target_hero)
+        # 目标没有【闪】，但保留一张非【闪】手牌，避免空城等被动影响断言语义。
+        target.hand[:] = [
+            Card(
+                id="shensu_test_tao",
+                name="桃",
+                card_type=CardType.BASIC,
+                subtype=CardSubtype.HEAL,
+                suit=CardSuit.HEART,
+                number=3,
+            )
+        ]
         hp_before = target.hp
 
         skill_system = engine.skill_system

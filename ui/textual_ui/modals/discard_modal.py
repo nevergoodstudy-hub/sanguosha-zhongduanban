@@ -1,4 +1,4 @@
-"""弃牌阶段弹窗 (P0-3)
+"""弃牌阶段弹窗 (P0-3).
 
 让人类玩家在弃牌阶段选择要弃掉的手牌。
 支持多选，必须恰好弃掉 need_count 张牌才能确认。
@@ -9,7 +9,8 @@ dismiss(None)      → 超时/异常（自动弃末尾的牌）
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+import logging
+from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
@@ -22,8 +23,11 @@ if TYPE_CHECKING:
     from game.card import Card
 
 
-class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
-    """弃牌阶段弹窗"""
+logger = logging.getLogger(__name__)
+
+
+class DiscardModal(AnimatedModalScreen[list[int] | None]):
+    """弃牌阶段弹窗."""
 
     DEFAULT_CSS = """
     DiscardModal {
@@ -75,11 +79,27 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
     }
     """
 
-    def __init__(self, cards: list[Card], need_count: int, countdown: int = 30):
-        """Args:
+    def __init__(
+        self,
+        cards: list[Card],
+        need_count: int,
+        countdown: int = 30,
+        *,
+        title: str | None = None,
+        confirm_text: str = "✅ 确认弃牌",
+        cancel_text: str | None = None,
+        timeout_auto_select: bool = True,
+    ):
+        """初始化弃牌弹窗.
+
+        Args:
         cards: 玩家当前手牌列表
-        need_count: 需要弃掉的张数
+        need_count: 需要选择的张数
         countdown: 倒计时秒数，0 表示不倒计时
+        title: 顶部标题，默认弃牌提示
+        confirm_text: 确认按钮前缀文案
+        cancel_text: 可选取消按钮文案；None 表示不显示
+        timeout_auto_select: 超时后是否自动选择最后 N 张牌
         """
         super().__init__()
         self._cards = cards
@@ -88,11 +108,15 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
         self._remaining = countdown
         self._countdown = countdown
         self._timer: Timer | None = None
+        self._title = title or f"🗑 弃牌阶段 — 请选择 {self._need_count} 张牌弃掉"
+        self._confirm_text = confirm_text
+        self._cancel_text = cancel_text
+        self._timeout_auto_select = timeout_auto_select
 
     def compose(self) -> ComposeResult:
         with Container(id="discard-container"):
             yield Static(
-                f"🗑 弃牌阶段 — 请选择 {self._need_count} 张牌弃掉",
+                self._title,
                 id="discard-title",
             )
             yield Static(
@@ -106,7 +130,6 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
                 for i, card in enumerate(self._cards):
                     suit_map = {"spade": "♠", "heart": "♥", "club": "♣", "diamond": "♦"}
                     suit_icon = suit_map.get(getattr(card.suit, "value", ""), "?")
-                    color = "red" if suit_icon in ("♥", "♦") else "white"
                     label = f"{suit_icon}{card.number_str} {card.name}"
                     yield Button(
                         label,
@@ -116,11 +139,13 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
                     )
 
             yield Button(
-                f"✅ 确认弃牌 (0/{self._need_count})",
+                f"{self._confirm_text} (0/{self._need_count})",
                 id="btn-confirm-discard",
                 variant="success",
                 disabled=True,
             )
+            if self._cancel_text:
+                yield Button(self._cancel_text, id="btn-cancel-discard", variant="error")
 
     def on_mount(self) -> None:
         super().on_mount()  # 淡入动画
@@ -132,14 +157,16 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
         try:
             cd = self.query_one("#discard-countdown", Static)
             cd.update(f"⏱ {self._remaining}s")
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("DiscardModal countdown refresh failed: %s", exc)
         if self._remaining <= 0:
             if self._timer:
                 self._timer.stop()
-            # 超时：自动选择最后 N 张牌
-            auto = list(range(len(self._cards) - self._need_count, len(self._cards)))
-            self.dismiss(auto)
+            if self._timeout_auto_select:
+                auto = list(range(len(self._cards) - self._need_count, len(self._cards)))
+                self.dismiss(auto)
+            else:
+                self.dismiss(None)
 
     def _status_text(self) -> str:
         selected = len(self._selected)
@@ -148,11 +175,11 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
         return f"[green]已选 {selected}/{self._need_count} 张 ✓[/green]"
 
     def _refresh_ui(self) -> None:
-        """刷新选中状态"""
+        """刷新选中状态."""
         try:
             self.query_one("#discard-status", Static).update(self._status_text())
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("DiscardModal status refresh failed: %s", exc)
 
         # 更新按钮样式
         for i in range(len(self._cards)):
@@ -164,17 +191,17 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
                 else:
                     btn.remove_class("selected")
                     btn.variant = "default"
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("DiscardModal card button refresh failed: %s", exc)
 
         # 更新确认按钮
         try:
             confirm = self.query_one("#btn-confirm-discard", Button)
             ok = len(self._selected) == self._need_count
             confirm.disabled = not ok
-            confirm.label = f"✅ 确认弃牌 ({len(self._selected)}/{self._need_count})"
-        except Exception:
-            pass
+            confirm.label = f"{self._confirm_text} ({len(self._selected)}/{self._need_count})"
+        except Exception as exc:
+            logger.debug("DiscardModal confirm button refresh failed: %s", exc)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id or ""
@@ -193,3 +220,7 @@ class DiscardModal(AnimatedModalScreen[Optional[list[int]]]):
                 if self._timer:
                     self._timer.stop()
                 self.dismiss(sorted(self._selected))
+        elif btn_id == "btn-cancel-discard":
+            if self._timer:
+                self._timer.stop()
+            self.dismiss(None)

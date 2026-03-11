@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""三国杀终端版 - PyInstaller 6.18 构建脚本
+"""三国杀终端版 - PyInstaller 6.18 构建脚本.
 
 使用方法:
     python build.py              # 单文件打包 (默认)
@@ -75,7 +75,7 @@ def build(*, onedir: bool = False, debug: bool = False, name: str = "sanguosha")
     mode_str = "onedir" if onedir else "onefile"
     print(f"Build mode: {mode_str}")
     print(f"Python: {sys.version.split()[0]}")
-    print(f"Running PyInstaller...")
+    print("Running PyInstaller...")
 
     result = subprocess.run(args, cwd=PROJECT_ROOT)
 

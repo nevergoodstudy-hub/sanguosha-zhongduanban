@@ -97,6 +97,24 @@ class TestServerMsg:
         assert msg.data["player_id"] == 1
         assert msg.data["timeout"] == 15.0
 
+    def test_game_request_factory_with_request_metadata(self):
+        msg = ServerMsg.game_request(
+            "discard",
+            2,
+            {"cards": [{"id": "sha_spade_A"}]},
+            timeout=20.0,
+            request_id="req-1",
+            message="请选择弃牌",
+            required=True,
+            min_cards=2,
+            max_cards=2,
+        )
+        assert msg.data["request_id"] == "req-1"
+        assert msg.data["message"] == "请选择弃牌"
+        assert msg.data["required"] is True
+        assert msg.data["min_cards"] == 2
+        assert msg.data["max_cards"] == 2
+
     def test_game_over_factory(self):
         msg = ServerMsg.game_over("rebel", "主公阵亡", {"rounds": 5})
         assert msg.data["winner"] == "rebel"
@@ -163,15 +181,31 @@ class TestClientMsg:
         assert msg.type == MsgType.ROOM_START
 
     def test_game_action(self):
-        msg = ClientMsg.game_action(1, "play_card", {"card_id": 42, "target_ids": [2]})
+        msg = ClientMsg.game_action(1, "play_card", {"card_id": "sha_spade_A", "target_ids": [2]})
         assert msg.data["action_type"] == "play_card"
-        assert msg.data["card_id"] == 42
+        assert msg.data["card_id"] == "sha_spade_A"
 
     def test_game_response(self):
-        msg = ClientMsg.game_response(1, "play_shan", accepted=True, response_data={"card_id": 7})
+        msg = ClientMsg.game_response(
+            1,
+            "play_shan",
+            accepted=True,
+            response_data={"card_id": "shan_heart_2"},
+        )
         assert msg.data["request_type"] == "play_shan"
         assert msg.data["accepted"] is True
-        assert msg.data["card_id"] == 7
+        assert msg.data["card_id"] == "shan_heart_2"
+
+    def test_game_response_with_request_id(self):
+        msg = ClientMsg.game_response(
+            1,
+            "discard",
+            accepted=True,
+            response_data={"card_ids": ["sha_spade_A", "shan_heart_2"]},
+            request_id="req-1",
+        )
+        assert msg.data["request_id"] == "req-1"
+        assert msg.data["card_ids"] == ["sha_spade_A", "shan_heart_2"]
 
     def test_hero_chosen(self):
         msg = ClientMsg.hero_chosen(1, "liubei")

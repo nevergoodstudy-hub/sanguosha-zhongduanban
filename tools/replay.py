@@ -1,5 +1,5 @@
 """最小回放工具（M3-T03）
-根据 action_log 重建对局，用于开发调试和失败复现
+根据 action_log 重建对局，用于开发调试和失败复现.
 """
 
 import json
@@ -15,10 +15,10 @@ from game.engine import GameEngine
 
 
 class ReplayTool:
-    """回放工具类"""
+    """回放工具类."""
 
     def __init__(self, log_path: str):
-        """初始化回放工具
+        """初始化回放工具.
 
         Args:
             log_path: action_log JSON 文件路径
@@ -29,7 +29,7 @@ class ReplayTool:
         self.errors: list = []
 
     def load_log(self) -> bool:
-        """加载日志文件"""
+        """加载日志文件."""
         try:
             with open(self.log_path, encoding="utf-8") as f:
                 self.log_data = json.load(f)
@@ -45,7 +45,7 @@ class ReplayTool:
             return False
 
     def setup_game(self) -> bool:
-        """根据日志设置游戏"""
+        """根据日志设置游戏."""
         if not self.log_data:
             self.errors.append("日志未加载")
             return False
@@ -73,7 +73,7 @@ class ReplayTool:
             return False
 
     def replay_actions(self, step_by_step: bool = False) -> bool:
-        """回放动作
+        """回放动作.
 
         Args:
             step_by_step: 是否逐步执行（等待用户输入）
@@ -109,7 +109,7 @@ class ReplayTool:
         return True
 
     def verify_result(self) -> bool:
-        """验证回放结果是否与日志一致"""
+        """验证回放结果是否与日志一致."""
         if not self.engine or not self.log_data:
             return False
 
@@ -124,7 +124,7 @@ class ReplayTool:
             return False
 
     def run(self, step_by_step: bool = False) -> dict[str, Any]:
-        """运行完整回放
+        """运行完整回放.
 
         Args:
             step_by_step: 是否逐步执行
@@ -158,7 +158,7 @@ class ReplayTool:
 
 
 def list_logs(log_dir: str = "logs") -> list:
-    """列出可用的日志文件"""
+    """列出可用的日志文件."""
     log_path = Path(log_dir)
     if not log_path.exists():
         return []
@@ -168,7 +168,7 @@ def list_logs(log_dir: str = "logs") -> list:
 
 
 def main():
-    """命令行入口"""
+    """命令行入口."""
     import argparse
 
     parser = argparse.ArgumentParser(description="三国杀对局回放工具")

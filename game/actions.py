@@ -1,5 +1,5 @@
 """动作与请求系统
-定义玩家操作的标准化接口，实现 UI/逻辑分离
+定义玩家操作的标准化接口，实现 UI/逻辑分离.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class ActionType(Enum):
-    """动作类型枚举"""
+    """动作类型枚举."""
 
     PLAY_CARD = auto()  # 出牌
     USE_SKILL = auto()  # 使用技能
@@ -32,7 +32,7 @@ class ActionType(Enum):
 
 
 class RequestType(Enum):
-    """请求类型枚举"""
+    """请求类型枚举."""
 
     PLAY_SHAN = auto()  # 请求出闪
     PLAY_SHA = auto()  # 请求出杀
@@ -50,7 +50,7 @@ class RequestType(Enum):
 @dataclass
 class GameAction(ABC):
     """游戏动作基类
-    所有玩家操作都应继承此类
+    所有玩家操作都应继承此类.
     """
 
     action_type: ActionType
@@ -59,7 +59,7 @@ class GameAction(ABC):
 
     @abstractmethod
     def validate(self, engine: GameEngine) -> tuple[bool, str]:
-        """验证动作是否合法
+        """验证动作是否合法.
 
         Returns:
             (是否合法, 错误信息)
@@ -68,7 +68,7 @@ class GameAction(ABC):
 
     @abstractmethod
     def execute(self, engine: GameEngine) -> bool:
-        """执行动作
+        """执行动作.
 
         Returns:
             是否执行成功
@@ -78,10 +78,10 @@ class GameAction(ABC):
 
 @dataclass
 class PlayCardAction(GameAction):
-    """出牌动作"""
+    """出牌动作."""
 
     action_type: ActionType = field(default=ActionType.PLAY_CARD, init=False)
-    card_id: int = 0
+    card_id: str = ""
     target_ids: list[int] = field(default_factory=list)
 
     def validate(self, engine: GameEngine) -> tuple[bool, str]:
@@ -96,7 +96,7 @@ class PlayCardAction(GameAction):
         # 检查卡牌是否存在
         card = None
         for c in player.hand:
-            if id(c) == self.card_id or getattr(c, "id", None) == self.card_id:
+            if getattr(c, "id", None) == self.card_id:
                 card = c
                 break
 
@@ -113,7 +113,7 @@ class PlayCardAction(GameAction):
         player = engine.get_player_by_id(self.player_id)
         card = None
         for c in player.hand:
-            if id(c) == self.card_id or getattr(c, "id", None) == self.card_id:
+            if getattr(c, "id", None) == self.card_id:
                 card = c
                 break
 
@@ -125,12 +125,12 @@ class PlayCardAction(GameAction):
 
 @dataclass
 class UseSkillAction(GameAction):
-    """使用技能动作"""
+    """使用技能动作."""
 
     action_type: ActionType = field(default=ActionType.USE_SKILL, init=False)
     skill_id: str = ""
     target_ids: list[int] = field(default_factory=list)
-    card_ids: list[int] = field(default_factory=list)
+    card_ids: list[str] = field(default_factory=list)
 
     def validate(self, engine: GameEngine) -> tuple[bool, str]:
         player = engine.get_player_by_id(self.player_id)
@@ -158,7 +158,7 @@ class UseSkillAction(GameAction):
         cards = []
         for cid in self.card_ids:
             for c in player.hand:
-                if id(c) == cid or getattr(c, "id", None) == cid:
+                if getattr(c, "id", None) == cid:
                     cards.append(c)
                     break
 
@@ -172,10 +172,10 @@ class UseSkillAction(GameAction):
 
 @dataclass
 class DiscardAction(GameAction):
-    """弃牌动作"""
+    """弃牌动作."""
 
     action_type: ActionType = field(default=ActionType.DISCARD, init=False)
-    card_ids: list[int] = field(default_factory=list)
+    card_ids: list[str] = field(default_factory=list)
 
     def validate(self, engine: GameEngine) -> tuple[bool, str]:
         player = engine.get_player_by_id(self.player_id)
@@ -196,7 +196,7 @@ class DiscardAction(GameAction):
         cards = []
         for cid in self.card_ids:
             for c in player.hand:
-                if id(c) == cid or getattr(c, "id", None) == cid:
+                if getattr(c, "id", None) == cid:
                     cards.append(c)
                     break
 
@@ -208,10 +208,10 @@ class DiscardAction(GameAction):
 
 @dataclass
 class RespondAction(GameAction):
-    """响应动作（出闪、出杀等）"""
+    """响应动作（出闪、出杀等）."""
 
     action_type: ActionType = field(default=ActionType.RESPOND, init=False)
-    card_id: int | None = None  # None 表示不响应
+    card_id: str | None = None  # None 表示不响应
     skill_id: str | None = None  # 使用技能响应
 
     def validate(self, engine: GameEngine) -> tuple[bool, str]:
@@ -227,7 +227,7 @@ class RespondAction(GameAction):
 
 @dataclass
 class EndPhaseAction(GameAction):
-    """结束阶段动作"""
+    """结束阶段动作."""
 
     action_type: ActionType = field(default=ActionType.END_PHASE, init=False)
 
@@ -243,7 +243,7 @@ class EndPhaseAction(GameAction):
 @dataclass
 class GameRequest:
     """游戏请求
-    引擎向玩家请求输入时使用
+    引擎向玩家请求输入时使用.
     """
 
     request_type: RequestType
@@ -263,27 +263,27 @@ class GameRequest:
 @dataclass
 class GameResponse:
     """游戏响应
-    玩家对请求的响应
+    玩家对请求的响应.
     """
 
     request_type: RequestType
     player_id: int
     accepted: bool = False  # 是否接受/响应
-    card_ids: list[int] = field(default_factory=list)
+    card_ids: list[str] = field(default_factory=list)
     target_ids: list[int] = field(default_factory=list)
-    option: str | int | bool | list[int] | None = None
+    option: str | int | bool | list[str] | list[int] | None = None
 
 
 class ActionValidator:
     """动作验证器
-    集中处理所有动作的合法性校验
+    集中处理所有动作的合法性校验.
     """
 
     @staticmethod
     def validate_play_card(
         player: Player, card: Card, targets: list[Player], engine: GameEngine
     ) -> tuple[bool, str]:
-        """验证出牌动作"""
+        """验证出牌动作."""
         from .card import CardName
         from .constants import SkillId
 
@@ -293,9 +293,8 @@ class ActionValidator:
 
         # 杀的验证
         if card.name == CardName.SHA:
-            if not player.can_use_sha():
-                if not player.has_skill(SkillId.PAOXIAO):
-                    return False, _t("error.sha_used")
+            if not player.can_use_sha() and not player.has_skill(SkillId.PAOXIAO):
+                return False, _t("error.sha_used")
 
             if not targets:
                 return False, _t("error.sha_no_target")
@@ -309,9 +308,8 @@ class ActionValidator:
                     return False, _t("error.target_kongcheng", target=target.name)
 
         # 桃的验证
-        if card.name == CardName.TAO:
-            if player.hp >= player.max_hp:
-                return False, _t("error.hp_full")
+        if card.name == CardName.TAO and player.hp >= player.max_hp:
+            return False, _t("error.hp_full")
 
         # 闪不能主动使用
         if card.name == CardName.SHAN:
@@ -329,7 +327,7 @@ class ActionValidator:
 
     @staticmethod
     def validate_use_skill(player: Player, skill_id: str, engine: GameEngine) -> tuple[bool, str]:
-        """验证技能使用"""
+        """验证技能使用."""
         if not engine.skill_system:
             return False, _t("error.skill_system_not_init")
 
@@ -341,14 +339,14 @@ class ActionValidator:
 
 class ActionExecutor:
     """动作执行器
-    负责执行经过验证的动作
+    负责执行经过验证的动作.
     """
 
     def __init__(self, engine: GameEngine):
         self.engine = engine
 
     def execute(self, action: GameAction) -> bool:
-        """执行动作"""
+        """执行动作."""
         valid, msg = action.validate(self.engine)
         if not valid:
             # 发送错误事件

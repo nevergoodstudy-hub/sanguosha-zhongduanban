@@ -110,7 +110,7 @@ class TestEngineDealDamage:
     def test_zero_damage_ignored(self):
         from game.engine import GameEngine
 
-        engine = GameEngine.__new__(GameEngine)
+        GameEngine.__new__(GameEngine)
         # Use mock engine to test the method directly
         engine_mock = _make_engine()
         target = _make_player("T")
@@ -129,7 +129,7 @@ class TestEngineDamageHelpers:
     def test_ai_should_save_same_identity(self):
         from game.player import Identity
 
-        engine = _make_engine()
+        _make_engine()
 
         savior = MagicMock()
         savior.identity = Identity.REBEL

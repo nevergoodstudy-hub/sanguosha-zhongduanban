@@ -1,1 +1,1 @@
-"""TUI Widgets 模块"""
+"""TUI Widgets 模块."""

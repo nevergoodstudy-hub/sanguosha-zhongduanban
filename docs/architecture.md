@@ -115,7 +115,7 @@ main.py
 data/
   ├── cards.json        ── 108 张标准牌库 (含军争扩展)
   ├── card_effects.json ── 数据驱动卡牌效果定义
-  ├── heroes.json       ── 20+ 武将定义
+  ├── heroes.json       ── 32 武将定义（含 2026-03 身份模式同步批次）
   ├── heroes_new.json   ── 扩展武将 (待合并)
   └── skill_dsl.json    ── 技能 DSL 声明
 ```

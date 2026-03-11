@@ -1,4 +1,4 @@
-"""网络消息 Pydantic 校验模型 (Phase 3.3)
+"""网络消息 Pydantic 校验模型 (Phase 3.3).
 
 为 net/protocol.py 中的 ClientMsg / ServerMsg 提供严格的输入校验。
 服务端在 _handle_message 中解析原始 JSON 后，先经 Pydantic 模型校验，
@@ -22,7 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ClientMsgModel(BaseModel):
-    """客户端消息校验模型"""
+    """客户端消息校验模型."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -40,7 +40,7 @@ class ClientMsgModel(BaseModel):
 
 
 class RoomCreateData(BaseModel):
-    """room_create 消息的 data 校验"""
+    """room_create 消息的 data 校验."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -50,7 +50,7 @@ class RoomCreateData(BaseModel):
 
 
 class RoomJoinData(BaseModel):
-    """room_join 消息的 data 校验"""
+    """room_join 消息的 data 校验."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -58,10 +58,11 @@ class RoomJoinData(BaseModel):
     room_id: str = Field(min_length=1, max_length=36)
     reconnect: bool = False
     last_seq: int = Field(default=0, ge=0)
+    token: str | None = None
 
 
 class RoomReadyData(BaseModel):
-    """room_ready 消息的 data 校验"""
+    """room_ready 消息的 data 校验."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -69,7 +70,7 @@ class RoomReadyData(BaseModel):
 
 
 class GameActionData(BaseModel):
-    """game_action 消息的 data 校验"""
+    """game_action 消息的 data 校验."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -77,16 +78,21 @@ class GameActionData(BaseModel):
 
 
 class GameResponseData(BaseModel):
-    """game_response 消息的 data 校验"""
+    """game_response 消息的 data 校验."""
 
     model_config = ConfigDict(extra="ignore")
+    request_id: str | None = None
 
     request_type: str = Field(min_length=1)
     accepted: bool = False
+    card_id: str | None = None
+    card_ids: list[str] = Field(default_factory=list)
+    target_ids: list[int] = Field(default_factory=list)
+    option: Any = None
 
 
 class HeroChosenData(BaseModel):
-    """hero_chosen 消息的 data 校验"""
+    """hero_chosen 消息的 data 校验."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -94,7 +100,7 @@ class HeroChosenData(BaseModel):
 
 
 class ChatData(BaseModel):
-    """chat 消息的 data 校验"""
+    """chat 消息的 data 校验."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -118,7 +124,7 @@ DATA_VALIDATORS: dict[str, type[BaseModel]] = {
 
 
 def validate_client_message(raw_json: str) -> ClientMsgModel:
-    """校验原始 JSON 字符串，返回经过校验的 ClientMsgModel。
+    """校验原始 JSON 字符串，返回经过校验的 ClientMsgModel。.
 
     流程:
       1. 用 ClientMsgModel.model_validate_json 校验外层结构

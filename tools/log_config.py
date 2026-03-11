@@ -1,4 +1,4 @@
-"""集中式日志配置 (P2-3)
+"""集中式日志配置 (P2-3).
 
 提供 setup_logging() 统一初始化日志格式和级别。
 支持文本和 JSON 两种格式。
@@ -17,14 +17,13 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
-
 # 默认格式
 TEXT_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 class JsonFormatter(logging.Formatter):
-    """JSON 格式化器，用于结构化日志输出。"""
+    """JSON 格式化器，用于结构化日志输出。."""
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry: dict[str, Any] = {
@@ -45,7 +44,7 @@ def setup_logging(
     json_format: bool = False,
     log_file: str | None = None,
 ) -> None:
-    """初始化全局日志配置。
+    """初始化全局日志配置。.
 
     Args:
         level: 日志级别 (DEBUG/INFO/WARNING/ERROR/CRITICAL)

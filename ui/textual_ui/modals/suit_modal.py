@@ -1,4 +1,4 @@
-"""花色选择弹窗 (M-C C7)
+"""花色选择弹窗 (M-C C7).
 
 修复 P0: 原 choose_suit 使用 random.choice。
 提供 ♠♥♣♦ 四个大按钮，点击 dismiss 对应 CardSuit。
@@ -9,8 +9,6 @@ dismiss(None) → 取消
 
 from __future__ import annotations
 
-from typing import Optional
-
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.widgets import Button, Static
@@ -18,8 +16,8 @@ from textual.widgets import Button, Static
 from ui.textual_ui.modals.base import AnimatedModalScreen
 
 
-class SuitSelectModal(AnimatedModalScreen[Optional[str]]):
-    """花色选择弹窗 — 四色大按钮"""
+class SuitSelectModal(AnimatedModalScreen[str | None]):
+    """花色选择弹窗 — 四色大按钮."""
 
     DEFAULT_CSS = """
     SuitSelectModal {

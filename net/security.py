@@ -1,4 +1,4 @@
-"""网络安全模块 (Phase 4.4)
+"""网络安全模块 (Phase 4.4).
 
 提供:
 - ConnectionTokenManager: 基于 secrets 的连接令牌管理
@@ -42,7 +42,7 @@ TOKEN_EXPIRY: float = 86_400.0  # 24 小时
 
 
 class ConnectionTokenManager:
-    """基于 ``secrets`` 模块的连接令牌管理器。
+    """基于 ``secrets`` 模块的连接令牌管理器。.
 
     - 连接时生成不可伪造的随机令牌
     - 断线重连时验证令牌 (timing-safe comparison)
@@ -57,7 +57,7 @@ class ConnectionTokenManager:
         self._player_tokens: dict[int, str] = {}
 
     def issue(self, player_id: int) -> str:
-        """为玩家签发新令牌。"""
+        """为玩家签发新令牌。."""
         token = secrets.token_urlsafe(TOKEN_BYTES)
         now = time.time()
         # 清除该玩家的旧令牌
@@ -69,7 +69,7 @@ class ConnectionTokenManager:
         return token
 
     def verify(self, token: str, expected_player_id: int) -> bool:
-        """验证令牌是否属于指定玩家且未过期。
+        """验证令牌是否属于指定玩家且未过期。.
 
         使用 ``hmac.compare_digest`` 防止时序攻击。
         """
@@ -88,7 +88,7 @@ class ConnectionTokenManager:
         return pid == expected_player_id
 
     def revoke(self, *, player_id: int | None = None, token: str | None = None) -> None:
-        """撤销令牌 (按玩家 ID 或按令牌)。"""
+        """撤销令牌 (按玩家 ID 或按令牌)。."""
         if player_id is not None:
             tok = self._player_tokens.pop(player_id, None)
             if tok:
@@ -99,7 +99,7 @@ class ConnectionTokenManager:
                 self._player_tokens.pop(record[0], None)
 
     def cleanup_expired(self) -> int:
-        """清理所有过期令牌，返回清理数量。"""
+        """清理所有过期令牌，返回清理数量。."""
         now = time.time()
         expired = [
             tok for tok, (_, created) in self._tokens.items() if now - created > self._expiry
@@ -119,13 +119,13 @@ class ConnectionTokenManager:
 
 
 class OriginValidator:
-    """WebSocket Origin 白名单验证器。
+    """WebSocket Origin 白名单验证器。.
 
     验证 WebSocket 握手请求的 Origin 头，防止跨站 WebSocket 劫持 (CSWSH)。
     """
 
     def __init__(self, allowed_origins: str = ""):
-        """初始化 Origin 验证器。
+        """初始化 Origin 验证器。.
 
         Args:
             allowed_origins: 逗号分隔的允许 Origin 列表。
@@ -140,16 +140,16 @@ class OriginValidator:
 
     @property
     def is_enabled(self) -> bool:
-        """是否启用了 Origin 验证。"""
+        """是否启用了 Origin 验证。."""
         return len(self._allowed) > 0
 
     @property
     def allowed_origins(self) -> tuple[str, ...]:
-        """返回标准化后的 Origin 白名单（只读）。"""
+        """返回标准化后的 Origin 白名单（只读）。."""
         return tuple(sorted(self._allowed))
 
     def is_allowed(self, origin: str | None) -> bool:
-        """检查 Origin 是否在白名单中。
+        """检查 Origin 是否在白名单中。.
 
         Args:
             origin: 请求的 Origin 头值。
@@ -169,7 +169,7 @@ class OriginValidator:
 
 
 class RateLimiter:
-    """基于滑动窗口的速率限制器 (O(1) 操作)。"""
+    """基于滑动窗口的速率限制器 (O(1) 操作)。."""
 
     def __init__(self, window: float = 1.0, max_msgs: int = 30):
         self._window = window
@@ -177,7 +177,7 @@ class RateLimiter:
         self._timestamps: dict[int, deque[float]] = {}  # player_id → timestamps
 
     def check(self, player_id: int) -> bool:
-        """检查是否允许处理消息。返回 True 表示允许。"""
+        """检查是否允许处理消息。返回 True 表示允许。."""
         now = time.time()
         cutoff = now - self._window
 
@@ -197,7 +197,7 @@ class RateLimiter:
         return True
 
     def remove_player(self, player_id: int) -> None:
-        """清理玩家的速率限制数据。"""
+        """清理玩家的速率限制数据。."""
         self._timestamps.pop(player_id, None)
 
 
@@ -208,7 +208,7 @@ _HTML_TAG_RE = re.compile(r"<[^>]+>")
 
 
 def sanitize_chat_message(text: str, max_length: int = 500) -> str:
-    """净化聊天消息内容。
+    """净化聊天消息内容。.
 
     1. 截断到最大长度
     2. 转义 HTML 特殊字符 (防 XSS)
@@ -231,14 +231,14 @@ def sanitize_chat_message(text: str, max_length: int = 500) -> str:
 
 
 class IPConnectionTracker:
-    """跟踪每个 IP 的活跃连接数。"""
+    """跟踪每个 IP 的活跃连接数。."""
 
     def __init__(self, max_per_ip: int = DEFAULT_MAX_CONNECTIONS_PER_IP):
         self._max_per_ip = max_per_ip
         self._counts: dict[str, int] = {}
 
     def can_connect(self, ip: str) -> bool:
-        """检查该 IP 是否还能建立新连接。"""
+        """检查该 IP 是否还能建立新连接。."""
         return self._counts.get(ip, 0) < self._max_per_ip
 
     def add(self, ip: str) -> None:

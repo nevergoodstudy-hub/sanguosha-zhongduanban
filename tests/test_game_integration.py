@@ -4,14 +4,13 @@ Tests for combat, game over detection, distance calculation,
 and damage/death flow using real GameEngine instances.
 """
 
-import copy
 
 import pytest
 
 from game.card import Card, CardName, CardSubtype, CardSuit, CardType
 from game.engine import GameEngine
-from game.enums import GamePhase, GameState
-from game.player import Identity, Player
+from game.enums import GameState
+from game.player import Identity
 
 
 def _make_sha(suit: CardSuit = CardSuit.SPADE, number: int = 7) -> Card:
@@ -218,8 +217,16 @@ class TestCombatSha:
         target = engine.players[1]
         engine.current_player_index = 0
 
-        # Clear target hand so they can't respond
-        target.hand.clear()
+        # 固定为无额外防御/规避效果的武将，避免新增武将池后随机命中空城、宗室等被动。
+        attacker_hero = engine.hero_repo.get_hero("zhangfei")
+        target_hero = engine.hero_repo.get_hero("caocao")
+        assert attacker_hero is not None
+        assert target_hero is not None
+        attacker.set_hero(attacker_hero)
+        target.set_hero(target_hero)
+
+        # 目标没有【闪】，但保留一张非【闪】手牌，确保断言只验证“无法打出闪”这一分支。
+        target.hand[:] = [_make_tao()]
         sha = _make_sha()
         attacker.draw_cards([sha])
         old_hp = target.hp

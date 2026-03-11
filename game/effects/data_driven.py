@@ -1,4 +1,4 @@
-"""数据驱动卡牌效果（M2-T04）
+"""数据驱动卡牌效果（M2-T04）.
 
 通过 data/card_effects.json 中的声明式配置执行简单卡牌效果，
 与手写 Effect 子类共存（手写优先、数据驱动补充）。
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataDrivenCardEffect(CardEffect):
-    """从 JSON 配置驱动的卡牌效果。
+    """从 JSON 配置驱动的卡牌效果。.
 
     支持简单卡牌（桃、无中生有、桃园结义等），
     复杂卡牌（杀、决斗、南蛮等）仍使用手写子类。
@@ -39,25 +39,23 @@ class DataDrivenCardEffect(CardEffect):
 
     def can_use(self, engine, player, card, targets):
         cond = self._config.get("condition")
-        if cond:
-            if not self._check_condition(cond, engine, player, targets):
-                msg = self._config.get("condition_fail_msg", _t("effect.condition_fail"))
-                return False, msg
+        if cond and not self._check_condition(cond, engine, player, targets):
+            msg = self._config.get("condition_fail_msg", _t("effect.condition_fail"))
+            return False, msg
         return True, ""
 
     def resolve(self, engine, player, card, targets):
         # 条件检查
         cond = self._config.get("condition")
-        if cond:
-            if not self._check_condition(cond, engine, player, targets):
-                fail_action = self._config.get("condition_fail_action", "")
-                if fail_action == "return_card":
-                    engine.log_event(
-                        "error",
-                        self._config.get("condition_fail_msg", _t("effect.condition_fail")),
-                    )
-                    player.draw_cards([card])
-                return False
+        if cond and not self._check_condition(cond, engine, player, targets):
+            fail_action = self._config.get("condition_fail_action", "")
+            if fail_action == "return_card":
+                engine.log_event(
+                    "error",
+                    self._config.get("condition_fail_msg", _t("effect.condition_fail")),
+                )
+                player.draw_cards([card])
+            return False
 
         scope = self._config.get("scope")
         use_wuxie = self._config.get("wuxie", False)
@@ -98,7 +96,7 @@ class DataDrivenCardEffect(CardEffect):
     # ==================== 内部 ====================
 
     def _resolve_all_alive(self, engine, player, card):
-        """桃园结义类：遍历所有存活角色"""
+        """桃园结义类：遍历所有存活角色."""
         wuxie_per_target = self._config.get("wuxie_per_target", False)
 
         start_index = engine.players.index(player)
@@ -108,23 +106,22 @@ class DataDrivenCardEffect(CardEffect):
             if not p.is_alive:
                 continue
 
-            if wuxie_per_target:
-                if engine._request_wuxie(card, player, p):
-                    engine.log_event(
-                        "effect",
-                        _t("effect.nullified_for", card=self._display_name, name=p.name),
-                    )
-                    continue
+            if wuxie_per_target and engine._request_wuxie(card, player, p):
+                engine.log_event(
+                    "effect",
+                    _t("effect.nullified_for", card=self._display_name, name=p.name),
+                )
+                continue
 
             self._execute_steps(engine, player, p)
 
     def _execute_steps(self, engine, source_player, current_target):
-        """执行步骤列表"""
+        """执行步骤列表."""
         for step in self._config.get("steps", []):
             self._exec_step(step, engine, source_player, current_target)
 
     def _exec_step(self, step, engine, player, target):
-        """执行单个步骤"""
+        """执行单个步骤."""
         # draw
         if "draw" in step:
             info = step["draw"]
@@ -153,7 +150,7 @@ class DataDrivenCardEffect(CardEffect):
 
                 if if_wounded and recipient.hp >= recipient.max_hp:
                     return  # 不需要回血
-                healed = recipient.heal(amount)
+                recipient.heal(amount)
 
         # log
         elif "log" in step:
@@ -172,7 +169,7 @@ class DataDrivenCardEffect(CardEffect):
                 engine.log_event("effect", msg)
 
     def _check_condition(self, cond, engine, player, targets):
-        """检查条件"""
+        """检查条件."""
         check = cond.get("check", "")
         if check == "hp_below_max":
             return player.hp < player.max_hp
@@ -181,7 +178,7 @@ class DataDrivenCardEffect(CardEffect):
         return True
 
     def _resolve_player(self, ref, player, target):
-        """解析玩家引用"""
+        """解析玩家引用."""
         if ref == "self":
             return player
         if ref == "target":
@@ -192,7 +189,7 @@ class DataDrivenCardEffect(CardEffect):
 
 
 def load_card_effects_config() -> dict[str, dict[str, Any]]:
-    """从 data/card_effects.json 加载卡牌效果配置
+    """从 data/card_effects.json 加载卡牌效果配置.
 
     Returns:
         card_name -> config 映射

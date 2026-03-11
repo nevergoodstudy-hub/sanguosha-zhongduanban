@@ -73,3 +73,14 @@ RESEARCH_SYNTHESIS.md
 
 # Ruff 缓存
 .ruff_cache/
+
+# Git worktrees
+.worktrees/
+worktrees/
+
+# 打包/发布产物
+msix_output/
+*.msix
+Package.appxmanifest
+*.egg-info/
+.pip-audit-cache/

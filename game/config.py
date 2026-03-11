@@ -1,4 +1,4 @@
-"""游戏配置中心 (SSOT - 单一事实来源)
+"""游戏配置中心 (SSOT - 单一事实来源).
 
 所有可配置的游戏参数应在此定义，支持从环境变量覆盖。
 """
@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from typing import Any
 
 
 def _get_env_float(key: str, default: float) -> float:
-    """从环境变量获取浮点数配置"""
+    """从环境变量获取浮点数配置."""
     value = os.environ.get(key)
     if value is not None:
         try:
@@ -21,7 +22,7 @@ def _get_env_float(key: str, default: float) -> float:
 
 
 def _get_env_int(key: str, default: int) -> int:
-    """从环境变量获取整数配置"""
+    """从环境变量获取整数配置."""
     value = os.environ.get(key)
     if value is not None:
         try:
@@ -32,7 +33,7 @@ def _get_env_int(key: str, default: int) -> int:
 
 
 def _get_env_bool(key: str, default: bool) -> bool:
-    """从环境变量获取布尔配置"""
+    """从环境变量获取布尔配置."""
     value = os.environ.get(key, "").lower()
     if value in ("true", "1", "yes", "on"):
         return True
@@ -43,7 +44,7 @@ def _get_env_bool(key: str, default: bool) -> bool:
 
 @dataclass(frozen=True)
 class GameConfig:
-    """游戏配置类 (不可变)
+    """游戏配置类 (不可变).
 
     所有配置项支持通过环境变量覆盖：
     - SANGUOSHA_AI_DELAY: AI 回合延迟秒数
@@ -126,15 +127,15 @@ class GameConfig:
 
     @classmethod
     def from_env(cls) -> GameConfig:
-        """从环境变量创建配置实例"""
+        """从环境变量创建配置实例."""
         return cls()
 
-    def get(self, key: str, default: any | None = None) -> any:
-        """字典风格的访问方法（兼容旧代码）"""
+    def get(self, key: str, default: Any | None = None) -> Any:
+        """字典风格的访问方法（兼容旧代码）."""
         return getattr(self, key, default)
 
     def validate(self) -> list[str]:
-        """验证配置值范围
+        """验证配置值范围.
 
         Returns:
             错误列表（空表示验证通过）
@@ -189,7 +190,7 @@ _config: GameConfig | None = None
 
 
 def get_config() -> GameConfig:
-    """获取全局配置实例（懒加载）"""
+    """获取全局配置实例（懒加载）."""
     global _config
     if _config is None:
         _config = GameConfig.from_env()
@@ -197,7 +198,7 @@ def get_config() -> GameConfig:
 
 
 def reset_config() -> None:
-    """重置配置（用于测试）"""
+    """重置配置（用于测试）."""
     global _config
     _config = None
 

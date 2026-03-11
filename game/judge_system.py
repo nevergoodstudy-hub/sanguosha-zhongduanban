@@ -1,4 +1,4 @@
-"""判定子系统 (Phase 2.4 — 引擎分解)
+"""判定子系统 (Phase 2.4 — 引擎分解).
 
 从 engine.py 提取的判定阶段逻辑:
 - 延时锦囊判定 (乐不思蜀/兵粮寸断/闪电)
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class JudgeSystem:
-    """判定子系统 — 处理判定阶段的延时锦囊结算。"""
+    """判定子系统 — 处理判定阶段的延时锦囊结算。."""
 
     def __init__(self, ctx: GameContext) -> None:
         self.ctx = ctx
@@ -34,7 +34,7 @@ class JudgeSystem:
     # ==================== 判定阶段 ====================
 
     def phase_judge(self, player: Player) -> None:
-        """判定阶段：依次处理判定区的延时锦囊。
+        """判定阶段：依次处理判定区的延时锦囊。.
 
         规则: "后到先判" — judge_area[0] 是最后放入的，先判定。
         每张延时锦囊判定前均有无懈可击拦截点。
@@ -66,9 +66,10 @@ class JudgeSystem:
                 self._resolve_lebusishu(player, judge_card)
             elif card.name == CardName.BINGLIANG:
                 self._resolve_bingliang(player, judge_card)
-            elif card.name == CardName.SHANDIAN:
-                if self._resolve_shandian(player, card, judge_card):
-                    continue  # 闪电传递, 不进弃牌堆
+            elif card.name == CardName.SHANDIAN and self._resolve_shandian(
+                player, card, judge_card
+            ):
+                continue  # 闪电传递, 不进弃牌堆
 
             # 判定牌和延时锦囊进弃牌堆
             ctx.deck.discard([judge_card, card])
@@ -76,7 +77,7 @@ class JudgeSystem:
     # ==================== 各延时锦囊结算 ====================
 
     def _resolve_lebusishu(self, player: Player, judge_card: object) -> None:
-        """乐不思蜀: 非红桃 → 跳过出牌阶段。"""
+        """乐不思蜀: 非红桃 → 跳过出牌阶段。."""
         ctx = self.ctx
         if judge_card.suit != CardSuit.HEART:
             ctx.log_event("effect", _t("judge.lebusishu_fail", name=player.name))
@@ -85,7 +86,7 @@ class JudgeSystem:
             ctx.log_event("effect", _t("judge.lebusishu_success", name=player.name))
 
     def _resolve_bingliang(self, player: Player, judge_card: object) -> None:
-        """兵粮寸断: 非梅花 → 跳过摸牌阶段。"""
+        """兵粮寸断: 非梅花 → 跳过摸牌阶段。."""
         ctx = self.ctx
         if judge_card.suit != CardSuit.CLUB:
             ctx.log_event("effect", _t("judge.bingliang_fail", name=player.name))
@@ -94,7 +95,7 @@ class JudgeSystem:
             ctx.log_event("effect", _t("judge.bingliang_success", name=player.name))
 
     def _resolve_shandian(self, player: Player, card: object, judge_card: object) -> bool:
-        """闪电: 黑桃 2-9 → 3 点雷电伤害; 否则传递给下家。
+        """闪电: 黑桃 2-9 → 3 点雷电伤害; 否则传递给下家。.
 
         返回 True 表示闪电传递 (不进弃牌堆), False 表示命中 (进弃牌堆)。
         """
@@ -119,7 +120,7 @@ class JudgeSystem:
         return False
 
     def _find_lightning_receiver(self, current: Player) -> Player | None:
-        """找到下一个可以接收闪电的玩家。
+        """找到下一个可以接收闪电的玩家。.
 
         跳过死亡玩家和已有闪电的玩家。
         如果绕一圈回到自己或无合法目标，返回 None。

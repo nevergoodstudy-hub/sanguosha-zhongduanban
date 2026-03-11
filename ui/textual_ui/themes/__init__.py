@@ -1,4 +1,4 @@
-"""UI 主题管理器 (P3-5 可访问性)
+"""UI 主题管理器 (P3-5 可访问性).
 
 提供高对比度主题切换，改善视觉辅助需求。
 支持 default / high_contrast / dark 三种预设主题。
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class ThemeColors:
-    """主题配色方案。"""
+    """主题配色方案。."""
 
     background: str = "#1e1e2e"
     surface: str = "#282840"
@@ -77,7 +77,7 @@ THEMES: dict[str, ThemeColors] = {
 
 
 class ThemeManager:
-    """主题管理器。
+    """主题管理器。.
 
     管理 Textual CSS 变量式主题切换。
     高对比度模式使用更鲜明的颜色边界、纯黑背景和纯白文本，
@@ -99,7 +99,7 @@ class ThemeManager:
         return THEMES[self._current]
 
     def set_theme(self, name: str) -> bool:
-        """切换主题。返回是否成功。"""
+        """切换主题。返回是否成功。."""
         if name not in THEMES:
             logger.warning("未知主题: %s", name)
             return False
@@ -107,7 +107,7 @@ class ThemeManager:
         return True
 
     def get_css(self) -> str:
-        """生成当前主题的 Textual CSS 变量覆盖。"""
+        """生成当前主题的 Textual CSS 变量覆盖。."""
         c = self.colors
         return f"""
         Screen {{
@@ -126,7 +126,7 @@ class ThemeManager:
         """
 
     def get_hp_color(self, ratio: float) -> str:
-        """根据 HP 比例返回对应颜色。"""
+        """根据 HP 比例返回对应颜色。."""
         c = self.colors
         if ratio > 0.5:
             return c.hp_full
@@ -136,9 +136,9 @@ class ThemeManager:
 
     @staticmethod
     def available_themes() -> list[str]:
-        """返回所有可用主题名。"""
+        """返回所有可用主题名。."""
         return list(THEMES.keys())
 
     def is_high_contrast(self) -> bool:
-        """当前是否为高对比度模式。"""
+        """当前是否为高对比度模式。."""
         return self._current == "high_contrast"

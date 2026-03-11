@@ -1,4 +1,4 @@
-"""装备子系统 (Phase 2.3 — 引擎分解)
+"""装备子系统 (Phase 2.3 — 引擎分解).
 
 从 engine.py 提取的装备相关逻辑:
 - 装备/卸装流程 (含白银狮子失去装备回复)
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class EquipmentSystem:
-    """装备子系统 — 处理装备穿戴/移除和被动装备效果。"""
+    """装备子系统 — 处理装备穿戴/移除和被动装备效果。."""
 
     def __init__(self, ctx: GameContext) -> None:
         self.ctx = ctx
@@ -36,7 +36,7 @@ class EquipmentSystem:
     # ==================== 装备穿戴/移除 ====================
 
     def equip(self, player: Player, card: Card) -> bool:
-        """装备一张装备牌, 替换同槽位旧装备。
+        """装备一张装备牌, 替换同槽位旧装备。.
 
         旧装备自动进入弃牌堆。
         """
@@ -58,6 +58,7 @@ class EquipmentSystem:
 
         if old_equipment:
             ctx.log_event("equip", _t("equipment.replaced", card=old_equipment.name))
+            ctx.notify_cards_lost(player, [old_equipment], source=player, reason="replace_equipment")
             ctx.deck.discard([old_equipment])
 
         # 装备后事件
@@ -70,8 +71,16 @@ class EquipmentSystem:
 
         return True
 
-    def remove(self, player: Player, card: Card) -> None:
-        """移除玩家装备区的指定装备牌并触发脱装效果。
+    def remove(
+        self,
+        player: Player,
+        card: Card,
+        *,
+        source: Player | None = None,
+        to_player: Player | None = None,
+        reason: str = "equipment_removed",
+    ) -> None:
+        """移除玩家装备区的指定装备牌并触发脱装效果。.
 
         白银狮子: 失去此装备时回复 1 点体力。
         """
@@ -82,6 +91,13 @@ class EquipmentSystem:
         for slot in EquipmentSlot:
             if player.equipment.get_card_by_slot(slot) == card:
                 player.equipment.unequip(slot)
+                ctx.notify_cards_lost(
+                    player,
+                    [card],
+                    source=source,
+                    to_player=to_player,
+                    reason=reason,
+                )
                 break
 
         # 白银狮子效果
@@ -100,7 +116,7 @@ class EquipmentSystem:
     # ==================== 护甲伤害修正 ====================
 
     def modify_damage(self, target: Player, damage: int, damage_type: str) -> int:
-        """根据目标护甲修正伤害值。
+        """根据目标护甲修正伤害值。.
 
         - 藤甲: 火焰伤害 +1
         - 白银狮子: 超过 1 的伤害封顶为 1
@@ -146,11 +162,9 @@ class EquipmentSystem:
     # ==================== AOE 免疫 ====================
 
     def is_immune_to_normal_aoe(self, target: Player) -> bool:
-        """判断目标是否因装备免疫普通 AOE (南蛮入侵/万箭齐发)。
+        """判断目标是否因装备免疫普通 AOE (南蛮入侵/万箭齐发)。.
 
         藤甲使南蛮入侵和万箭齐发无效。
         """
         armor = target.equipment.armor
-        if armor and armor.name == CardName.TENGJIA:
-            return True
-        return False
+        return bool(armor and armor.name == CardName.TENGJIA)

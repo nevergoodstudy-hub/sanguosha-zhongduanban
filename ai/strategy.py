@@ -1,4 +1,4 @@
-"""AI 策略协议与共享工具函数
+"""AI 策略协议与共享工具函数.
 
 Phase 4.1: 将 AI 决策逻辑按策略模式拆分，
 各难度策略实现此 Protocol，AIBot 作为薄协调器委托。
@@ -18,18 +18,18 @@ if TYPE_CHECKING:
 
 
 class AIStrategy(Protocol):
-    """AI 策略协议 — 各难度共用接口"""
+    """AI 策略协议 — 各难度共用接口."""
 
     def play_phase(self, player: Player, engine: GameEngine) -> None:
-        """出牌阶段决策"""
+        """出牌阶段决策."""
         ...
 
     def choose_discard(self, player: Player, count: int, engine: GameEngine) -> list[Card]:
-        """选择弃牌"""
+        """选择弃牌."""
         ...
 
     def should_use_qinglong(self, player: Player, target: Player, engine: GameEngine) -> bool:
-        """决定是否使用青龙偃月刀继续攻击"""
+        """决定是否使用青龙偃月刀继续攻击."""
         ...
 
 
@@ -37,7 +37,7 @@ class AIStrategy(Protocol):
 
 
 def is_enemy(player: Player, target: Player, *, engine: GameEngine | None = None) -> bool:
-    """判断目标是否为敌人
+    """判断目标是否为敌人.
 
     Args:
         player: 判断主体
@@ -53,11 +53,9 @@ def is_enemy(player: Player, target: Player, *, engine: GameEngine | None = None
         return target_identity in [Identity.LORD, Identity.LOYALIST]
     elif my_identity == Identity.SPY:
         # BUG-FIX: 之前只计算 player+target 两人，永远为 2，导致间谍始终视所有人为敌
-        if engine is not None:
-            alive_count = len(engine.get_alive_players())
-        else:
-            # 无 engine 时保守估计：假设非最终对决阶段
-            alive_count = 3
+        alive_count = (
+            len(engine.get_alive_players()) if engine is not None else 3
+        )  # 无 engine 时保守估计：假设非最终对决阶段
         if alive_count <= 2:
             return True  # 最后单挑阶段，所有人都是敌人
         # 前期帮主公清反贼，中期帮反贼削弱主公阵营
@@ -67,12 +65,12 @@ def is_enemy(player: Player, target: Player, *, engine: GameEngine | None = None
 
 
 def get_friends(player: Player, engine: GameEngine) -> list[Player]:
-    """获取友方玩家"""
+    """获取友方玩家."""
     return [p for p in engine.get_other_players(player) if not is_enemy(player, p)]
 
 
 def card_priority(card: Card) -> int:
-    """卡牌保留优先级（低值先弃）"""
+    """卡牌保留优先级（低值先弃）."""
     if card.name == CardName.TAO:
         return 100  # 最高优先级保留
     elif card.name == CardName.WUXIE:
@@ -90,7 +88,7 @@ def card_priority(card: Card) -> int:
 
 
 def smart_discard(player: Player, count: int) -> list[Card]:
-    """智能弃牌 — 按优先级保留高价值牌"""
+    """智能弃牌 — 按优先级保留高价值牌."""
     if not player.hand:
         return []
 
@@ -106,7 +104,7 @@ def smart_discard(player: Player, count: int) -> list[Card]:
 
 
 def pick_least_valuable(cards: list, player: Player) -> Card:
-    """从候选牌中选价值最低的牌作为转化素材"""
+    """从候选牌中选价值最低的牌作为转化素材."""
 
     def card_value(card: Card) -> int:
         if card.name == CardName.TAO:
@@ -126,12 +124,11 @@ def pick_least_valuable(cards: list, player: Player) -> Card:
 
 
 def count_useless_cards(player: Player, engine: GameEngine) -> int:
-    """计算无用卡牌数量"""
+    """计算无用卡牌数量."""
     useless = 0
     for card in player.hand:
         if card.name == CardName.SHAN:
             useless += max(0, len(player.get_cards_by_name(CardName.SHAN)) - 2)
-        elif card.name == CardName.SHA:
-            if not player.can_use_sha():
-                useless += 1
+        elif card.name == CardName.SHA and not player.can_use_sha():
+            useless += 1
     return useless

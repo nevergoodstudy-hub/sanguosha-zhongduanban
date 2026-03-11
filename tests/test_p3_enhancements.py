@@ -186,6 +186,7 @@ class TestReplaySystem:
             path = f.name
         recorder.save(path)
 
-        data = json.loads(gzip.open(path, "rt", encoding="utf-8").read())
+        with gzip.open(path, "rt", encoding="utf-8") as f:
+            data = json.loads(f.read())
         assert data["events"] == []
         Path(path).unlink(missing_ok=True)

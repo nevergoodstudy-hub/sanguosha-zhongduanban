@@ -1,4 +1,4 @@
-"""游戏规则界面"""
+"""游戏规则界面."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from textual.widgets import Button, Static
 
 
 class RulesScreen(Screen):
-    """游戏规则界面"""
+    """游戏规则界面."""
 
     BINDINGS = [Binding("escape", "go_back", "返回")]
 
@@ -72,5 +72,5 @@ class RulesScreen(Screen):
             self.app.pop_screen()
 
     def action_go_back(self) -> None:
-        """Esc 键返回"""
+        """Esc 键返回."""
         self.app.pop_screen()

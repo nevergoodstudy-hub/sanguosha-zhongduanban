@@ -1,5 +1,5 @@
 """三国杀游戏核心模块
-包含游戏引擎、玩家、卡牌、武将、技能系统、事件系统和动作系统
+包含游戏引擎、玩家、卡牌、武将、技能系统、事件系统和动作系统.
 
 重构版本 v1.1.0:
 - 新增事件总线系统 (events.py) 实现模块解耦
@@ -68,10 +68,7 @@ __all__ = [
     "ActionExecutor",
 ]
 
-try:
-    from importlib.metadata import version as _get_version
+from versioning import get_project_version
 
-    __version__ = _get_version("sanguosha")
-except Exception:
-    __version__ = "3.0.0"  # fallback, keep in sync with pyproject.toml
+__version__ = get_project_version()
 __author__ = "Sanguosha Dev Team"

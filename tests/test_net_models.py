@@ -64,6 +64,17 @@ class TestRoomJoinData:
         data = RoomJoinData(player_name="关羽", room_id="abc123")
         assert data.room_id == "abc123"
 
+    def test_reconnect_token_allowed(self):
+        data = RoomJoinData(
+            player_name="关羽",
+            room_id="abc123",
+            reconnect=True,
+            last_seq=5,
+            token="signed-token",
+        )
+        assert data.reconnect is True
+        assert data.token == "signed-token"
+
     def test_empty_room_id_rejected(self):
         with pytest.raises(ValidationError):
             RoomJoinData(player_name="关羽", room_id="")
@@ -137,6 +148,23 @@ class TestValidateClientMessage:
         )
         with pytest.raises(ValidationError):
             validate_client_message(raw)
+
+    def test_room_join_reconnect_token_validation(self):
+        raw = json.dumps(
+            {
+                "type": "room_join",
+                "player_id": 1,
+                "data": {
+                    "player_name": "曹操",
+                    "room_id": "room-1",
+                    "reconnect": True,
+                    "last_seq": 3,
+                    "token": "signed-token",
+                },
+            }
+        )
+        msg = validate_client_message(raw)
+        assert msg.type == "room_join"
 
     def test_hero_chosen_validation(self):
         raw = json.dumps(

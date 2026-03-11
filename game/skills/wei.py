@@ -1,4 +1,4 @@
-"""魏国武将技能处理器
+"""魏国武将技能处理器.
 
 包含以下武将技能：
   曹操 - 奸雄(jianxiong)、护驾(hujia)
@@ -33,21 +33,20 @@ if TYPE_CHECKING:
 def handle_jianxiong(
     player: Player, engine: GameEngine, damage_card: Card | None = None, **kwargs
 ) -> bool:
-    """奸雄：受到伤害后，可以获得造成伤害的牌"""
-    if damage_card:
-        if damage_card in engine.deck.discard_pile:
-            engine.deck.discard_pile.remove(damage_card)
-            player.draw_cards([damage_card])
-            engine.log_event(
-                "skill", _t("skill_msg.jianxiong", name=player.name, card=damage_card.display_name)
-            )
-            return True
+    """奸雄：受到伤害后，可以获得造成伤害的牌."""
+    if damage_card and damage_card in engine.deck.discard_pile:
+        engine.deck.discard_pile.remove(damage_card)
+        player.draw_cards([damage_card])
+        engine.log_event(
+            "skill", _t("skill_msg.jianxiong", name=player.name, card=damage_card.display_name)
+        )
+        return True
     return False
 
 
 @skill_handler("hujia")
 def handle_hujia(player: Player, engine: GameEngine, **kwargs) -> bool:
-    """护驾：主公技，让其他魏势力角色代替出闪"""
+    """护驾：主公技，让其他魏势力角色代替出闪."""
     from ..card import CardName
     from ..hero import Kingdom
     from ..player import Identity
@@ -81,7 +80,7 @@ def handle_hujia(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 @skill_handler("fankui")
 def handle_fankui(player: Player, engine: GameEngine, source: Player = None, **kwargs) -> bool:
-    """反馈：受到伤害后，可以获得伤害来源的一张牌"""
+    """反馈：受到伤害后，可以获得伤害来源的一张牌."""
     if source is None or source == player:
         return False
 
@@ -104,7 +103,7 @@ def handle_fankui(player: Player, engine: GameEngine, source: Player = None, **k
 
 @skill_handler("guicai")
 def handle_guicai(player: Player, engine: GameEngine, judge_card: Card = None, **kwargs) -> bool:
-    """鬼才：在判定牌生效前，可以打出一张手牌代替之"""
+    """鬼才：在判定牌生效前，可以打出一张手牌代替之."""
     if not player.hand:
         return False
 
@@ -114,20 +113,14 @@ def handle_guicai(player: Player, engine: GameEngine, judge_card: Card = None, *
         engine.deck.discard([card])
         engine.log_event("skill", _t("skill_msg.guicai", name=player.name, card=card.display_name))
         return True
-
-    # BUG-008 fix: 人类玩家通过 UI 选择手牌替换判定牌
-    ui = engine.ui
-    if ui:
-        try:
-            selected = ui.choose_card_to_play(player)
-            if selected:
-                player.remove_card(selected)
-                engine.deck.discard([selected])
-                engine.log_event(
-                    "skill", _t("skill_msg.guicai", name=player.name, card=selected.display_name)
-                )
-                return True
-        except Exception:
+    request_handler = getattr(engine, "request_handler", None)
+    if request_handler:
+        selected = request_handler.request_skill_card(player, "guicai", list(player.hand))
+        if selected:
+            player.remove_card(selected)
+            engine.deck.discard([selected])
+            engine.log_event("skill", _t("skill_msg.guicai", name=player.name, card=selected.display_name))
+            return True
             pass
 
     return False
@@ -138,7 +131,7 @@ def handle_guicai(player: Player, engine: GameEngine, judge_card: Card = None, *
 
 @skill_handler("ganglie")
 def handle_ganglie(player: Player, engine: GameEngine, source: Player = None, **kwargs) -> bool:
-    """刚烈：受到伤害后，可以进行判定，若结果不为红桃，伤害来源须弃置两张手牌或受到1点伤害"""
+    """刚烈：受到伤害后，可以进行判定，若结果不为红桃，伤害来源须弃置两张手牌或受到1点伤害."""
     if source is None or source == player:
         return False
 
@@ -159,23 +152,16 @@ def handle_ganglie(player: Player, engine: GameEngine, source: Player = None, **
                 engine.deck.discard(cards)
                 engine.log_event("skill", _t("skill_msg.ganglie_discard", name=source.name))
             else:
-                # BUG-007 fix: 人类玩家通过 UI 选择弃两张牌或受到1点伤害
-                ui = engine.ui
-                chose_discard = False
-                if ui:
-                    try:
-                        cards_to_discard = ui.choose_cards_to_discard(source, 2)
-                        if cards_to_discard and len(cards_to_discard) >= 2:
-                            for c in cards_to_discard[:2]:
-                                source.remove_card(c)
-                            engine.deck.discard(cards_to_discard[:2])
-                            engine.log_event(
-                                "skill", _t("skill_msg.ganglie_discard", name=source.name)
-                            )
-                            chose_discard = True
-                    except Exception:
-                        pass
-                if not chose_discard:
+                request_handler = getattr(engine, "request_handler", None)
+                cards_to_discard = (
+                    request_handler.request_discard(source, 0, 2) if request_handler else []
+                )
+                if len(cards_to_discard) >= 2:
+                    for c in cards_to_discard[:2]:
+                        source.remove_card(c)
+                    engine.deck.discard(cards_to_discard[:2])
+                    engine.log_event("skill", _t("skill_msg.ganglie_discard", name=source.name))
+                else:
                     engine.deal_damage(player, source, 1)
         else:
             engine.deal_damage(player, source, 1)
@@ -189,7 +175,7 @@ def handle_ganglie(player: Player, engine: GameEngine, source: Player = None, **
 
 @skill_handler("tuxi")
 def handle_tuxi(player: Player, engine: GameEngine, targets: list = None, **kwargs) -> bool:
-    """突袭：摸牌阶段，可以少摸牌，然后获得等量其他角色各一张手牌"""
+    """突袭：摸牌阶段，可以少摸牌，然后获得等量其他角色各一张手牌."""
     if targets is None:
         targets = []
 
@@ -216,7 +202,7 @@ def handle_duanliang(
     cards: list = None,
     **kwargs,
 ) -> bool:
-    """断粮：出牌阶段，可以将黑色基本牌或装备牌当【兵粮寸断】使用；可以对距离2以内的角色使用"""
+    """断粮：出牌阶段，可以将黑色基本牌或装备牌当【兵粮寸断】使用；可以对距离2以内的角色使用."""
     from ..card import Card, CardName, CardSubtype, CardType
 
     if target is None and targets:
@@ -288,7 +274,7 @@ def handle_duanliang(
 
 @skill_handler("jushou")
 def handle_jushou(player: Player, engine: GameEngine, **kwargs) -> bool:
-    """据守：结束阶段摸三张牌并翻面"""
+    """据守：结束阶段摸三张牌并翻面."""
     cards = engine.deck.draw(3)
     player.draw_cards(cards)
     player.toggle_flip()
@@ -311,7 +297,7 @@ def handle_shensu(
 ) -> bool:
     """神速：
     选项1: 跳过判定阶段和摸牌阶段，视为对一名角色使用一张【杀】
-    选项2: 跳过出牌阶段并弃置一张装备牌，视为对一名角色使用一张【杀】
+    选项2: 跳过出牌阶段并弃置一张装备牌，视为对一名角色使用一张【杀】.
     """
     if target is None and targets:
         target = targets[0]

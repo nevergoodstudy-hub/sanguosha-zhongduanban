@@ -15,8 +15,8 @@
   <img src="https://img.shields.io/badge/TUI-Textual-blueviolet" alt="Textual">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-green" alt="Platform">
   <img src="https://img.shields.io/badge/code%20style-ruff-261230.svg" alt="Code style: ruff">
-  <img src="https://img.shields.io/badge/tests-1503%20passed-brightgreen" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-77.91%25-yellowgreen" alt="Coverage">
+  <img src="https://img.shields.io/badge/tests-targeted%20regressions%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/identity%20sync-5%20heroes-blue" alt="Identity Sync">
 </p>
 
 ---
@@ -24,7 +24,7 @@
 ## 🎮 游戏概览
 
 全鼠标点击交互的终端三国杀，基于 [Textual](https://textual.textualize.io/) TUI 框架构建。
-支持 2-8 人身份模式、20+ 武将、完整卡牌系统和三级 AI 对战。
+支持 2-8 人身份模式、32 名武将、完整卡牌系统、三级 AI 对战，以及 headless / 房间模式共用的技能生命周期。
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -62,16 +62,22 @@
 - **弃牌阶段** — 人类玩家弹窗选择弃牌（带倒计时兜底）
 - **军争机制** — 酒、火杀/雷杀、铁索连环传导、藤甲
 
-### 🧠 武将技能（已完整实现）
-- **国色** — 方块牌当乐不思蜀 | **断粮** — 黑色牌当兵粮寸断（距离≤2）
-- **奇袭** — 黑色牌当过河拆桥 | **神速** — 跳过阶段视为使用杀
-- **苦肉** — 失去体力+濒死检查+摸牌 | **借刀杀人** — 令他人出杀或交武器
+### 🧠 武将技能（含 2026-03 同步批次）
+- **新增同步武将** — 谋袁术(矜名/枭噬/厌粱)、胡金定(轻缘/重身)、界刘表(自守/宗室)、界法正(眩惑/恩怨)、向宠(固营/睦阵)
+- **既有核心技能** — 国色、断粮、奇袭、神速、苦肉、借刀杀人
 - 以及：武圣、咆哮、仁德、制衡、反间、观星、空城、无双、鬼才、刚烈、突袭、流离、青囊、急救、离间、闭月、烈弓、狂骨、据守、克己、结姻、枭姬……
 
 ### 🤖 AI 系统
 - 🟢 **简单** — 随机出牌
-- 🟡 **普通** — 基础策略 + 转化技能（国色/断粮/奇袭/神速/苦肉）+ 借刀杀人
+- 🟡 **普通** — 基础策略 + 转化技能（国色/断粮/奇袭/神速/苦肉）+ 借刀杀人 + 眩惑 / 睦阵 / 厌粱
 - 🔴 **困难** — 嘲讽值系统 + 局势评估 + 综合攻击价值计算 + 身份推断
+- **自动对战验证** — headless / 房间模式会正确初始化 SkillSystem，并能稳定跑完含新增武将的身份局
+
+### 🆕 2026-03 身份模式同步批次
+- 新增 5 名同步武将：谋袁术、胡金定、界刘表、界法正、向宠
+- 新增技能事件与轮次状态支持：牌张获得/失去、回血、回合开始与回合重置语义
+- headless / 房间模式与 TUI 共用 `GAME_START` / `ROUND_START` 生命周期
+- 普通 / 困难 AI 已能在自动对战中使用 `眩惑`、`睦阵`、`厌粱`
 
 ## 📥 安装与运行
 
@@ -96,9 +102,12 @@ python main.py
 
 ```bash
 pip install pyinstaller
-python build.py            # 生成 dist/sanguosha.exe (单文件)
-python build.py --onedir   # 目录模式
+python build.py                               # 生成 dist/sanguosha.exe (单文件)
+python build.py --onedir                      # 目录模式
+python build_msix.py --allow-placeholder-assets  # Windows 本地验证 MSIX（开发占位资源）
 ```
+
+GitHub Release 标签构建会产出 Windows / Linux / macOS 的 PyInstaller 制品；`build_msix.py` 主要用于本地 Windows 打包验证。
 
 ### 其他模式
 
@@ -152,15 +161,15 @@ python main.py --lang en_US          # 英文界面
 - **防具**：八卦阵、仁王盾、藤甲🌿、白银狮子
 - **坐骑**：赤兔(-1)、大宛(-1)、紫骍(-1)、的卢(+1)、爪黄飞电(+1)、绝影(+1)
 
-## 👥 武将列表（20+）
+## 👥 武将列表（32）
 
-**蜀**：刘备(仁德/激将)、关羽(武圣)、张飞(咆哮)、诸葛亮(观星/空城)、马超(马术/铁骑)、黄月英(集智/奇才)、魏延(狂骨)
+**蜀（13）**：刘备(仁德/激将)、界关羽(武圣/义绝)、张飞(咆哮)、诸葛亮(观星/空城)、界赵云(龙胆/涯角)、马超(马术/铁骑)、黄月英(集智/奇才)、黄忠(烈弓)、魏延(狂骨)、徐庶(推心/祤福)、胡金定(轻缘/重身)、界法正(眩惑/恩怨)、向宠(固营/睦阵)
 
-**魏**：曹操(奸雄/护驾)、司马懿(反馈/鬼才)、夏侯惇(刚烈)、张辽(突袭)、徐晃(断粮)、曹仁(据守)
+**魏（7）**：曹操(奸雄/护驾)、司马懿(反馈/鬼才)、夏侯惇(刚烈)、界张辽(突袭)、徐晃(断粮)、曹仁(据守)、夏侯渊(神速)
 
-**吴**：孙权(制衡/救援)、周瑜(英姿/反间)、大乔(国色/流离)、吕蒙(克己)、甘宁(奇袭)、黄盖(苦肉)、孙尚香(结姻/枭姬)
+**吴（7）**：孙权(制衡/救援)、周瑜(英姿/反间)、大乔(国色/流离)、甘宁(奇袭)、吕蒙(克己)、黄盖(苦肉)、孙尚香(结姻/枭姬)
 
-**群**：吕布(无双)、华佗(青囊/急救)、貂蝉(离间/闭月)
+**群（5）**：吕布(无双)、华佗(青囊/急救)、貂蝉(离间/闭月)、谋袁术(矜名/枭噬/厌粱)、界刘表(自守/宗室)
 
 ## 📁 项目结构
 
@@ -226,10 +235,11 @@ sanguosha/
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest tests/ -v              # 全量测试 (1503 用例)
-python -m pytest --cov=game --cov=ai    # 含覆盖率报告
-python -m ruff check .                  # 静态分析
-python -m mypy game ai net              # 类型检查
+python -m pytest tests/ -v                                                                 # 全量测试
+python -m pytest tests/test_identity_sync_state.py tests/test_identity_sync_heroes.py tests/test_identity_sync_ai.py tests/test_integration.py -q
+python -m pytest --cov=game --cov=ai                                                       # 含覆盖率报告
+python -m ruff check .                                                                     # 静态分析
+python -m mypy game ai net                                                                 # 类型检查
 ```
 
 ### 扩展武将
@@ -245,6 +255,15 @@ python -m mypy game ai net              # 类型检查
 3. `ui/textual_ui/widgets/card_widget.py` — 添加 `CARD_EFFECT_DESC` tooltip
 
 ## 📝 版本历史
+
+### v4.1.0 (2026-03-11) — 身份模式内容同步 & AI/Headless 补强
+
+**身份模式同步：**
+- 新增 5 名 OL 同步武将：谋袁术、胡金定、界刘表、界法正、向宠
+- 补齐对应技能与事件语义：`矜名/枭噬/厌粱`、`轻缘/重身`、`自守/宗室`、`眩惑/恩怨`、`固营/睦阵`
+- headless / 房间模式启动路径统一初始化 `SkillSystem`，并补齐 `GAME_START` / `ROUND_START` 生命周期
+- 普通 / 困难 AI 支持 `眩惑`、`睦阵`、`厌粱` 自动使用
+- 新增 `tests/test_identity_sync_heroes.py` 与 `tests/test_identity_sync_ai.py`，相关状态/集成回归通过
 
 ### v4.0.0 (2026-02-21) — 架构升级 & 全面强化
 

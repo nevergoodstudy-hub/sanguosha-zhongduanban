@@ -1,4 +1,4 @@
-"""存档与读档系统 (M4-T06)
+"""存档与读档系统 (M4-T06).
 
 功能:
 - 序列化完整游戏状态为 JSON
@@ -36,7 +36,7 @@ _MIGRATIONS: dict[int, tuple[int, Callable[[dict[str, Any]], dict[str, Any]]]] =
 
 
 def register_migration(from_schema: int, to_schema: int):
-    """注册存档迁移函数的装饰器。
+    """注册存档迁移函数的装饰器。.
 
     Args:
         from_schema: 源 schema 版本
@@ -52,7 +52,7 @@ def register_migration(from_schema: int, to_schema: int):
 
 @register_migration(from_schema=1, to_schema=2)
 def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
-    """v1 → v2: 为玩家补充 judge_area / is_chained / is_flipped 字段。"""
+    """v1 → v2: 为玩家补充 judge_area / is_chained / is_flipped 字段。."""
     for player in data.get("players", []):
         player.setdefault("judge_area", [])
         player.setdefault("is_chained", False)
@@ -62,7 +62,7 @@ def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def apply_migrations(data: dict[str, Any]) -> dict[str, Any]:
-    """按链式顺序将存档数据迁移到当前 schema 版本。
+    """按链式顺序将存档数据迁移到当前 schema 版本。.
 
     无 schema_version 字段的旧存档视为 schema 1。
 
@@ -91,7 +91,7 @@ def apply_migrations(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def serialize_card(card: Card) -> dict[str, Any]:
-    """序列化单张卡牌"""
+    """序列化单张卡牌."""
     return {
         "name": card.name
         if isinstance(card.name, str)
@@ -107,7 +107,7 @@ def serialize_card(card: Card) -> dict[str, Any]:
 
 
 def serialize_player(player: Player) -> dict[str, Any]:
-    """序列化玩家状态"""
+    """序列化玩家状态."""
     data = {
         "id": player.id,
         "name": player.name,
@@ -142,7 +142,7 @@ def serialize_player(player: Player) -> dict[str, Any]:
 
 
 def serialize_engine(engine: GameEngine) -> dict[str, Any]:
-    """序列化完整游戏状态
+    """序列化完整游戏状态.
 
     Returns:
         可 JSON 化的 dict，包含所有重建游戏所需信息
@@ -176,7 +176,7 @@ def serialize_engine(engine: GameEngine) -> dict[str, Any]:
 
 
 def save_game(engine: GameEngine, filepath: str | None = None) -> str:
-    """保存游戏到文件
+    """保存游戏到文件.
 
     Args:
         engine: 游戏引擎
@@ -201,7 +201,7 @@ def save_game(engine: GameEngine, filepath: str | None = None) -> str:
 
 
 def load_game(filepath: str) -> dict[str, Any]:
-    """从文件加载存档数据
+    """从文件加载存档数据.
 
     Args:
         filepath: 存档文件路径
@@ -224,7 +224,7 @@ def load_game(filepath: str) -> dict[str, Any]:
 
 
 def list_saves(save_dir: str = SAVE_DIR) -> list[dict[str, Any]]:
-    """列出所有存档文件
+    """列出所有存档文件.
 
     Returns:
         存档信息列表 (路径、时间、玩家数、回合数)
@@ -255,7 +255,7 @@ def list_saves(save_dir: str = SAVE_DIR) -> list[dict[str, Any]]:
 
 
 def delete_save(filepath: str) -> bool:
-    """删除存档"""
+    """删除存档."""
     try:
         Path(filepath).unlink()
         return True
@@ -267,7 +267,7 @@ def delete_save(filepath: str) -> bool:
 
 
 class EnhancedReplay:
-    """增强回放器 (M4-T06)
+    """增强回放器 (M4-T06).
 
     支持:
     - 单步前进
@@ -284,20 +284,20 @@ class EnhancedReplay:
 
     @property
     def progress(self) -> float:
-        """当前进度 (0.0 ~ 1.0)"""
+        """当前进度 (0.0 ~ 1.0)."""
         if self.total_steps == 0:
             return 1.0
         return self.current_step / self.total_steps
 
     @property
     def current_action(self) -> dict[str, Any] | None:
-        """当前步骤的动作"""
+        """当前步骤的动作."""
         if 0 <= self.current_step < self.total_steps:
             return self.action_log[self.current_step]
         return None
 
     def step_forward(self) -> dict[str, Any] | None:
-        """前进一步"""
+        """前进一步."""
         if self.current_step < self.total_steps:
             action = self.action_log[self.current_step]
             self.current_step += 1
@@ -305,34 +305,34 @@ class EnhancedReplay:
         return None
 
     def step_back(self) -> bool:
-        """后退一步"""
+        """后退一步."""
         if self.current_step > 0:
             self.current_step -= 1
             return True
         return False
 
     def jump_to(self, step: int) -> bool:
-        """跳转到指定步骤"""
+        """跳转到指定步骤."""
         if 0 <= step <= self.total_steps:
             self.current_step = step
             return True
         return False
 
     def reset(self) -> None:
-        """重置到开头"""
+        """重置到开头."""
         self.current_step = 0
 
     def set_speed(self, speed: float) -> None:
-        """设置播放速度 (0.25x ~ 4.0x)"""
+        """设置播放速度 (0.25x ~ 4.0x)."""
         self.speed = max(0.25, min(4.0, speed))
 
     @property
     def delay(self) -> float:
-        """当前步骤间的延迟 (秒)"""
+        """当前步骤间的延迟 (秒)."""
         return 0.5 / self.speed
 
     def get_summary(self) -> dict[str, Any]:
-        """获取回放摘要"""
+        """获取回放摘要."""
         return {
             "total_steps": self.total_steps,
             "current_step": self.current_step,

@@ -1,4 +1,4 @@
-"""TUI Screens 模块"""
+"""TUI Screens 模块."""
 
 from .game_over import GameOverScreen
 from .game_play import GamePlayScreen

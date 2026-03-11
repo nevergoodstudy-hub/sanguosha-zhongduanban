@@ -5,6 +5,39 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [4.1.0] - 2026-03-11
+
+### Added
+- 新增 5 名身份模式同步武将：谋袁术、胡金定、界刘表、界法正、向宠
+- 新增对应技能实现：`jinming` / `xiaoshi` / `yanliang` / `qingyuan` / `zhongshen` / `zishou` / `zongshi` / `xuanhuo` / `enyuan` / `guying` / `muzhen`
+- 新增回归测试：`tests/test_identity_sync_state.py`、`tests/test_identity_sync_heroes.py`、`tests/test_identity_sync_ai.py`
+
+### Changed
+- headless 与房间模式启动路径统一初始化 `SkillSystem`，并补齐 `GAME_START` / `ROUND_START` 生命周期
+- 普通 / 困难 AI 现在会在合适时机使用 `眩惑`、`睦阵`、`厌粱`
+- README、版本元数据与发布说明更新为 `4.1.0`，同步新的 32 将 roster 与打包说明
+
+### Fixed
+- `Player.heal()` 仅在实际回复时发布 `HP_RECOVERED`
+- `SkillSystem._on_hp_recovered()` 错误引用修复，并恢复 `ganglie` 到伤害流程
+- headless 对战缺失技能初始化、起手摸牌语义事件和回合起始钩子的偏差
+
+## [4.0.0] - 2026-02-21
+
+### Changed
+- 异步引擎、阶段状态机、GameContext 协议、层次化异常体系与主题系统完成整合
+- 技能系统保持 DSL-first + Python fallback，并补齐回放系统、战绩历史与插件系统
+
+### Added
+- WebSocket TLS、会话重连、速率限制、配置校验与无障碍支持
+- i18n 审计、统一日志规范与 `ARCHITECTURE.md` 架构文档
+
+## [3.3.1] - 2026-02-10
+
+### Added
+- `build.py` 自动化 PyInstaller 构建脚本
+- Windows 可执行文件发布产物与 GitHub Release 打包支持
+
 ## [3.3.0] - 2026-02-09
 
 ### Fixed

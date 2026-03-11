@@ -1,4 +1,4 @@
-"""响应类 ModalScreen 弹窗 (M-C C1/C2/C3)
+"""响应类 ModalScreen 弹窗 (M-C C1/C2/C3).
 
 ResponseModalBase — 半透明背景 + 倒计时 + dismiss 模式基类
 ShanResponseModal — "是否出闪"
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 class ResponseModalBase(AnimatedModalScreen[bool]):
-    """响应类弹窗基类
+    """响应类弹窗基类.
 
     半透明背景覆盖，居中弹窗框，可选倒计时自动拒绝。
     子类只需定义 title_text / body_text / confirm_label / reject_label。
@@ -133,7 +133,7 @@ class ResponseModalBase(AnimatedModalScreen[bool]):
             self._countdown_timer = self.set_interval(1.0, self._tick)
 
     def _tick(self) -> None:
-        """倒计时每秒 tick"""
+        """倒计时每秒 tick."""
         self._remaining -= 1
         try:
             cd_widget = self.query_one("#modal-countdown", Static)
@@ -155,7 +155,7 @@ class ResponseModalBase(AnimatedModalScreen[bool]):
 
 
 class ShanResponseModal(ResponseModalBase):
-    """闪响应弹窗: 你被【杀】攻击，是否出【闪】？"""
+    """闪响应弹窗: 你被【杀】攻击，是否出【闪】？."""
 
     title_text = "⚔ 你被攻击了！"
     body_text = "是否使用【闪】抵消？"
@@ -165,7 +165,7 @@ class ShanResponseModal(ResponseModalBase):
 
 
 class ShaResponseModal(ResponseModalBase):
-    """杀响应弹窗: 需要出【杀】（决斗/南蛮入侵/万箭齐发）"""
+    """杀响应弹窗: 需要出【杀】（决斗/南蛮入侵/万箭齐发）."""
 
     title_text = "⚡ 需要出杀！"
     body_text = "是否使用【杀】响应？"
@@ -175,7 +175,7 @@ class ShaResponseModal(ResponseModalBase):
 
 
 class TaoResponseModal(ResponseModalBase):
-    """桃响应弹窗: 濒死求桃"""
+    """桃响应弹窗: 濒死求桃."""
 
     title_text = "💀 濒死救援！"
     confirm_label = "🍑 使用桃"

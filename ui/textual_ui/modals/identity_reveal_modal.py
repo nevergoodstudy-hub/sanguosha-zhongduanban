@@ -1,4 +1,4 @@
-"""IdentityRevealModal — 身份揭示模态窗口
+"""IdentityRevealModal — 身份揭示模态窗口.
 
 游戏开始时弹出，向人类玩家展示其被分配的身份和胜利条件。
 仅当人类不是主公时显示（主公身份本就公开）。
@@ -29,7 +29,7 @@ _IDENTITY_COLORS = {
 
 
 class IdentityRevealModal(ModalScreen[bool]):
-    """身份揭示模态窗口"""
+    """身份揭示模态窗口."""
 
     CSS = """
     IdentityRevealModal {

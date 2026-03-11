@@ -1,4 +1,4 @@
-"""Tests for game.actions module — action classes and enums."""
+﻿"""Tests for game.actions module — action classes and enums."""
 
 from unittest.mock import MagicMock
 
@@ -48,7 +48,7 @@ class TestPlayCardAction:
 
     def test_validate_no_player(self):
         engine = self._make_engine(player=None)
-        action = PlayCardAction(player_id=1, card_id=99)
+        action = PlayCardAction(player_id=1, card_id="missing_card")
         ok, msg = action.validate(engine)
         assert ok is False
         assert "不存在" in msg
@@ -57,7 +57,7 @@ class TestPlayCardAction:
         player = MagicMock()
         player.hand = []
         engine = self._make_engine(player=player, current_player_id=2)
-        action = PlayCardAction(player_id=1, card_id=99)
+        action = PlayCardAction(player_id=1, card_id="sha_99")
         ok, msg = action.validate(engine)
         assert ok is False
         assert "回合" in msg
@@ -66,34 +66,34 @@ class TestPlayCardAction:
         player = MagicMock()
         player.hand = []
         engine = self._make_engine(player=player, current_player_id=1)
-        action = PlayCardAction(player_id=1, card_id=99)
+        action = PlayCardAction(player_id=1, card_id="sha_99")
         ok, msg = action.validate(engine)
         assert ok is False
         assert "卡牌" in msg
 
     def test_validate_ok(self):
         card = MagicMock()
-        card.id = 42
+        card.id = "sha_42"
         player = MagicMock()
         player.hand = [card]
         engine = self._make_engine(player=player, current_player_id=1)
-        action = PlayCardAction(player_id=1, card_id=42)
+        action = PlayCardAction(player_id=1, card_id="sha_42")
         ok, msg = action.validate(engine)
         assert ok is True
 
     def test_execute_invalid(self):
         engine = self._make_engine(player=None)
-        action = PlayCardAction(player_id=1, card_id=99)
+        action = PlayCardAction(player_id=1, card_id="missing_card")
         assert action.execute(engine) is False
 
     def test_execute_ok(self):
         card = MagicMock()
-        card.id = 42
+        card.id = "sha_42"
         player = MagicMock()
         player.hand = [card]
         engine = self._make_engine(player=player, current_player_id=1)
         engine.use_card.return_value = True
-        action = PlayCardAction(player_id=1, card_id=42)
+        action = PlayCardAction(player_id=1, card_id="sha_42")
         assert action.execute(engine) is True
         engine.use_card.assert_called_once()
 
@@ -147,14 +147,14 @@ class TestUseSkillAction:
 
     def test_execute_ok(self):
         card = MagicMock()
-        card.id = 10
+        card.id = "sha_10"
         player = MagicMock()
         player.hand = [card]
         engine = MagicMock()
         engine.get_player_by_id.return_value = player
         engine.skill_system.can_use_skill.return_value = True
         engine.skill_system.use_skill.return_value = True
-        action = UseSkillAction(player_id=1, skill_id="wusheng", card_ids=[10])
+        action = UseSkillAction(player_id=1, skill_id="wusheng", card_ids=["sha_10"])
         assert action.execute(engine) is True
 
     def test_action_type(self):
@@ -166,7 +166,7 @@ class TestDiscardAction:
     def test_validate_no_player(self):
         engine = MagicMock()
         engine.get_player_by_id.return_value = None
-        action = DiscardAction(player_id=1, card_ids=[1])
+        action = DiscardAction(player_id=1, card_ids=["sha_1"])
         ok, msg = action.validate(engine)
         assert ok is False
 
@@ -181,24 +181,24 @@ class TestDiscardAction:
     def test_validate_ok(self):
         engine = MagicMock()
         engine.get_player_by_id.return_value = MagicMock()
-        action = DiscardAction(player_id=1, card_ids=[1, 2])
+        action = DiscardAction(player_id=1, card_ids=["sha_1", "sha_2"])
         ok, msg = action.validate(engine)
         assert ok is True
 
     def test_execute_invalid(self):
         engine = MagicMock()
         engine.get_player_by_id.return_value = None
-        action = DiscardAction(player_id=1, card_ids=[1])
+        action = DiscardAction(player_id=1, card_ids=["sha_1"])
         assert action.execute(engine) is False
 
     def test_execute_ok(self):
         card = MagicMock()
-        card.id = 5
+        card.id = "sha_5"
         player = MagicMock()
         player.hand = [card]
         engine = MagicMock()
         engine.get_player_by_id.return_value = player
-        action = DiscardAction(player_id=1, card_ids=[5])
+        action = DiscardAction(player_id=1, card_ids=["sha_5"])
         result = action.execute(engine)
         assert result is True
         engine.discard_cards.assert_called_once()
@@ -208,7 +208,7 @@ class TestDiscardAction:
         player.hand = []
         engine = MagicMock()
         engine.get_player_by_id.return_value = player
-        action = DiscardAction(player_id=1, card_ids=[99])
+        action = DiscardAction(player_id=1, card_ids=["sha_99"])
         result = action.execute(engine)
         assert result is False
 

@@ -1,4 +1,4 @@
-"""AnimatedModalScreen — 带淡入动画的 ModalScreen 基类 (P1-2)
+"""AnimatedModalScreen — 带淡入动画的 ModalScreen 基类 (P1-2).
 
 所有游戏弹窗应继承此基类，以获得：
 - 推入时 opacity 0%→100% 的淡入效果 (0.3s, out_cubic)
@@ -19,7 +19,7 @@ T = TypeVar("T")
 
 
 class AnimatedModalScreen(ModalScreen[T]):
-    """带淡入效果的 ModalScreen 基类"""
+    """带淡入效果的 ModalScreen 基类."""
 
     # 子类可覆盖
     FADE_DURATION: float = 0.3
@@ -32,7 +32,7 @@ class AnimatedModalScreen(ModalScreen[T]):
     """
 
     def on_mount(self) -> None:
-        """推入屏幕时执行淡入动画"""
+        """推入屏幕时执行淡入动画."""
         self.styles.animate(
             "opacity",
             value=1.0,

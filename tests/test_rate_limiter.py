@@ -1,7 +1,5 @@
 """Tests for net.rate_limiter module."""
 
-import time
-from unittest.mock import patch
 
 from net.rate_limiter import ConnectionRateLimiter, TokenBucket
 
