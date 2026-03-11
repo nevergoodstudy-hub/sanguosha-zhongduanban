@@ -20,7 +20,7 @@
 - `SplashScreen.png`（620x300）
 
 > 正式发布不要使用占位图标。
-> 构建脚本现在只会在你显式传入 `--allow-placeholder-assets` 时，才在 `msix_output/Assets` 中生成开发占位图标，避免把占位资源写回仓库。
+> 构建脚本现在只会在你显式传入 `--allow-placeholder-assets` 时，才在 `msix_output/Assets` 中生成或复用开发占位图标；如果 `Assets/` 目录里仍然是占位 PNG，默认构建也会直接拒绝，避免把占位资源误当正式资源打进发布包。
 
 ## 构建步骤
 

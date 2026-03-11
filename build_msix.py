@@ -90,6 +90,21 @@ def get_missing_assets(assets_dir: Path = ASSETS_DIR) -> list[str]:
     return [name for name in REQUIRED_ASSET_FILES if not (assets_dir / name).exists()]
 
 
+def is_placeholder_asset(asset_path: Path) -> bool:
+    """检测单个资源文件是否仍为开发占位图标."""
+    if not asset_path.exists() or not asset_path.is_file():
+        return False
+    try:
+        return asset_path.read_bytes() == PLACEHOLDER_PNG
+    except OSError:
+        return False
+
+
+def get_placeholder_assets(assets_dir: Path = ASSETS_DIR) -> list[str]:
+    """返回仍为开发占位图标的资源文件名列表."""
+    return [name for name in REQUIRED_ASSET_FILES if is_placeholder_asset(assets_dir / name)]
+
+
 def create_assets(assets_dir: Path = ASSETS_DIR) -> None:
     """创建开发占位资源文件."""
     assets_dir.mkdir(parents=True, exist_ok=True)
@@ -126,20 +141,36 @@ def prepare_msix_assets(
     """准备 MSIX 输出目录中的资源文件."""
     dest_dir.mkdir(parents=True, exist_ok=True)
     missing_source_assets = get_missing_assets(source_dir)
-    if not missing_source_assets:
+    placeholder_source_assets = get_placeholder_assets(source_dir)
+    if not missing_source_assets and not placeholder_source_assets:
         for name in REQUIRED_ASSET_FILES:
             shutil.copy2(source_dir / name, dest_dir / name)
         return True
 
     if not allow_placeholder_assets:
-        print("错误: 缺少以下 MSIX 资源文件:")
-        for name in missing_source_assets:
-            print(f"  - {name}")
+        if missing_source_assets:
+            print("错误: 缺少以下 MSIX 资源文件:")
+            for name in missing_source_assets:
+                print(f"  - {name}")
+        if placeholder_source_assets:
+            print("错误: 以下 MSIX 资源文件仍是开发占位图标:")
+            for name in placeholder_source_assets:
+                print(f"  - {name}")
         print("请在 Assets 目录提供真实资源文件，或仅在开发验证时显式传入 --allow-placeholder-assets。")
         return False
+    print("警告: Assets 目录包含缺失或占位资源，正在输出目录中准备开发占位图标。")
+    for name in REQUIRED_ASSET_FILES:
+        src = source_dir / name
+        dst = dest_dir / name
+        if src.exists():
+            shutil.copy2(src, dst)
+            if name in placeholder_source_assets:
+                print(f"  注意: 复用开发占位图标 {name}，请勿用于正式发布")
+            continue
+        print(f"  注意: 缺少 {name}，正在输出目录中生成开发占位图标")
+        dst.write_bytes(PLACEHOLDER_PNG)
 
-    print("警告: Assets 目录不完整，正在输出目录中生成开发占位图标。")
-    return ensure_assets(assets_dir=dest_dir, allow_placeholder_assets=True)
+    return get_missing_assets(dest_dir) == []
 
 
 def resolve_cert_password(
