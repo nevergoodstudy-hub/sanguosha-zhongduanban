@@ -80,6 +80,11 @@ from .player_manager import PlayerManager  # noqa: E402
 
 # M1-T01: 导入 TurnManager（GamePhase 已在上方定义，不会循环导入）
 from .turn_manager import TurnManager  # noqa: E402
+from .engine_event_logging import (
+    log_event as _engine_log_event,
+    notify_cards_lost as _engine_notify_cards_lost,
+    notify_cards_obtained as _engine_notify_cards_obtained,
+)
 
 
 @dataclass(slots=True)
@@ -118,6 +123,8 @@ class GameEngine:
 
         # 事件总线（核心解耦组件）
         self.event_bus: EventBus = EventBus()
+        # 日志事件语义映射（供外部辅助模块复用）
+        self._log_category_map = _LOG_CATEGORY_MAP
 
         # 核心组件
         self.deck: Deck = Deck(str(base_path / "cards.json"))
@@ -264,6 +271,10 @@ class GameEngine:
             # 成功执行的动作记录到日志
             self.action_log.append(
                 {
+                    "log_schema_version": "1.1",
+                    "action_id": action.action_id,
+                    "correlation_id": action.correlation_id,
+                    "source_channel": action.source_channel,
                     "action_type": action.action_type.name,
                     "player_id": action.player_id,
                     "timestamp": action.timestamp,
@@ -277,7 +288,12 @@ class GameEngine:
         """序列化动作数据（用于回放）."""
         from .actions import DiscardAction, PlayCardAction, UseSkillAction
 
-        data = {"type": action.action_type.name}
+        data = {
+            "type": action.action_type.name,
+            "action_id": action.action_id,
+            "source_channel": action.source_channel,
+            "correlation_id": action.correlation_id,
+        }
 
         if isinstance(action, PlayCardAction):
             data["card_id"] = action.card_id
@@ -286,6 +302,7 @@ class GameEngine:
             data["skill_id"] = action.skill_id
             data["target_ids"] = action.target_ids
             data["card_ids"] = action.card_ids
+            data["extra_payload"] = action.extra_payload
         elif isinstance(action, DiscardAction):
             data["card_ids"] = action.card_ids
 
@@ -300,60 +317,16 @@ class GameEngine:
         card: Card | None = None,
         **extra_data,
     ) -> None:
-        """记录游戏事件并通过事件总线发布.
-
-        Args:
-            event_type: 事件类型（字符串，兼容旧代码）
-            message: 事件消息
-            source: 事件来源玩家
-            target: 事件目标玩家
-            card: 相关卡牌
-            **extra_data: 额外数据
-        """
-        # 同步写入 Python 日志（便于排查运行问题）
-        try:
-            level = logging.INFO
-            et = (event_type or "").lower()
-            if et in {"error", "exception"}:
-                level = logging.ERROR
-            elif et in {"warn", "warning"}:
-                level = logging.WARNING
-
-            src_name = source.name if source else None
-            tgt_name = target.name if target else None
-            card_name = card.display_name if card else None
-            logger.log(
-                level,
-                "[%s] %s | src=%s tgt=%s card=%s",
-                event_type,
-                message,
-                src_name,
-                tgt_name,
-                card_name,
-            )
-        except Exception:
-            # 日志系统不应影响游戏流程
-            pass
-
-        # M1-T04: 发布语义化事件（替代统一的 LOG_MESSAGE）
-        semantic_type = _LOG_CATEGORY_MAP.get(event_type, EventType.LOG_MESSAGE)
-        self.event_bus.emit(
-            semantic_type,
-            message=message,
-            log_type=event_type,
+        """记录游戏事件并通过事件总线发布."""
+        _engine_log_event(
+            self,
+            event_type,
+            message,
             source=source,
             target=target,
             card=card,
             **extra_data,
         )
-
-        # 同时发布 LOG_MESSAGE 供 UI 订阅者消费
-        if semantic_type != EventType.LOG_MESSAGE:
-            self.event_bus.emit(
-                EventType.LOG_MESSAGE,
-                message=message,
-                log_type=event_type,
-            )
 
     def notify_cards_obtained(
         self,
@@ -365,15 +338,12 @@ class GameEngine:
         reason: str = "",
     ) -> None:
         """发布获得牌语义事件."""
-        if not cards:
-            return
-        self.event_bus.emit(
-            EventType.CARD_OBTAINED,
-            player=player,
-            target=player,
+        _engine_notify_cards_obtained(
+            self,
+            player,
+            cards,
             source=source,
             from_player=from_player,
-            cards=list(cards),
             reason=reason,
         )
 
@@ -387,15 +357,12 @@ class GameEngine:
         reason: str = "",
     ) -> None:
         """发布失去牌语义事件."""
-        if not cards:
-            return
-        self.event_bus.emit(
-            EventType.CARD_LOST,
-            player=player,
-            target=player,
+        _engine_notify_cards_lost(
+            self,
+            player,
+            cards,
             source=source,
             to_player=to_player,
-            cards=list(cards),
             reason=reason,
         )
 
@@ -1404,9 +1371,16 @@ class GameEngine:
         if not hasattr(self, "action_log"):
             self.action_log = []
 
+        # 汇总来源统计
+        source_channel_stats: dict[str, int] = {}
+        for item in self.action_log:
+            source = item.get("source_channel", "unknown")
+            source_channel_stats[source] = source_channel_stats.get(source, 0) + 1
+
         # 构建导出数据
         export_data = {
-            "version": "1.0",
+            "version": "1.1",
+            "action_log_schema_version": "1.1",
             "exported_at": datetime.now().isoformat(),
             "game_seed": getattr(self, "game_seed", None),
             "player_count": len(self.players),
@@ -1421,6 +1395,8 @@ class GameEngine:
             ],
             "winner": self.winner_identity.value if self.winner_identity else None,
             "rounds": self.round_count,
+            "action_count": len(self.action_log),
+            "source_channel_stats": source_channel_stats,
             "actions": self.action_log,
         }
 

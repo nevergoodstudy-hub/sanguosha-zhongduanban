@@ -17,6 +17,12 @@ from textual.screen import Screen
 from textual.widgets import Button, RichLog, Static
 
 from i18n import t as _t
+from ui.textual_ui.screens.game_play_helpers import (
+    countdown_color,
+    parse_card_play_message,
+    parse_damage_message,
+    parse_skill_message,
+)
 
 if TYPE_CHECKING:
     from game.engine import GameEngine
@@ -480,10 +486,44 @@ class GamePlayScreen(Screen):
         )
 
         if cards_to_discard and len(cards_to_discard) == count:
-            self.engine.discard_cards(player, cards_to_discard)
+            self._execute_discard_action(player, cards_to_discard)
         elif player.need_discard > 0:
-            auto_discard = player.hand[-player.need_discard :]
-            self.engine.discard_cards(player, list(auto_discard))
+            auto_discard = list(player.hand[-player.need_discard :])
+            self._execute_discard_action(player, auto_discard)
+
+    def _execute_play_card_action(self, player: Player, card, targets: list[Player] | None = None) -> bool:
+        from game.actions import PlayCardAction
+
+        if targets is None:
+            targets = []
+
+        action = PlayCardAction(
+            player_id=player.id,
+            card_id=card.id,
+            target_ids=[target.id for target in targets],
+            source_channel="textual_ui",
+        )
+        return self.engine.execute_action(action)
+
+    def _execute_discard_action(self, player: Player, cards: list) -> bool:
+        from game.actions import DiscardAction
+
+        action = DiscardAction(
+            player_id=player.id,
+            card_ids=[card.id for card in cards],
+            source_channel="textual_ui",
+        )
+        return self.engine.execute_action(action)
+
+    def _execute_skill_action(self, player: Player, skill_id: str) -> bool:
+        from game.actions import UseSkillAction
+
+        action = UseSkillAction(
+            player_id=player.id,
+            skill_id=skill_id,
+            source_channel="textual_ui",
+        )
+        return self.engine.execute_action(action)
 
     def _handle_card_play(self, player: Player, card) -> None:
         """处理出牌."""
@@ -492,7 +532,7 @@ class GamePlayScreen(Screen):
         engine = self.engine
 
         if card.card_type == CardType.EQUIPMENT:
-            engine.use_card(player, card)
+            self._execute_play_card_action(player, card)
         elif card.name == CardName.SHA:
             if not player.can_use_sha():
                 from game.constants import SkillId
@@ -506,12 +546,12 @@ class GamePlayScreen(Screen):
                 return
             target = self._wait_for_target(player, targets, "选择杀的目标")
             if target:
-                engine.use_card(player, card, [target])
+                self._execute_play_card_action(player, card, [target])
         elif card.name == CardName.TAO:
             if player.hp >= player.max_hp:
                 self._post_log("⚠ 体力已满")
                 return
-            engine.use_card(player, card)
+            self._execute_play_card_action(player, card)
         elif card.name == CardName.SHAN:
             self._post_log("⚠ 闪不能主动使用")
             return
@@ -619,7 +659,7 @@ class GamePlayScreen(Screen):
         """处理技能使用."""
         engine = self.engine
         if engine.skill_system:
-            engine.skill_system.use_skill(skill_id, player)
+            self._execute_skill_action(player, skill_id)
 
     # ==================== 线程间通信 ====================
 
@@ -767,25 +807,8 @@ class GamePlayScreen(Screen):
 
     @staticmethod
     def _countdown_color(secs: int, total: int = 30) -> str:
-        """根据剩余秒数计算 RGB 渐变色 (P2-2).
-
-        green(#27ae60) → yellow(#f39c12) → red(#e74c3c)
-        ratio > 0.5 时 green→yellow，ratio <= 0.5 时 yellow→red
-        """
-        ratio = max(0.0, min(1.0, secs / total))
-        if ratio > 0.5:
-            # green → yellow (ratio 1.0→0.5 maps to factor 0→1)
-            f = (1.0 - ratio) * 2  # 0→1
-            r = int(0x27 + (0xF3 - 0x27) * f)
-            g = int(0xAE + (0x9C - 0xAE) * f)
-            b = int(0x60 + (0x12 - 0x60) * f)
-        else:
-            # yellow → red (ratio 0.5→0 maps to factor 0→1)
-            f = (0.5 - ratio) * 2  # 0→1
-            r = int(0xF3 + (0xE7 - 0xF3) * f)
-            g = int(0x9C + (0x4C - 0x9C) * f)
-            b = int(0x12 + (0x3C - 0x12) * f)
-        return f"#{r:02x}{g:02x}{b:02x}"
+        """根据剩余秒数计算 RGB 渐变色 (P2-2)."""
+        return countdown_color(secs, total)
 
     def _update_countdown_display(self) -> None:
         """更新信息面板的倒计时显示 — P2-2: RGB 渐变色."""
@@ -862,17 +885,12 @@ class GamePlayScreen(Screen):
     def _update_play_area_card(self, msg: str) -> None:
         """更新中央出牌区显示."""
         try:
-            import re
-
             from ui.textual_ui.widgets.play_area import PlayArea
 
             play_area = self.query_one("#play-area", PlayArea)
-            # 解析 "玩家 对 目标 使用了【卡牌】" 或 "玩家 使用了【卡牌】"
-            m = re.search(r"(.+?)\s+(?:对\s+(.+?)\s+)?使用[了]*【(.+?)】", msg)
-            if m:
-                player_name = m.group(1).strip()
-                target_name = m.group(2).strip() if m.group(2) else ""
-                card_name = m.group(3).strip()
+            parsed = parse_card_play_message(msg)
+            if parsed:
+                player_name, card_name, target_name = parsed
                 play_area.show_card_play(player_name, card_name, target_name)
         except Exception as exc:
             self._log_ui_recoverable_error(
@@ -884,15 +902,12 @@ class GamePlayScreen(Screen):
     def _update_play_area_skill(self, msg: str) -> None:
         """更新中央出牌区显示技能."""
         try:
-            import re
-
             from ui.textual_ui.widgets.play_area import PlayArea
 
             play_area = self.query_one("#play-area", PlayArea)
-            m = re.search(r"(.+?)\s+发动【(.+?)】", msg)
-            if m:
-                player_name = m.group(1).strip()
-                skill_name = m.group(2).strip()
+            parsed = parse_skill_message(msg)
+            if parsed:
+                player_name, skill_name = parsed
                 play_area.show_skill_use(player_name, skill_name)
         except Exception as exc:
             self._log_ui_recoverable_error(
@@ -904,20 +919,12 @@ class GamePlayScreen(Screen):
     def _update_play_area_damage(self, msg: str) -> None:
         """更新中央出牌区显示伤害."""
         try:
-            import re
-
             from ui.textual_ui.widgets.play_area import PlayArea
 
             play_area = self.query_one("#play-area", PlayArea)
-            m = re.search(r"(.+?)\s+受到[了]*\s*(\d+)\s*点", msg)
-            if m:
-                target_name = m.group(1).strip()
-                amount = int(m.group(2))
-                dtype = ""
-                if "火焰" in msg:
-                    dtype = "fire"
-                elif "雷电" in msg:
-                    dtype = "thunder"
+            parsed = parse_damage_message(msg)
+            if parsed:
+                target_name, amount, dtype = parsed
                 play_area.show_damage(target_name, amount, dtype)
         except Exception as exc:
             self._log_ui_recoverable_error(
