@@ -3,10 +3,12 @@
 测试房间管理、消息路由、断线重连
 """
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from game.actions import GameRequest, GameResponse, PlayCardAction, RequestType
 from net.protocol import ClientMsg, RoomState, ServerMsg
 from net.server import ConnectedPlayer, GameServer, Room
 
@@ -60,6 +62,10 @@ class TestGameServer:
         assert len(server.connections) == 0
         assert len(server.rooms) == 0
 
+    def test_default_host_is_loopback(self):
+        server = GameServer()
+        assert server.host == "127.0.0.1"
+
     def test_assign_player_id(self):
         server = GameServer()
         assert server._assign_player_id() == 1
@@ -73,6 +79,24 @@ class TestGameServer:
     def test_get_serve_origins_enabled(self):
         server = GameServer(allowed_origins="https://b.example, https://a.example")
         assert server._get_serve_origins() == ["https://a.example", "https://b.example"]
+
+    def test_check_origin_fail_closed_when_unconfigured(self):
+        server = GameServer(allowed_origins="")
+        ws = MagicMock()
+        ws.request.headers.get.return_value = "https://example.com"
+        assert server._check_origin(ws) is False
+
+    def test_check_origin_whitelist_allows(self):
+        server = GameServer(allowed_origins="https://example.com")
+        ws = MagicMock()
+        ws.request.headers.get.return_value = "https://example.com"
+        assert server._check_origin(ws) is True
+
+    def test_check_origin_whitelist_blocks_unknown(self):
+        server = GameServer(allowed_origins="https://example.com")
+        ws = MagicMock()
+        ws.request.headers.get.return_value = "https://evil.com"
+        assert server._check_origin(ws) is False
 
     @pytest.mark.asyncio
     async def test_register(self):
@@ -231,6 +255,24 @@ class TestHandlers:
         assert player.room_id is None
 
     @pytest.mark.asyncio
+    async def test_room_join_reconnect_requires_token(self):
+        server = GameServer()
+        _, host = await self._make_player(server)
+        ws, player = await self._make_player(server)
+
+        create_msg = ClientMsg.room_create(host.player_id, "Host")
+        await server._handle_room_create(host, create_msg)
+        room_id = host.room_id
+
+        reconnect_msg = ClientMsg.room_join(player.player_id, "Guest", room_id)
+        reconnect_msg.data["reconnect"] = True
+        reconnect_msg.data["last_seq"] = 0
+
+        await server._handle_room_join(player, reconnect_msg)
+        assert player.room_id is None
+        assert ws.send.call_count == 1
+
+    @pytest.mark.asyncio
     async def test_room_leave(self):
         server = GameServer()
         ws, player = await self._make_player(server)
@@ -349,6 +391,122 @@ class TestBroadcastGameEvent:
         await server._broadcast_game_event(room, "e2", {})
         assert room.event_log[0].seq == 1
         assert room.event_log[1].seq == 2
+
+
+class TestAuthoritativeTurnActions:
+    @pytest.mark.asyncio
+    async def test_handle_game_action_enqueues_active_player_action(self):
+        server = GameServer()
+        ws = AsyncMock()
+        player = ConnectedPlayer(player_id=1, name="A", websocket=ws, room_id="r1")
+        room = Room(room_id="r1", host_id=1, state=RoomState.PLAYING)
+        action_queue = asyncio.Queue()
+        room._pending_action = (1, action_queue)
+        room.players[1] = player
+        server.rooms["r1"] = room
+
+        msg = ClientMsg.game_action(1, "play_card", {"card_id": "sha_spade_A", "target_ids": [2]})
+        await server._handle_game_action(player, msg)
+
+        queued = await asyncio.wait_for(action_queue.get(), timeout=0.1)
+        assert queued["action_type"] == "play_card"
+        assert queued["card_id"] == "sha_spade_A"
+
+    @pytest.mark.asyncio
+    async def test_apply_human_action_executes_engine_action(self):
+        server = GameServer()
+        ws = AsyncMock()
+        player = ConnectedPlayer(player_id=1, name="A", websocket=ws)
+        room = Room(room_id="r1", host_id=1, state=RoomState.PLAYING)
+        room.players[1] = player
+        server.rooms["r1"] = room
+        room.engine = MagicMock()
+        room.engine.execute_action.return_value = True
+
+        should_end_turn = await server._apply_human_action(
+            room,
+            player,
+            {"action_type": "play_card", "card_id": "sha_spade_A", "target_ids": [2]},
+        )
+
+        assert should_end_turn is False
+        room.engine.execute_action.assert_called_once()
+        action = room.engine.execute_action.call_args.args[0]
+        assert isinstance(action, PlayCardAction)
+        assert action.player_id == 1
+        assert action.card_id == "sha_spade_A"
+        assert action.target_ids == [2]
+
+    @pytest.mark.asyncio
+    async def test_apply_human_action_end_turn_short_circuits(self):
+        server = GameServer()
+        ws = AsyncMock()
+        player = ConnectedPlayer(player_id=1, name="A", websocket=ws)
+        room = Room(room_id="r1", host_id=1, state=RoomState.PLAYING)
+        room.engine = MagicMock()
+
+        should_end_turn = await server._apply_human_action(room, player, {"action_type": "end_turn"})
+
+        assert should_end_turn is True
+        room.engine.execute_action.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_request_game_response_waits_for_matching_client_response(self):
+        server = GameServer()
+        ws = AsyncMock()
+        player = ConnectedPlayer(player_id=1, name="A", websocket=ws, room_id="r1")
+        room = Room(room_id="r1", host_id=1, state=RoomState.PLAYING)
+        room.players[1] = player
+        server.rooms["r1"] = room
+
+        request = GameRequest(
+            request_type=RequestType.PLAY_SHAN,
+            player_id=1,
+            options={"cards": [{"id": "shan_heart_2"}]},
+            timeout=1.0,
+            required=False,
+        )
+        response_task = asyncio.create_task(server._request_game_response(room, request))
+
+        await asyncio.sleep(0)
+        pending_request_id = next(iter(room._pending_requests))
+
+        await server._handle_game_response(
+            player,
+            ClientMsg.game_response(
+                1,
+                "play_shan",
+                accepted=True,
+                response_data={"request_id": pending_request_id, "card_id": "shan_heart_2"},
+            ),
+        )
+
+        response = await response_task
+
+        assert response == GameResponse(
+            request_type=RequestType.PLAY_SHAN,
+            player_id=1,
+            accepted=True,
+            card_ids=["shan_heart_2"],
+        )
+        assert room._pending_requests == {}
+
+    @pytest.mark.asyncio
+    async def test_run_human_discard_phase_routes_through_request_handler(self):
+        server = GameServer()
+        room = Room(room_id="r1", host_id=1, state=RoomState.PLAYING)
+        engine = MagicMock()
+        player = MagicMock()
+        player.need_discard = 2
+        player.hand = ["sha_spade_A", "shan_heart_2"]
+
+        selected_cards = [MagicMock(), MagicMock()]
+        engine.request_handler.request_discard.return_value = selected_cards
+
+        await server._run_human_discard_phase(room, engine, player)
+
+        engine.request_handler.request_discard.assert_called_once_with(player, 2, 2)
+        engine.discard_cards.assert_called_once_with(player, selected_cards)
 
 
 # ==================== 网络安全测试 (Phase 4.4) ====================

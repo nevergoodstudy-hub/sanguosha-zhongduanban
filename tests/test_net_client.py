@@ -44,6 +44,20 @@ class TestGameClientHandlers:
         assert client._on_disconnect == handler
 
     @pytest.mark.asyncio
+    async def test_invoke_callback_sync(self):
+        client = GameClient()
+        handler = MagicMock()
+        await client._invoke_callback(handler)
+        handler.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_invoke_callback_async(self):
+        client = GameClient()
+        handler = AsyncMock()
+        await client._invoke_callback(handler)
+        handler.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_dispatch_calls_handler(self):
         client = GameClient()
         handler = MagicMock()
@@ -123,7 +137,7 @@ class TestConvenienceMethods:
         client._ws = AsyncMock()
         client._connected = True
         client.player_id = 1
-        await client.play_card(42, [2, 3])
+        await client.play_card("sha_spade_A", [2, 3])
         client._ws.send.assert_called_once()
 
     @pytest.mark.asyncio
@@ -132,7 +146,7 @@ class TestConvenienceMethods:
         client._ws = AsyncMock()
         client._connected = True
         client.player_id = 1
-        await client.respond("play_shan", True, card_id=7)
+        await client.respond("play_shan", True, card_id="shan_heart_2")
         client._ws.send.assert_called_once()
 
     @pytest.mark.asyncio
@@ -161,12 +175,12 @@ class TestMainPyNetArgs:
         import argparse
 
         parser = argparse.ArgumentParser()
-        parser.add_argument("--server", nargs="?", const="0.0.0.0:8765", default=None)
+        parser.add_argument("--server", nargs="?", const="127.0.0.1:8765", default=None)
         parser.add_argument("--connect", default=None)
         parser.add_argument("--name", default=None)
 
         args = parser.parse_args(["--server"])
-        assert args.server == "0.0.0.0:8765"
+        assert args.server == "127.0.0.1:8765"
 
         args = parser.parse_args(["--server", "192.168.1.1:9999"])
         assert args.server == "192.168.1.1:9999"
@@ -175,7 +189,7 @@ class TestMainPyNetArgs:
         import argparse
 
         parser = argparse.ArgumentParser()
-        parser.add_argument("--server", nargs="?", const="0.0.0.0:8765", default=None)
+        parser.add_argument("--server", nargs="?", const="127.0.0.1:8765", default=None)
         parser.add_argument("--connect", default=None)
         parser.add_argument("--name", default=None)
 
@@ -187,7 +201,7 @@ class TestMainPyNetArgs:
         import argparse
 
         parser = argparse.ArgumentParser()
-        parser.add_argument("--server", nargs="?", const="0.0.0.0:8765", default=None)
+        parser.add_argument("--server", nargs="?", const="127.0.0.1:8765", default=None)
         parser.add_argument("--connect", default=None)
 
         args = parser.parse_args([])

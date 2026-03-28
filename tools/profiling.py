@@ -1,4 +1,4 @@
-"""性能分析工具 (P3-4)
+"""性能分析工具 (P3-4).
 
 提供 @timed 装饰器和全局 metrics 收集，
 用于识别热路径和性能瓶颈。
@@ -34,7 +34,7 @@ _SLOW_THRESHOLD: float = 0.1
 
 
 def timed(func: F) -> F:
-    """装饰器：记录函数执行时间。
+    """装饰器：记录函数执行时间。.
 
     超过阈值的调用会记录 WARNING 级别日志。
     """
@@ -54,7 +54,7 @@ def timed(func: F) -> F:
 
 
 def report_metrics() -> dict[str, dict[str, float]]:
-    """生成性能报告。
+    """生成性能报告。.
 
     Returns:
         按函数名组织的指标字典，包含 calls, total_ms, avg_ms, max_ms。
@@ -71,10 +71,10 @@ def report_metrics() -> dict[str, dict[str, float]]:
 
 
 def reset_metrics() -> None:
-    """清空所有已收集的指标。"""
+    """清空所有已收集的指标。."""
     _metrics.clear()
 
 
 def get_raw_metrics() -> dict[str, list[float]]:
-    """获取原始指标数据（用于高级分析）。"""
+    """获取原始指标数据（用于高级分析）。."""
     return _metrics

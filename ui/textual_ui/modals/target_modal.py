@@ -1,4 +1,4 @@
-"""目标选择弹窗 (M-C C5)
+"""目标选择弹窗 (M-C C5).
 
 替代原 info-panel 纯文本编号选择。
 可选目标以按钮网格排列，点击选中后 dismiss(index)。
@@ -9,7 +9,7 @@ dismiss(None) → 取消选择
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -22,8 +22,8 @@ if TYPE_CHECKING:
     pass
 
 
-class TargetSelectModal(AnimatedModalScreen[Optional[int]]):
-    """目标选择弹窗 — 点击目标按钮选中"""
+class TargetSelectModal(AnimatedModalScreen[int | None]):
+    """目标选择弹窗 — 点击目标按钮选中."""
 
     DEFAULT_CSS = """
     TargetSelectModal {
@@ -59,7 +59,7 @@ class TargetSelectModal(AnimatedModalScreen[Optional[int]]):
     def __init__(self, targets: list, prompt: str = "选择目标"):
         """Args:
         targets: Player 对象列表
-        prompt: 提示文字
+        prompt: 提示文字.
         """
         super().__init__()
         self._targets = targets

@@ -1,4 +1,4 @@
-"""游戏引擎模块 — Facade / 组合协调器
+"""游戏引擎模块 — Facade / 组合协调器.
 
 GameEngine 作为统一入口，组合并协调以下子系统：
   - TurnManager      : 回合阶段流转 (准备/判定/摸牌/出牌/弃牌/结束)
@@ -28,11 +28,11 @@ from typing import TYPE_CHECKING, Any
 
 logger = logging.getLogger(__name__)
 
-from .card import Card, CardName, CardSubtype, CardType, Deck
-from .constants import IdentityConfig, SkillId
-from .events import EventBus, EventType, GameEvent
-from .hero import HeroRepository, Kingdom
-from .player import Identity, Player
+from .card import Card, CardName, CardSubtype, CardType, Deck  # noqa: E402
+from .constants import IdentityConfig, SkillId  # noqa: E402
+from .events import EventBus, EventType, GameEvent  # noqa: E402
+from .hero import HeroRepository, Kingdom  # noqa: E402
+from .player import Identity, Player  # noqa: E402
 
 if TYPE_CHECKING:
     from ai.bot import AIBot
@@ -72,20 +72,39 @@ _LOG_CATEGORY_MAP: dict[str, EventType] = {
 
 # 枚举已提取到 enums.py，此处 re-export 保持向后兼容
 # P2-4: 距离缓存
-from .distance_cache import DistanceCache
-from .enums import GamePhase, GameState  # noqa: F401  — 公共 API re-export
+from .distance_cache import DistanceCache  # noqa: E402
+from .enums import GamePhase, GameState  # noqa: E402,F401  — 公共 API re-export
 
 # P0-4: 玩家管理器 (引擎分解 Step 1)
-from .player_manager import PlayerManager
+from .player_manager import PlayerManager  # noqa: E402
 
 # M1-T01: 导入 TurnManager（GamePhase 已在上方定义，不会循环导入）
-from .turn_manager import TurnManager
+from .turn_manager import TurnManager  # noqa: E402
+from .engine_event_logging import (
+    log_event as _engine_log_event,
+    notify_cards_lost as _engine_notify_cards_lost,
+    notify_cards_obtained as _engine_notify_cards_obtained,
+)
+from .engine_setup_helpers import (
+    assign_identities as _engine_assign_identities,
+    ensure_can_start_game as _engine_ensure_can_start_game,
+    setup_game as _engine_setup_game,
+)
+from .engine_phase_helpers import (
+    phase_discard as _engine_phase_discard,
+    phase_draw as _engine_phase_draw,
+    phase_end as _engine_phase_end,
+    phase_judge as _engine_phase_judge,
+    phase_play as _engine_phase_play,
+    phase_prepare as _engine_phase_prepare,
+)
+from .engine_turn_helpers import next_turn as _engine_next_turn
 
 
 @dataclass(slots=True)
 class GameLogEntry:
     """游戏日志条目类
-    用于记录游戏日志（避免与 events.py 中的 GameEvent 冲突）
+    用于记录游戏日志（避免与 events.py 中的 GameEvent 冲突）.
     """
 
     event_type: str
@@ -100,7 +119,7 @@ class GameLogEntry:
 
 
 class GameEngine:
-    """游戏引擎 — Facade / 组合协调器
+    """游戏引擎 — Facade / 组合协调器.
 
     作为所有子系统的统一入口，通过委托模式将具体逻辑分发到各子系统。
     外部调用方（game_controller / game_play / tests）只需通过
@@ -108,7 +127,7 @@ class GameEngine:
     """
 
     def __init__(self, data_dir: str = "data"):
-        """初始化游戏引擎
+        """初始化游戏引擎.
 
         Args:
             data_dir: 数据文件目录路径
@@ -118,6 +137,8 @@ class GameEngine:
 
         # 事件总线（核心解耦组件）
         self.event_bus: EventBus = EventBus()
+        # 日志事件语义映射（供外部辅助模块复用）
+        self._log_category_map = _LOG_CATEGORY_MAP
 
         # 核心组件
         self.deck: Deck = Deck(str(base_path / "cards.json"))
@@ -184,26 +205,60 @@ class GameEngine:
         self.card_resolver = CardResolver(self)
 
     def set_ui(self, ui: GameUI) -> None:
-        """设置UI组件并通过EventBus订阅日志消息"""
+        """设置UI组件并通过EventBus订阅日志消息."""
         self.ui = ui
         # M1-T04: UI 通过 EventBus 订阅，不再由引擎直接 push
         self.event_bus.subscribe(EventType.LOG_MESSAGE, self._on_log_for_ui)
 
     def _on_log_for_ui(self, event: GameEvent) -> None:
-        """EventBus handler: 转发日志消息到 UI"""
+        """EventBus handler: 转发日志消息到 UI."""
         if self.ui:
             msg = event.data.get("message", "")
             if msg:
                 self.ui.show_log(msg)
 
     def set_skill_system(self, skill_system: SkillSystem) -> None:
-        """设置技能系统并注册被动技能事件处理器"""
+        """设置技能系统并注册被动技能事件处理器."""
         self.skill_system = skill_system
         # M1-T04: 被动技能通过 EventBus 监听事件自动触发
         skill_system.register_event_handlers(self.event_bus)
 
-    def execute_action(self, action: "GameAction") -> bool:
-        """统一动作执行入口（M2-T01）
+    def _ensure_skill_system(self) -> None:
+        """确保当前引擎已挂载技能系统."""
+        if self.skill_system is None:
+            from .skill import SkillSystem
+
+            self.set_skill_system(SkillSystem(self))
+
+    def _deal_initial_hand_cards(self) -> None:
+        """为所有玩家发放初始手牌并发布对应事件."""
+        from i18n import t as _t
+
+        for player in self.players:
+            cards = self.deck.draw(4)
+            player.draw_cards(cards)
+            self.notify_cards_obtained(player, cards, reason="initial_draw")
+            self.log_event("draw_cards", _t("game.draw_cards", player=player.name, count=len(cards)))
+
+    def _begin_started_game(self) -> None:
+        """进入已开始状态并发布统一的开局生命周期事件."""
+        from i18n import t as _t
+
+        self.state = GameState.IN_PROGRESS
+        self.current_player_index = self.lord_player_index
+        self.round_count = 1
+        for player in self.players:
+            player.reset_round()
+
+        self.log_event("game_start", _t("game.start"))
+        self.event_bus.emit(
+            EventType.ROUND_START,
+            round=self.round_count,
+            player=self.current_player,
+        )
+
+    def execute_action(self, action: GameAction) -> bool:
+        """统一动作执行入口（M2-T01）.
 
         所有玩家行为（出牌/技能/弃牌）都应通过此方法执行，
         以确保统一的校验和日志记录。
@@ -230,6 +285,10 @@ class GameEngine:
             # 成功执行的动作记录到日志
             self.action_log.append(
                 {
+                    "log_schema_version": "1.1",
+                    "action_id": action.action_id,
+                    "correlation_id": action.correlation_id,
+                    "source_channel": action.source_channel,
                     "action_type": action.action_type.name,
                     "player_id": action.player_id,
                     "timestamp": action.timestamp,
@@ -239,11 +298,16 @@ class GameEngine:
 
         return result
 
-    def _serialize_action(self, action: "GameAction") -> dict:
-        """序列化动作数据（用于回放）"""
+    def _serialize_action(self, action: GameAction) -> dict:
+        """序列化动作数据（用于回放）."""
         from .actions import DiscardAction, PlayCardAction, UseSkillAction
 
-        data = {"type": action.action_type.name}
+        data = {
+            "type": action.action_type.name,
+            "action_id": action.action_id,
+            "source_channel": action.source_channel,
+            "correlation_id": action.correlation_id,
+        }
 
         if isinstance(action, PlayCardAction):
             data["card_id"] = action.card_id
@@ -252,6 +316,7 @@ class GameEngine:
             data["skill_id"] = action.skill_id
             data["target_ids"] = action.target_ids
             data["card_ids"] = action.card_ids
+            data["extra_payload"] = action.extra_payload
         elif isinstance(action, DiscardAction):
             data["card_ids"] = action.card_ids
 
@@ -266,138 +331,73 @@ class GameEngine:
         card: Card | None = None,
         **extra_data,
     ) -> None:
-        """记录游戏事件并通过事件总线发布
-
-        Args:
-            event_type: 事件类型（字符串，兼容旧代码）
-            message: 事件消息
-            source: 事件来源玩家
-            target: 事件目标玩家
-            card: 相关卡牌
-            **extra_data: 额外数据
-        """
-        # 同步写入 Python 日志（便于排查运行问题）
-        try:
-            level = logging.INFO
-            et = (event_type or "").lower()
-            if et in {"error", "exception"}:
-                level = logging.ERROR
-            elif et in {"warn", "warning"}:
-                level = logging.WARNING
-
-            src_name = source.name if source else None
-            tgt_name = target.name if target else None
-            card_name = card.display_name if card else None
-            logger.log(
-                level,
-                "[%s] %s | src=%s tgt=%s card=%s",
-                event_type,
-                message,
-                src_name,
-                tgt_name,
-                card_name,
-            )
-        except Exception:
-            # 日志系统不应影响游戏流程
-            pass
-
-        # M1-T04: 发布语义化事件（替代统一的 LOG_MESSAGE）
-        semantic_type = _LOG_CATEGORY_MAP.get(event_type, EventType.LOG_MESSAGE)
-        self.event_bus.emit(
-            semantic_type,
-            message=message,
-            log_type=event_type,
+        """记录游戏事件并通过事件总线发布."""
+        _engine_log_event(
+            self,
+            event_type,
+            message,
             source=source,
             target=target,
             card=card,
             **extra_data,
         )
 
-        # 同时发布 LOG_MESSAGE 供 UI 订阅者消费
-        if semantic_type != EventType.LOG_MESSAGE:
-            self.event_bus.emit(
-                EventType.LOG_MESSAGE,
-                message=message,
-                log_type=event_type,
-            )
+    def notify_cards_obtained(
+        self,
+        player: Player,
+        cards: list[Card],
+        *,
+        source: Player | None = None,
+        from_player: Player | None = None,
+        reason: str = "",
+    ) -> None:
+        """发布获得牌语义事件."""
+        _engine_notify_cards_obtained(
+            self,
+            player,
+            cards,
+            source=source,
+            from_player=from_player,
+            reason=reason,
+        )
+
+    def notify_cards_lost(
+        self,
+        player: Player,
+        cards: list[Card],
+        *,
+        source: Player | None = None,
+        to_player: Player | None = None,
+        reason: str = "",
+    ) -> None:
+        """发布失去牌语义事件."""
+        _engine_notify_cards_lost(
+            self,
+            player,
+            cards,
+            source=source,
+            to_player=to_player,
+            reason=reason,
+        )
 
     def setup_game(
         self, player_count: int, human_player_index: int = 0, role_preference: str = "lord"
     ) -> None:
-        """设置游戏
-
-        Args:
-            player_count: 玩家数量（2-8）
-            human_player_index: 人类玩家索引
-            role_preference: 身份偏好 ("lord" = 人类固定主公, "random" = 随机分配)
-        """
-        if player_count < 2 or player_count > 8:
-            from i18n import t as _t
-
-            raise ValueError(_t("error.player_count"))
-
-        self._role_preference = role_preference
-
-        # 创建玩家
-        self.players.clear()
-        self.human_player = None
-        for i in range(player_count):
-            is_human = i == human_player_index and human_player_index >= 0
-            from i18n import t as _t
-
-            player = Player(
-                id=i,
-                name=_t("game.player_name", index=i + 1) if is_human else f"AI_{i + 1}",
-                is_ai=not is_human,
-                seat=i,
-            )
-            self.players.append(player)
-            if is_human:
-                self.human_player = player
-
-        # 分配身份
-        self._assign_identities()
-
-        # 重置牌堆
-        self.deck.reset()
-
-        self.state = GameState.CHOOSING_HEROES
-        from i18n import t as _t
-
-        self.log_event("game_setup", _t("game.setup_complete", count=player_count))
-
-    def _assign_identities(self) -> None:
-        """分配身份（支持2-8人）- 使用 IdentityConfig (SSOT)"""
-        player_count = len(self.players)
-
-        # 使用 constants.py 中的 IdentityConfig 作为单一事实来源
-        config = IdentityConfig.get_config(player_count)
-        identities = (
-            [Identity.LORD] * config.get("lord", 1)
-            + [Identity.LOYALIST] * config.get("loyalist", 0)
-            + [Identity.REBEL] * config.get("rebel", 1)
-            + [Identity.SPY] * config.get("spy", 0)
+        """设置游戏."""
+        _engine_setup_game(
+            self,
+            player_count,
+            human_player_index=human_player_index,
+            role_preference=role_preference,
         )
 
-        role_pref = getattr(self, "_role_preference", "lord")
-
-        if role_pref == "random":
-            # 完全随机分配：所有身份洗牌后按座位分配
-            random.shuffle(identities)
-            for i, player in enumerate(self.players):
-                player.identity = identities[i]
-        else:
-            # 兼容原行为：第一个玩家固定为主公
-            self.players[0].identity = identities[0]
-            remaining_identities = identities[1:]
-            random.shuffle(remaining_identities)
-            for i, player in enumerate(self.players[1:], 1):
-                if i - 1 < len(remaining_identities):
-                    player.identity = remaining_identities[i - 1]
+    def _assign_identities(self) -> None:
+        """分配身份（支持2-8人）- 使用 IdentityConfig (SSOT)."""
+        _engine_assign_identities(self)
 
     @property
     def lord_player(self) -> Player | None:
-        """获取主公玩家"""
+        """获取主公玩家."""
         for p in self.players:
             if p.identity == Identity.LORD:
                 return p
@@ -405,14 +405,14 @@ class GameEngine:
 
     @property
     def lord_player_index(self) -> int:
-        """获取主公玩家的座位索引"""
+        """获取主公玩家的座位索引."""
         for i, p in enumerate(self.players):
             if p.identity == Identity.LORD:
                 return i
         return 0
 
     def choose_heroes(self, choices: dict[int, str]) -> None:
-        """为所有玩家选择武将
+        """为所有玩家选择武将.
 
         Args:
             choices: 玩家ID到武将ID的映射
@@ -433,7 +433,7 @@ class GameEngine:
                 )
 
     def auto_choose_heroes_for_ai(self) -> dict[int, str]:
-        """为AI玩家自动选择武将
+        """为AI玩家自动选择武将.
 
         Returns:
             AI玩家的武将选择
@@ -455,58 +455,53 @@ class GameEngine:
         return choices
 
     def start_game(self) -> None:
-        """开始游戏"""
-        from i18n import t as _t
-
-        if self.state != GameState.CHOOSING_HEROES:
-            raise RuntimeError(_t("error.game_state_start"))
-
-        # 确保所有玩家都有武将
-        for player in self.players:
-            if player.hero is None:
-                raise RuntimeError(_t("error.no_hero", player=player.name))
-
-        # 发初始手牌（每人4张）
-        for player in self.players:
-            cards = self.deck.draw(4)
-            player.draw_cards(cards)
-            self.log_event(
-                "draw_cards", _t("game.draw_cards", player=player.name, count=len(cards))
-            )
-
-        self.state = GameState.IN_PROGRESS
-        # 从主公开始行动（主公不一定是 player[0]）
-        self.current_player_index = self.lord_player_index
-        self.round_count = 1
-
-        self.log_event("game_start", _t("game.start"))
+        """开始游戏."""
+        _engine_ensure_can_start_game(self)
+        self._deal_initial_hand_cards()
+        self._begin_started_game()
 
     @property
     def current_player(self) -> Player:
-        """获取当前回合玩家"""
+        """获取当前回合玩家."""
         return self.players[self.current_player_index]
 
     def get_player_by_id(self, player_id: int) -> Player | None:
-        """根据ID获取玩家"""
+        """根据ID获取玩家."""
         for player in self.players:
             if player.id == player_id:
                 return player
         return None
 
     def get_alive_players(self) -> list[Player]:
-        """获取所有存活玩家"""
+        """获取所有存活玩家."""
         return [p for p in self.players if p.is_alive]
 
     def get_other_players(self, player: Player) -> list[Player]:
-        """获取除指定玩家外的其他存活玩家"""
+        """获取除指定玩家外的其他存活玩家."""
         return [p for p in self.players if p.is_alive and p != player]
 
+    def count_alive_kingdoms(self) -> int:
+        """获取当前存活角色的势力数."""
+        return len({player.hero.kingdom.value for player in self.get_alive_players() if player.hero})
+
+    def record_card_usage(
+        self, player: Player, card: Card, targets: list[Player] | None = None, *, is_virtual: bool = False
+    ) -> None:
+        """记录回合内的用牌统计，供复杂技能条件判定使用."""
+        used_types = set(player.get_turn_flag("used_card_types", set()))
+        used_types.add(card.card_type.value)
+        player.set_turn_flag("used_card_types", used_types)
+        if targets and any(target != player for target in targets):
+            player.set_turn_flag("used_card_targeting_others", True)
+        if is_virtual:
+            player.set_turn_flag("used_virtual_card", True)
+
     def get_all_other_players(self, player: Player) -> list[Player]:
-        """获取除指定玩家外的所有其他玩家（含已死亡），用于 UI 显示"""
+        """获取除指定玩家外的所有其他玩家（含已死亡），用于 UI 显示."""
         return [p for p in self.players if p != player]
 
     def get_next_player(self, player: Player | None = None) -> Player:
-        """获取下一个存活玩家"""
+        """获取下一个存活玩家."""
         if player is None:
             player = self.current_player
 
@@ -519,7 +514,7 @@ class GameEngine:
         return player  # 如果只剩一个玩家
 
     def calculate_distance(self, from_player: Player, to_player: Player) -> int:
-        """计算两个玩家之间的距离 (P2-4: 带缓存)
+        """计算两个玩家之间的距离 (P2-4: 带缓存).
 
         Args:
             from_player: 起始玩家
@@ -543,7 +538,7 @@ class GameEngine:
         return dist
 
     def _calculate_distance_raw(self, from_player: Player, to_player: Player) -> int:
-        """计算原始距离 (无缓存)"""
+        """计算原始距离 (无缓存)."""
         alive_players = self.get_alive_players()
         if len(alive_players) <= 1:
             return 0
@@ -573,7 +568,7 @@ class GameEngine:
         return max(1, base_distance + distance_modifier)
 
     def is_in_attack_range(self, attacker: Player, target: Player) -> bool:
-        """检查目标是否在攻击范围内
+        """检查目标是否在攻击范围内.
 
         Args:
             attacker: 攻击者
@@ -587,7 +582,7 @@ class GameEngine:
         return distance <= attack_range
 
     def get_targets_in_range(self, player: Player) -> list[Player]:
-        """获取攻击范围内的所有目标"""
+        """获取攻击范围内的所有目标."""
         targets = []
         for other in self.get_other_players(player):
             if self.is_in_attack_range(player, other):
@@ -597,7 +592,7 @@ class GameEngine:
     # ==================== 回合流程 ====================
 
     def run_turn(self) -> None:
-        """执行当前玩家的回合（委托给 TurnManager）"""
+        """执行当前玩家的回合（委托给 TurnManager）."""
         player = self.current_player
 
         if not player.is_alive:
@@ -607,52 +602,37 @@ class GameEngine:
         self.turn_manager.run_turn(player)
 
     def phase_prepare(self, player: Player) -> None:
-        """准备阶段 — 委托给 TurnManager (Phase 2.6)"""
-        self.phase = GamePhase.PREPARE
-        self.turn_manager._execute_prepare_phase(player)
+        """准备阶段 — 委托给 TurnManager (Phase 2.6)."""
+        _engine_phase_prepare(self, player)
 
     def phase_judge(self, player: Player) -> None:
-        """判定阶段 — 委托给 TurnManager (Phase 2.6)"""
-        self.phase = GamePhase.JUDGE
-        self.turn_manager._execute_judge_phase(player)
+        """判定阶段 — 委托给 TurnManager (Phase 2.6)."""
+        _engine_phase_judge(self, player)
 
     def phase_draw(self, player: Player) -> None:
-        """摸牌阶段 — 委托给 TurnManager (Phase 2.6)"""
-        self.phase = GamePhase.DRAW
-        self.turn_manager._execute_draw_phase(player)
+        """摸牌阶段 — 委托给 TurnManager (Phase 2.6)."""
+        _engine_phase_draw(self, player)
 
     def phase_play(self, player: Player) -> None:
-        """出牌阶段 — 委托给 TurnManager (Phase 2.6)"""
-        self.phase = GamePhase.PLAY
-        self.turn_manager._execute_play_phase(player)
+        """出牌阶段 — 委托给 TurnManager (Phase 2.6)."""
+        _engine_phase_play(self, player)
 
     def phase_discard(self, player: Player) -> None:
-        """弃牌阶段 — 委托给 TurnManager (Phase 2.6)"""
-        self.phase = GamePhase.DISCARD
-        self.turn_manager._execute_discard_phase(player)
+        """弃牌阶段 — 委托给 TurnManager (Phase 2.6)."""
+        _engine_phase_discard(self, player)
 
     def phase_end(self, player: Player) -> None:
-        """结束阶段 — 委托给 TurnManager (Phase 2.6)"""
-        self.phase = GamePhase.END
-        self.turn_manager._execute_end_phase(player)
+        """结束阶段 — 委托给 TurnManager (Phase 2.6)."""
+        _engine_phase_end(self, player)
 
     def next_turn(self) -> None:
-        """进入下一个玩家的回合"""
-        # 找到下一个存活的玩家
-        for i in range(1, len(self.players) + 1):
-            next_index = (self.current_player_index + i) % len(self.players)
-            if self.players[next_index].is_alive:
-                self.current_player_index = next_index
-                break
-
-        # 如果回到主公，回合数+1
-        if self.current_player_index == self.lord_player_index:
-            self.round_count += 1
+        """进入下一个玩家的回合."""
+        _engine_next_turn(self)
 
     # ==================== 卡牌使用 ====================
 
     def use_card(self, player: Player, card: Card, targets: list[Player] | None = None) -> bool:
-        """使用卡牌（M1-T02: 优先通过 effect_registry 路由）
+        """使用卡牌（M1-T02: 优先通过 effect_registry 路由）.
 
         Args:
             player: 使用者
@@ -665,7 +645,22 @@ class GameEngine:
         if targets is None:
             targets = []
 
+        if (
+            self.skill_system
+            and self.phase == GamePhase.PLAY
+            and targets
+            and player.has_skill(SkillId.XIAOSHI)
+        ):
+            self.skill_system.trigger_skill(
+                SkillId.XIAOSHI,
+                player,
+                self,
+                card=card,
+                targets=targets,
+            )
+
         # 移除手牌
+        card_was_in_hand = card in player.hand
         if card in player.hand:
             player.remove_card(card)
 
@@ -675,27 +670,60 @@ class GameEngine:
             CardSubtype.FIRE_ATTACK,
             CardSubtype.THUNDER_ATTACK,
         ]:
-            return self.combat.use_sha(player, card, targets)
+            result = self.combat.use_sha(player, card, targets)
+            if card_was_in_hand and card not in player.hand:
+                self.notify_cards_lost(player, [card], source=player, reason="use_card")
+            if result:
+                self.record_card_usage(player, card, targets)
+            return result
 
         # M1-T02: 优先通过效果注册表路由
         effect = self.effect_registry.get(card.name)
         if effect:
-            return effect.resolve(self, player, card, targets)
+            result = effect.resolve(self, player, card, targets)
+            if card_was_in_hand and card not in player.hand:
+                self.notify_cards_lost(player, [card], source=player, reason="use_card")
+            if result:
+                self.record_card_usage(player, card, targets)
+            return result
 
         # 借刀杀人单独路由
         if card.name == CardName.JIEDAO:
-            return self.card_resolver.use_jiedao(player, card, targets)
+            result = self.card_resolver.use_jiedao(player, card, targets)
+            if card_was_in_hand and card not in player.hand:
+                self.notify_cards_lost(player, [card], source=player, reason="use_card")
+            if result:
+                self.record_card_usage(player, card, targets)
+            return result
 
         # 按子类型 fallback
         if card.subtype == CardSubtype.ALCOHOL:
-            return self.card_resolver.use_jiu(player, card)
+            result = self.card_resolver.use_jiu(player, card)
+            if card_was_in_hand and card not in player.hand:
+                self.notify_cards_lost(player, [card], source=player, reason="use_card")
+            if result:
+                self.record_card_usage(player, card, targets)
+            return result
         elif card.subtype == CardSubtype.CHAIN:
-            return self.card_resolver.use_tiesuo(player, card, targets)
+            result = self.card_resolver.use_tiesuo(player, card, targets)
+            if card_was_in_hand and card not in player.hand:
+                self.notify_cards_lost(player, [card], source=player, reason="use_card")
+            if result:
+                self.record_card_usage(player, card, targets)
+            return result
         elif card.is_type(CardType.EQUIPMENT):
-            return self.equipment_sys.equip(player, card)
+            result = self.equipment_sys.equip(player, card)
+            if card_was_in_hand and card not in player.hand:
+                self.notify_cards_lost(player, [card], source=player, reason="use_card")
+            if result:
+                self.record_card_usage(player, card, targets)
+            return result
 
         # 将使用的牌放入弃牌堆
         self.deck.discard([card])
+        if card_was_in_hand and card not in player.hand:
+            self.notify_cards_lost(player, [card], source=player, reason="use_card")
+        self.record_card_usage(player, card, targets)
         return True
 
     # ==================== GameContext 协议方法 ====================
@@ -703,7 +731,7 @@ class GameEngine:
     def _request_wuxie(
         self, trick_card: Card, source: Player, target: Player | None = None, is_delay: bool = False
     ) -> bool:
-        """请求无懈可击响应 — 委托给 CombatSystem (Phase 2.2)"""
+        """请求无懈可击响应 — 委托给 CombatSystem (Phase 2.2)."""
         return self.combat.request_wuxie(trick_card, source, target, is_delay)
 
     def _ai_should_wuxie(
@@ -714,7 +742,7 @@ class GameEngine:
         trick_card: Card,
         currently_cancelled: bool,
     ) -> bool:
-        """AI 决定是否使用无懈可击
+        """AI 决定是否使用无懈可击.
 
         简单策略：
         - 对敌方使用的有害锦囊（目标是己方）更倾向无懈
@@ -725,7 +753,7 @@ class GameEngine:
 
         # 获取 AI bot 进行更智能的判断
         if responder.id in self.ai_bots:
-            bot = self.ai_bots[responder.id]
+            self.ai_bots[responder.id]
             # 判断敌友关系（使用共享工具函数）
             is_source_enemy = is_enemy(responder, source)
             is_target_friendly = target and not is_enemy(responder, target)
@@ -745,9 +773,8 @@ class GameEngine:
             # 锦囊当前未被抵消
             if not currently_cancelled:
                 # 有害锦囊且目标是自己或友方 → 无懈
-                if trick_card.name in harmful_tricks:
-                    if is_target_self or is_target_friendly:
-                        return True
+                if trick_card.name in harmful_tricks and (is_target_self or is_target_friendly):
+                    return True
                 # 收益锦囊且来源是敌人 → 可能无懈（如敌方无中生有）
                 if trick_card.name == CardName.WUZHONG and is_source_enemy:
                     # 随机决定是否无懈敌方的无中生有
@@ -767,13 +794,21 @@ class GameEngine:
         return False
 
     def discard_cards(self, player: Player, cards: list[Card]) -> None:
-        """弃置卡牌"""
+        """弃置卡牌."""
+        discarded_cards = []
         for card in cards:
-            player.remove_card(card)
-        self.deck.discard(cards)
+            if player.remove_card(card):
+                discarded_cards.append(card)
+        self.notify_cards_lost(player, discarded_cards, source=player, reason="discard")
+        self.deck.discard(discarded_cards)
+        if discarded_cards:
+            player.set_turn_flag(
+                "discarded_card_count",
+                player.get_turn_flag("discarded_card_count", 0) + len(discarded_cards),
+            )
 
-        if cards:
-            cards_str = ", ".join(c.display_name for c in cards)
+        if discarded_cards:
+            cards_str = ", ".join(c.display_name for c in discarded_cards)
             from i18n import t as _t
 
             self.log_event("discard", _t("game.discard", player=player.name, cards=cards_str))
@@ -788,7 +823,7 @@ class GameEngine:
         damage_type: str = "normal",
         _chain_propagating: bool = False,
     ) -> None:
-        """造成伤害（支持属性伤害与铁索连环传导）
+        """造成伤害（支持属性伤害与铁索连环传导）.
 
         Args:
             source: 伤害来源，None 表示系统伤害（如闪电）
@@ -811,6 +846,20 @@ class GameEngine:
 
         source_name = source.name if source else _t("game.damage_system")
         old_hp = target.hp
+
+        # 伤害前事件：允许技能或系统修改/阻止伤害
+        damage_event = self.event_bus.emit(
+            EventType.DAMAGE_INFLICTING,
+            source=source,
+            target=target,
+            damage=damage,
+            damage_type=damage_type,
+        )
+        if damage_event.cancelled or damage_event.prevented:
+            return
+        damage = damage_event.damage
+        if damage <= 0:
+            return
 
         # 伤害类型显示
         damage_type_display = {
@@ -865,7 +914,7 @@ class GameEngine:
             self._handle_dying(target)
 
     def _handle_dying(self, player: Player) -> None:
-        """处理濒死状态
+        """处理濒死状态.
 
         当玩家体力 <= 0 时触发，向所有玩家请求桃救援
 
@@ -902,10 +951,14 @@ class GameEngine:
                     self.log_event("save", _t("game.save", savior=savior.name, player=player.name))
 
                     # 救援技能（孙权）
-                    if player.has_skill(SkillId.JIUYUAN) and player.identity == Identity.LORD:
-                        if savior.hero and savior.hero.kingdom == Kingdom.WU:
-                            player.heal(1)
-                            self.log_event("skill", _t("game.jiuyuan", player=player.name))
+                    if (
+                        player.has_skill(SkillId.JIUYUAN)
+                        and player.identity == Identity.LORD
+                        and savior.hero
+                        and savior.hero.kingdom == Kingdom.WU
+                    ):
+                        player.heal(1)
+                        self.log_event("skill", _t("game.jiuyuan", player=player.name))
                 else:
                     break
 
@@ -917,7 +970,7 @@ class GameEngine:
             self._handle_death(player)
 
     def _ai_should_save(self, savior: Player, dying: Player) -> bool:
-        """AI决定是否救援"""
+        """AI决定是否救援."""
         # 简单逻辑：同阵营救援
         if savior.identity == dying.identity:
             return True
@@ -933,7 +986,7 @@ class GameEngine:
         return False
 
     def _handle_death(self, player: Player) -> None:
-        """处理死亡"""
+        """处理死亡."""
         player.die()
         from i18n import t as _t
 
@@ -976,7 +1029,7 @@ class GameEngine:
         self.check_game_over()
 
     def check_game_over(self) -> bool:
-        """检查游戏是否结束"""
+        """检查游戏是否结束."""
         alive_players = self.get_alive_players()
 
         # 检查主公是否存活
@@ -1020,11 +1073,11 @@ class GameEngine:
         return False
 
     def is_game_over(self) -> bool:
-        """检查游戏是否结束"""
+        """检查游戏是否结束."""
         return self.state == GameState.FINISHED
 
     def get_winner_message(self) -> str:
-        """获取胜利消息"""
+        """获取胜利消息."""
         from i18n import t as _t
 
         if self.winner_identity == Identity.LORD:
@@ -1040,7 +1093,7 @@ class GameEngine:
     def setup_headless_game(
         self, player_count: int, ai_difficulty: str = "normal", seed: int | None = None
     ) -> None:
-        """设置无 UI 对战（用于压力测试与 AI 研究）
+        """设置无 UI 对战（用于压力测试与 AI 研究）.
 
         Args:
             player_count: 玩家数量（2-8）
@@ -1068,6 +1121,7 @@ class GameEngine:
 
         # 初始化动作日志（用于回放）
         self.action_log = []
+        self.ai_bots.clear()
 
         # 创建玩家（全部为 AI）
         self.players.clear()
@@ -1087,7 +1141,7 @@ class GameEngine:
 
         # 先创建玩家并分配身份，再分配武将（确保 set_hero 能正确识别主公 +1 HP）
         for i in range(player_count):
-            player = Player(id=i, name=f"AI_{i + 1}", is_ai=True, seat=i)
+            player = Player(id=i, name=f"AI_{i + 1}", is_ai=True, seat=i, game_engine=self)
             self.players.append(player)
 
         # BUG-FIX: 先分配身份，再分配武将——否则 set_hero 无法识别主公身份，导致主公缺少 +1 HP
@@ -1103,26 +1157,102 @@ class GameEngine:
 
             # 创建 AI
             self.ai_bots[player.id] = AIBot(player, difficulty)
+        self._ensure_skill_system()
 
         # 重置牌堆
         self.deck.reset()
+        self._deal_initial_hand_cards()
+        self._begin_started_game()
 
-        # 发初始手牌
-        for player in self.players:
-            cards = self.deck.draw(4)
-            player.draw_cards(cards)
+    def setup_room_game(
+        self,
+        connected_players: list[tuple[int, str]],
+        total_player_count: int | None = None,
+        ai_difficulty: str = "normal",
+        seed: int | None = None,
+    ) -> None:
+        """根据房间玩家创建网络权威对局."""
+        from ai.bot import AIBot, AIDifficulty
 
-        self.state = GameState.IN_PROGRESS
-        self.current_player_index = 0
-        self.round_count = 1
+        if total_player_count is None:
+            total_player_count = len(connected_players)
+
+        if total_player_count < 2 or total_player_count > 8:
+            from i18n import t as _t
+
+            raise ValueError(_t("error.player_count"))
+
+        if len(connected_players) > total_player_count:
+            raise ValueError("connected_players exceeds total_player_count")
+
+        player_ids = [player_id for player_id, _ in connected_players]
+        if len(set(player_ids)) != len(player_ids):
+            raise ValueError("duplicate connected player ids")
+
+        if seed is None:
+            seed = random.randint(0, 2**31 - 1)
+        self.game_seed = seed
+        random.seed(seed)
+        from i18n import t as _t
+
+        self.log_event("system", _t("game.random_seed", seed=seed))
+        self.action_log = []
+        self.players.clear()
+        self.ai_bots.clear()
+        self.human_player = None
+
+        for seat, (player_id, name) in enumerate(connected_players):
+            player = Player(id=player_id, name=name, is_ai=False, seat=seat)
+            player.game_engine = self
+            self.players.append(player)
+            if self.human_player is None:
+                self.human_player = player
+
+        next_ai_id = max(player_ids, default=0) + 1
+        ai_slots = total_player_count - len(connected_players)
+        for ai_index in range(ai_slots):
+            player = Player(
+                id=next_ai_id + ai_index,
+                name=f"AI_{ai_index + 1}",
+                is_ai=True,
+                seat=len(self.players),
+                game_engine=self,
+            )
+            self.players.append(player)
+
+        self._assign_identities()
+
+        all_heroes = self.hero_repo.get_all_heroes()
+        random.shuffle(all_heroes)
+        difficulty_map = {
+            "easy": AIDifficulty.EASY,
+            "normal": AIDifficulty.NORMAL,
+            "hard": AIDifficulty.HARD,
+        }
+        difficulty = difficulty_map.get(ai_difficulty, AIDifficulty.NORMAL)
+
+        for i, player in enumerate(self.players):
+            if i < len(all_heroes):
+                import copy
+
+                hero = copy.deepcopy(all_heroes[i])
+                player.set_hero(hero)
+
+            if player.is_ai:
+                self.ai_bots[player.id] = AIBot(player, difficulty)
+        self._ensure_skill_system()
+
+        self.deck.reset()
+        self._deal_initial_hand_cards()
+        self._begin_started_game()
 
     def _assign_identities_for_count(self, player_count: int) -> None:
-        """为指定人数分配身份配置"""
+        """为指定人数分配身份配置."""
         # 预配置身份（稍后在 _assign_identities 中使用）
         pass  # _assign_identities 会处理
 
     def run_headless_turn(self, max_actions: int = 50) -> bool:
-        """执行当前玩家的无 UI 回合（委托给 TurnManager）
+        """执行当前玩家的无 UI 回合（委托给 TurnManager）.
 
         Args:
             max_actions: 单回合最大操作数（防止死循环）
@@ -1140,7 +1270,7 @@ class GameEngine:
         return True
 
     def export_action_log(self, filepath: str | None = None) -> str:
-        """导出 action_log 为 JSON 文件（M3-T02）
+        """导出 action_log 为 JSON 文件（M3-T02）.
 
         Args:
             filepath: 导出路径，None 则自动生成
@@ -1154,9 +1284,16 @@ class GameEngine:
         if not hasattr(self, "action_log"):
             self.action_log = []
 
+        # 汇总来源统计
+        source_channel_stats: dict[str, int] = {}
+        for item in self.action_log:
+            source = item.get("source_channel", "unknown")
+            source_channel_stats[source] = source_channel_stats.get(source, 0) + 1
+
         # 构建导出数据
         export_data = {
-            "version": "1.0",
+            "version": "1.1",
+            "action_log_schema_version": "1.1",
             "exported_at": datetime.now().isoformat(),
             "game_seed": getattr(self, "game_seed", None),
             "player_count": len(self.players),
@@ -1171,6 +1308,8 @@ class GameEngine:
             ],
             "winner": self.winner_identity.value if self.winner_identity else None,
             "rounds": self.round_count,
+            "action_count": len(self.action_log),
+            "source_channel_stats": source_channel_stats,
             "actions": self.action_log,
         }
 
@@ -1193,7 +1332,7 @@ class GameEngine:
         return filepath
 
     def run_headless_battle(self, max_rounds: int = 100) -> dict[str, Any]:
-        """运行完整的无 UI 对局
+        """运行完整的无 UI 对局.
 
         Args:
             max_rounds: 最大回合数

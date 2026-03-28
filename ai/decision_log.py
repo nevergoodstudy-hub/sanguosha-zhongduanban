@@ -1,4 +1,4 @@
-"""AI 决策透明化日志 (P3-1)
+"""AI 决策透明化日志 (P3-1).
 
 记录 AI 每次决策的候选动作、选择理由和评分，
 用于调试 AI 行为和平衡性分析。可选启用，不影响性能。
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class AIDecision:
-    """AI 决策记录条目。"""
+    """AI 决策记录条目。."""
 
     timestamp: float = field(default_factory=time.time)
     player_id: int = -1
@@ -45,7 +45,7 @@ class AIDecision:
 
 
 class AIDecisionLogger:
-    """AI 决策日志记录器。
+    """AI 决策日志记录器。.
 
     可通过 enabled 参数控制是否实际记录，
     禁用时所有方法均为空操作。
@@ -68,7 +68,7 @@ class AIDecisionLogger:
         return self._history
 
     def log(self, decision: AIDecision) -> None:
-        """记录一条决策。"""
+        """记录一条决策。."""
         if not self._enabled:
             return
         self._history.append(decision)
@@ -83,17 +83,17 @@ class AIDecisionLogger:
         )
 
     def clear(self) -> None:
-        """清空历史记录。"""
+        """清空历史记录。."""
         self._history.clear()
 
     def export_json(self, path: str | Path) -> None:
-        """导出决策日志为 JSON 文件。"""
+        """导出决策日志为 JSON 文件。."""
         data = [asdict(d) for d in self._history]
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False, default=str)
 
     def summary(self) -> dict[str, Any]:
-        """生成摘要统计。"""
+        """生成摘要统计。."""
         if not self._history:
             return {"total": 0}
 

@@ -1,4 +1,4 @@
-"""WebSocket 游戏客户端 (M4-T03)
+"""WebSocket 游戏客户端 (M4-T03).
 
 功能:
 - 连接服务端
@@ -13,7 +13,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from contextlib import suppress
+from inspect import isawaitable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from websockets.asyncio.client import ClientConnection
@@ -24,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class GameClient:
-    """三国杀 WebSocket 客户端
+    """三国杀 WebSocket 客户端.
 
     职责:
     1. 维护与服务端的 WebSocket 连接
@@ -47,9 +49,9 @@ class GameClient:
         self._running: bool = False
 
         # 事件回调
-        self._handlers: dict[MsgType, Callable] = {}
-        self._on_connect: Callable | None = None
-        self._on_disconnect: Callable | None = None
+        self._handlers: dict[MsgType, Callable[[ServerMsg], Any]] = {}
+        self._on_connect: Callable[[], Any] | None = None
+        self._on_disconnect: Callable[[], Any] | None = None
 
         # 重连配置
         self.auto_reconnect: bool = True
@@ -61,22 +63,31 @@ class GameClient:
 
     # ==================== 事件回调注册 ====================
 
-    def on(self, msg_type: MsgType, handler: Callable) -> None:
-        """注册消息处理回调"""
+    def on(self, msg_type: MsgType, handler: Callable[[ServerMsg], Any]) -> None:
+        """注册消息处理回调."""
         self._handlers[msg_type] = handler
 
-    def on_connect(self, handler: Callable) -> None:
-        """注册连接成功回调"""
+    def on_connect(self, handler: Callable[[], Any]) -> None:
+        """注册连接成功回调."""
         self._on_connect = handler
 
-    def on_disconnect(self, handler: Callable) -> None:
-        """注册断连回调"""
+    def on_disconnect(self, handler: Callable[[], Any]) -> None:
+        """注册断连回调."""
         self._on_disconnect = handler
+
+    async def _invoke_callback(self, callback: Callable[..., Any], *args: Any) -> None:
+        """调用回调并兼容同步/异步函数。."""
+        try:
+            result = callback(*args)
+            if isawaitable(result):
+                await result
+        except Exception as e:
+            logger.warning(f"回调执行异常: {e}")
 
     # ==================== 连接管理 ====================
 
     async def connect(self) -> bool:
-        """连接到服务端"""
+        """连接到服务端."""
         try:
             import websockets
 
@@ -84,7 +95,7 @@ class GameClient:
             self._connected = True
             logger.info(f"已连接到 {self.server_url}")
             if self._on_connect:
-                await self._on_connect()
+                await self._invoke_callback(self._on_connect)
             return True
         except ImportError:
             logger.error("需要安装 websockets: pip install websockets")
@@ -95,18 +106,16 @@ class GameClient:
             return False
 
     async def disconnect(self) -> None:
-        """断开连接"""
+        """断开连接."""
         self._running = False
         self._connected = False
         if self._ws:
-            try:
+            with suppress(Exception):
                 await self._ws.close()
-            except Exception:
-                pass
             self._ws = None
         logger.info("已断开连接")
         if self._on_disconnect:
-            await self._on_disconnect()
+            await self._invoke_callback(self._on_disconnect)
 
     @property
     def is_connected(self) -> bool:
@@ -115,12 +124,16 @@ class GameClient:
     # ==================== 消息收发 ====================
 
     async def send(self, msg: ClientMsg) -> bool:
-        """发送消息"""
+        """发送消息."""
         if not self.is_connected:
             logger.warning("未连接，无法发送消息")
             return False
+        ws = self._ws
+        if ws is None:
+            logger.warning("未连接，无法发送消息")
+            return False
         try:
-            await self._ws.send(msg.to_json())
+            await ws.send(msg.to_json())
             return True
         except Exception as e:
             logger.warning(f"发送失败: {e}")
@@ -128,16 +141,19 @@ class GameClient:
             return False
 
     async def _receive_loop(self) -> None:
-        """消息接收循环"""
+        """消息接收循环."""
+        if self._ws is None:
+            return
         try:
             async for raw in self._ws:
-                await self._dispatch(raw)
+                payload = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw
+                await self._dispatch(payload)
         except Exception as e:
             logger.warning(f"接收循环中断: {e}")
             self._connected = False
 
     async def _dispatch(self, raw: str) -> None:
-        """分发收到的消息"""
+        """分发收到的消息."""
         try:
             msg = ServerMsg.from_json(raw)
 
@@ -155,10 +171,7 @@ class GameClient:
             # 调用注册的回调
             handler = self._handlers.get(msg.type)
             if handler:
-                if asyncio.iscoroutinefunction(handler):
-                    await handler(msg)
-                else:
-                    handler(msg)
+                await self._invoke_callback(handler, msg)
             else:
                 logger.debug(f"未处理的消息类型: {msg.type.value}")
 
@@ -168,7 +181,7 @@ class GameClient:
     # ==================== 心跳 ====================
 
     async def _heartbeat_loop(self) -> None:
-        """心跳循环"""
+        """心跳循环."""
         while self._running and self.is_connected:
             await asyncio.sleep(self._heartbeat_interval)
             if self.is_connected:
@@ -177,7 +190,7 @@ class GameClient:
     # ==================== 重连 ====================
 
     async def _reconnect(self) -> bool:
-        """尝试重连 (携带令牌用于身份验证)"""
+        """尝试重连 (携带令牌用于身份验证)."""
         for attempt in range(1, self.max_reconnect_attempts + 1):
             logger.info(f"重连尝试 {attempt}/{self.max_reconnect_attempts}...")
             await asyncio.sleep(self.reconnect_delay * attempt)
@@ -205,7 +218,7 @@ class GameClient:
     # ==================== 主循环 ====================
 
     async def run(self) -> None:
-        """客户端主循环"""
+        """客户端主循环."""
         if not await self.connect():
             return
 
@@ -233,34 +246,34 @@ class GameClient:
     async def create_room(
         self, player_name: str, max_players: int = 4, ai_fill: bool = True
     ) -> None:
-        """创建房间"""
+        """创建房间."""
         self.player_name = player_name
         await self.send(ClientMsg.room_create(self.player_id, player_name, max_players, ai_fill))
 
     async def join_room(self, player_name: str, room_id: str) -> None:
-        """加入房间"""
+        """加入房间."""
         self.player_name = player_name
         await self.send(ClientMsg.room_join(self.player_id, player_name, room_id))
 
     async def leave_room(self) -> None:
-        """离开房间"""
+        """离开房间."""
         await self.send(ClientMsg.room_leave(self.player_id))
         self.room_id = None
 
     async def set_ready(self, ready: bool = True) -> None:
-        """设置准备状态"""
+        """设置准备状态."""
         await self.send(ClientMsg.room_ready(self.player_id, ready))
 
     async def start_game(self) -> None:
-        """开始游戏 (房主)"""
+        """开始游戏 (房主)."""
         await self.send(ClientMsg.room_start(self.player_id))
 
     async def list_rooms(self) -> None:
-        """获取房间列表"""
+        """获取房间列表."""
         await self.send(ClientMsg.room_list())
 
-    async def play_card(self, card_id: int, target_ids: list[int] = None) -> None:
-        """出牌"""
+    async def play_card(self, card_id: str, target_ids: list[int] | None = None) -> None:
+        """出牌."""
         await self.send(
             ClientMsg.game_action(
                 self.player_id,
@@ -269,8 +282,8 @@ class GameClient:
             )
         )
 
-    async def use_skill(self, skill_id: str, target_ids: list[int] = None) -> None:
-        """使用技能"""
+    async def use_skill(self, skill_id: str, target_ids: list[int] | None = None) -> None:
+        """使用技能."""
         await self.send(
             ClientMsg.game_action(
                 self.player_id,
@@ -280,59 +293,89 @@ class GameClient:
         )
 
     async def end_turn(self) -> None:
-        """结束回合"""
+        """结束回合."""
         await self.send(ClientMsg.game_action(self.player_id, "end_turn"))
 
-    async def respond(self, request_type: str, accepted: bool, card_id: int = None) -> None:
-        """响应请求"""
-        data = {"card_id": card_id} if card_id is not None else {}
-        await self.send(ClientMsg.game_response(self.player_id, request_type, accepted, data))
+    async def discard(self, card_ids: list[str]) -> None:
+        """弃牌."""
+        await self.send(ClientMsg.game_action(self.player_id, "discard", {"card_ids": card_ids}))
+
+    async def respond(
+        self,
+        request_type: str,
+        accepted: bool,
+        card_id: str | None = None,
+        *,
+        request_id: str = "",
+        card_ids: list[str] | None = None,
+        target_ids: list[int] | None = None,
+        option: str | int | bool | list[str] | list[int] | None = None,
+    ) -> None:
+        """响应请求."""
+        data: dict[str, Any] = {}
+        if card_id is not None:
+            data["card_id"] = card_id
+        if card_ids is not None:
+            data["card_ids"] = card_ids
+        if target_ids is not None:
+            data["target_ids"] = target_ids
+        if option is not None:
+            data["option"] = option
+        await self.send(
+            ClientMsg.game_response(
+                self.player_id,
+                request_type,
+                accepted,
+                data,
+                request_id=request_id,
+            )
+        )
 
     async def choose_hero(self, hero_id: str) -> None:
-        """选择武将"""
+        """选择武将."""
         await self.send(ClientMsg.hero_chosen(self.player_id, hero_id))
 
     async def chat(self, message: str) -> None:
-        """发送聊天"""
+        """发送聊天."""
         await self.send(ClientMsg.chat(self.player_id, message))
 
 
 # ==================== CLI 客户端 ====================
 
 
-async def cli_client_main(server_url: str, player_name: str):
-    """简化的命令行客户端"""
+async def cli_client_main(server_url: str, player_name: str) -> None:
+    """简化的命令行客户端."""
     client = GameClient(server_url)
     client.player_name = player_name
 
     # 注册回调
     cli_log = logging.getLogger("sanguosha.cli")
 
-    def on_room_created(msg: ServerMsg):
+    def on_room_created(msg: ServerMsg) -> None:
         client.room_id = msg.data.get("room_id", "")
         cli_log.info("✓ 房间已创建: %s", client.room_id)
 
-    def on_room_joined(msg: ServerMsg):
+    def on_room_joined(msg: ServerMsg) -> None:
         client.room_id = msg.data.get("room_id", "")
         client.player_id = msg.data.get("player_id", 0)
         cli_log.info("✓ 已加入房间 %s, 你的 ID: %s", client.room_id, client.player_id)
 
-    def on_room_update(msg: ServerMsg):
+    def on_room_update(msg: ServerMsg) -> None:
         players = msg.data.get("players", [])
         state = msg.data.get("state", "")
         cli_log.info("房间状态: %s, 玩家: %s", state, [p["name"] for p in players])
 
-    def on_game_event(msg: ServerMsg):
+    def on_game_event(msg: ServerMsg) -> None:
         event_type = msg.data.get("event_type", "")
         cli_log.info("[事件] %s: %s", event_type, msg.data)
 
-    def on_game_over(msg: ServerMsg):
+    def on_game_over(msg: ServerMsg) -> None:
         cli_log.info("游戏结束! 胜者: %s", msg.data.get("winner"))
 
-    def on_chat(msg: ServerMsg):
+    def on_chat(msg: ServerMsg) -> None:
         cli_log.info("💬 %s: %s", msg.data.get("player_name"), msg.data.get("message"))
 
-    def on_error(msg: ServerMsg):
+    def on_error(msg: ServerMsg) -> None:
         cli_log.error("❌ 错误: %s", msg.data.get("message"))
 
     client.on(MsgType.ROOM_CREATED, on_room_created)
@@ -346,8 +389,8 @@ async def cli_client_main(server_url: str, player_name: str):
     await client.run()
 
 
-def main():
-    """命令行客户端入口"""
+def main() -> None:
+    """命令行客户端入口."""
     import argparse
 
     parser = argparse.ArgumentParser(description="三国杀客户端")

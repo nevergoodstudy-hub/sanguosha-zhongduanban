@@ -1,5 +1,5 @@
 """网络协议定义 (M4-T01)
-基于 WebSocket 的 JSON 消息格式
+基于 WebSocket 的 JSON 消息格式.
 
 协议设计:
 - 客户端 → 服务端: ClientMsg (动作/请求)
@@ -19,7 +19,7 @@ from typing import Any
 
 
 class MsgType(Enum):
-    """网络消息类型"""
+    """网络消息类型."""
 
     # ---- 连接管理 ----
     HEARTBEAT = "heartbeat"  # 心跳
@@ -63,7 +63,7 @@ class MsgType(Enum):
 
 
 class RoomState(Enum):
-    """房间状态"""
+    """房间状态."""
 
     WAITING = "waiting"  # 等待中
     FULL = "full"  # 已满
@@ -76,7 +76,7 @@ class RoomState(Enum):
 
 @dataclass
 class ServerMsg:
-    """服务端 → 客户端消息
+    """服务端 → 客户端消息.
 
     所有服务端发出的消息都使用此格式:
     {
@@ -93,7 +93,7 @@ class ServerMsg:
     timestamp: float = field(default_factory=time.time)
 
     def to_json(self) -> str:
-        """序列化为 JSON 字符串"""
+        """序列化为 JSON 字符串."""
         return json.dumps(
             {
                 "type": self.type.value,
@@ -106,7 +106,7 @@ class ServerMsg:
 
     @classmethod
     def from_json(cls, raw: str) -> ServerMsg:
-        """从 JSON 字符串反序列化"""
+        """从 JSON 字符串反序列化."""
         obj = json.loads(raw)
         return cls(
             type=MsgType(obj["type"]),
@@ -118,8 +118,20 @@ class ServerMsg:
     # ---------- 工厂方法 ----------
 
     @classmethod
-    def error(cls, message: str, code: int = 400) -> ServerMsg:
-        return cls(type=MsgType.ERROR, data={"message": message, "code": code})
+    def error(
+        cls,
+        message: str,
+        code: int = 400,
+        error_code: str = "E_GENERIC",
+    ) -> ServerMsg:
+        return cls(
+            type=MsgType.ERROR,
+            data={
+                "message": message,
+                "code": code,
+                "error_code": error_code,
+            },
+        )
 
     @classmethod
     def heartbeat_ack(cls) -> ServerMsg:
@@ -162,12 +174,12 @@ class ServerMsg:
 
     @classmethod
     def game_state(cls, state: dict[str, Any]) -> ServerMsg:
-        """完整游戏状态 (初始化 / 断线重连)"""
+        """完整游戏状态 (初始化 / 断线重连)."""
         return cls(type=MsgType.GAME_STATE, data=state)
 
     @classmethod
     def game_event(cls, event_type: str, event_data: dict[str, Any], seq: int = 0) -> ServerMsg:
-        """增量游戏事件"""
+        """增量游戏事件."""
         return cls(
             type=MsgType.GAME_EVENT,
             seq=seq,
@@ -182,22 +194,38 @@ class ServerMsg:
         cls,
         request_type: str,
         player_id: int,
-        options: dict[str, Any] = None,
+        options: dict[str, Any] | None = None,
         timeout: float = 30.0,
+        request_id: str = "",
+        message: str = "",
+        required: bool = False,
+        min_cards: int = 0,
+        max_cards: int = 1,
+        card_filter: str | None = None,
+        target_filter: str | None = None,
     ) -> ServerMsg:
-        """请求玩家输入"""
+        """请求玩家输入."""
         return cls(
             type=MsgType.GAME_REQUEST,
             data={
+                "request_id": request_id,
                 "request_type": request_type,
                 "player_id": player_id,
+                "message": message,
                 "options": options or {},
                 "timeout": timeout,
+                "required": required,
+                "min_cards": min_cards,
+                "max_cards": max_cards,
+                "card_filter": card_filter,
+                "target_filter": target_filter,
             },
         )
 
     @classmethod
-    def game_over(cls, winner: str, reason: str, stats: dict[str, Any] = None) -> ServerMsg:
+    def game_over(
+        cls, winner: str, reason: str, stats: dict[str, Any] | None = None
+    ) -> ServerMsg:
         return cls(
             type=MsgType.GAME_OVER,
             data={
@@ -230,7 +258,7 @@ class ServerMsg:
 
 @dataclass
 class ClientMsg:
-    """客户端 → 服务端消息
+    """客户端 → 服务端消息.
 
     格式:
     {
@@ -247,7 +275,7 @@ class ClientMsg:
     timestamp: float = field(default_factory=time.time)
 
     def to_json(self) -> str:
-        """序列化为 JSON 字符串"""
+        """序列化为 JSON 字符串."""
         return json.dumps(
             {
                 "type": self.type.value,
@@ -260,7 +288,7 @@ class ClientMsg:
 
     @classmethod
     def from_json(cls, raw: str) -> ClientMsg:
-        """从 JSON 字符串反序列化"""
+        """从 JSON 字符串反序列化."""
         obj = json.loads(raw)
         return cls(
             type=MsgType(obj["type"]),
@@ -318,9 +346,9 @@ class ClientMsg:
 
     @classmethod
     def game_action(
-        cls, player_id: int, action_type: str, action_data: dict[str, Any] = None
+        cls, player_id: int, action_type: str, action_data: dict[str, Any] | None = None
     ) -> ClientMsg:
-        """玩家主动操作 (出牌/技能/弃牌/结束)"""
+        """玩家主动操作 (出牌/技能/弃牌/结束)."""
         return cls(
             type=MsgType.GAME_ACTION,
             player_id=player_id,
@@ -336,13 +364,15 @@ class ClientMsg:
         player_id: int,
         request_type: str,
         accepted: bool = False,
-        response_data: dict[str, Any] = None,
+        response_data: dict[str, Any] | None = None,
+        request_id: str = "",
     ) -> ClientMsg:
-        """玩家响应请求 (出闪/出杀/出桃等)"""
+        """玩家响应请求 (出闪/出杀/出桃等)."""
         return cls(
             type=MsgType.GAME_RESPONSE,
             player_id=player_id,
             data={
+                "request_id": request_id,
                 "request_type": request_type,
                 "accepted": accepted,
                 **(response_data or {}),
@@ -374,7 +404,7 @@ class ClientMsg:
 
 
 def parse_message(raw: str) -> tuple[str, dict]:
-    """快速解析 JSON 消息，返回 (type_str, full_dict)
+    """快速解析 JSON 消息，返回 (type_str, full_dict).
 
     用于路由层在不构造完整对象时快速判断消息类型
     """
@@ -383,7 +413,7 @@ def parse_message(raw: str) -> tuple[str, dict]:
 
 
 def validate_msg_type(type_str: str) -> bool:
-    """检查消息类型是否合法"""
+    """检查消息类型是否合法."""
     try:
         MsgType(type_str)
         return True

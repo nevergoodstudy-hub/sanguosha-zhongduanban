@@ -1,5 +1,5 @@
 """卡牌系统模块
-定义卡牌类型、花色、卡牌类和牌堆
+定义卡牌类型、花色、卡牌类和牌堆.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class CardType(Enum):
-    """卡牌类型枚举"""
+    """卡牌类型枚举."""
 
     BASIC = "basic"  # 基本牌
     TRICK = "trick"  # 锦囊牌
@@ -25,7 +25,7 @@ class CardType(Enum):
 
 
 class CardSubtype(Enum):
-    """卡牌子类型枚举"""
+    """卡牌子类型枚举."""
 
     # 基本牌子类型
     ATTACK = "attack"  # 杀
@@ -53,7 +53,7 @@ class CardSubtype(Enum):
 
 
 class DamageType(Enum):
-    """伤害类型枚举 (军争篇)"""
+    """伤害类型枚举 (军争篇)."""
 
     NORMAL = "normal"  # 普通伤害
     FIRE = "fire"  # 火焰伤害
@@ -62,7 +62,7 @@ class DamageType(Enum):
 
 
 class CardSuit(Enum):
-    """卡牌花色枚举"""
+    """卡牌花色枚举."""
 
     SPADE = "spade"  # 黑桃 ♠
     HEART = "heart"  # 红心 ♥
@@ -71,7 +71,7 @@ class CardSuit(Enum):
 
     @property
     def symbol(self) -> str:
-        """获取花色符号"""
+        """获取花色符号."""
         symbols = {
             CardSuit.SPADE: "♠",
             CardSuit.HEART: "♥",
@@ -82,18 +82,18 @@ class CardSuit(Enum):
 
     @property
     def is_red(self) -> bool:
-        """是否为红色花色"""
+        """是否为红色花色."""
         return self in (CardSuit.HEART, CardSuit.DIAMOND)
 
     @property
     def is_black(self) -> bool:
-        """是否为黑色花色"""
+        """是否为黑色花色."""
         return self in (CardSuit.SPADE, CardSuit.CLUB)
 
 
 @dataclass(slots=True)
 class Card:
-    """卡牌类
+    """卡牌类.
 
     Attributes:
         id: 卡牌唯一标识符
@@ -118,7 +118,7 @@ class Card:
     distance_modifier: int = 0
 
     def __post_init__(self):
-        """初始化后处理"""
+        """初始化后处理."""
         # 转换字符串类型为枚举类型
         if isinstance(self.card_type, str):
             self.card_type = CardType(self.card_type)
@@ -129,45 +129,45 @@ class Card:
 
     @property
     def number_str(self) -> str:
-        """获取点数字符串表示"""
+        """获取点数字符串表示."""
         number_map = {1: "A", 11: "J", 12: "Q", 13: "K"}
         return number_map.get(self.number, str(self.number))
 
     @property
     def suit_symbol(self) -> str:
-        """获取花色符号"""
+        """获取花色符号."""
         return self.suit.symbol
 
     @property
     def is_red(self) -> bool:
-        """是否为红色牌"""
+        """是否为红色牌."""
         return self.suit.is_red
 
     @property
     def is_black(self) -> bool:
-        """是否为黑色牌"""
+        """是否为黑色牌."""
         return self.suit.is_black
 
     @property
     def display_name(self) -> str:
-        """获取显示名称（包含花色和点数）"""
+        """获取显示名称（包含花色和点数）."""
         return f"{self.name}{self.suit_symbol}{self.number_str}"
 
     @property
     def short_name(self) -> str:
-        """获取短名称"""
+        """获取短名称."""
         return f"{self.name}"
 
     def is_type(self, card_type: CardType) -> bool:
-        """检查是否为指定类型"""
+        """检查是否为指定类型."""
         return self.card_type == card_type
 
     def is_subtype(self, subtype: CardSubtype) -> bool:
-        """检查是否为指定子类型"""
+        """检查是否为指定子类型."""
         return self.subtype == subtype
 
     def can_target(self, user: Player, target: Player, game_engine: GameEngine) -> bool:
-        """检查是否可以对目标使用此牌
+        """检查是否可以对目标使用此牌.
 
         Args:
             user: 使用者
@@ -182,9 +182,8 @@ class Card:
             return False
 
         # 锦囊牌检查
-        if self.name in [CardName.JUEDOU, CardName.GUOHE]:
-            if user == target:
-                return False
+        if self.name in [CardName.JUEDOU, CardName.GUOHE] and user == target:
+            return False
 
         # 顺手牵羊需要距离检查
         if self.name == CardName.SHUNSHOU:
@@ -195,10 +194,7 @@ class Card:
                 return False
 
         # 检查目标是否存活
-        if not target.is_alive:
-            return False
-
-        return True
+        return target.is_alive
 
     def __str__(self) -> str:
         return self.display_name
@@ -207,7 +203,7 @@ class Card:
         return f"Card({self.id}, {self.display_name})"
 
     def to_dict(self) -> dict[str, Any]:
-        """转换为字典"""
+        """转换为字典."""
         return {
             "id": self.id,
             "name": self.name,
@@ -222,7 +218,7 @@ class Card:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Card:
-        """从字典创建卡牌"""
+        """从字典创建卡牌."""
         return cls(
             id=data["id"],
             name=data["name"],
@@ -238,11 +234,11 @@ class Card:
 
 class Deck:
     """牌堆类
-    管理游戏中的牌堆和弃牌堆
+    管理游戏中的牌堆和弃牌堆.
     """
 
     def __init__(self, data_path: str | None = None):
-        """初始化牌堆
+        """初始化牌堆.
 
         Args:
             data_path: 卡牌数据文件路径
@@ -255,12 +251,12 @@ class Deck:
             self.load_cards(data_path)
 
     def load_cards(self, data_path: str) -> None:
-        """从JSON文件加载卡牌数据
+        """从JSON文件加载卡牌数据.
 
         Args:
             data_path: JSON文件路径
         """
-        path = Path(data_path)
+        path = self._resolve_data_path(data_path)
         if not path.exists():
             raise FileNotFoundError(f"卡牌数据文件不存在: {data_path}")
 
@@ -319,18 +315,27 @@ class Deck:
         # 初始化摸牌堆
         self.reset()
 
+    def _resolve_data_path(self, data_path: str | Path) -> Path:
+        """解析卡牌数据路径，兼容项目相对路径."""
+        path = Path(data_path).expanduser()
+        if path.is_absolute() or path.exists():
+            return path
+
+        project_root = Path(__file__).resolve().parent.parent
+        return project_root / path
+
     def reset(self) -> None:
-        """重置牌堆（将所有牌放入摸牌堆并洗牌）"""
-        self.draw_pile = [card for card in self._all_cards]
+        """重置牌堆（将所有牌放入摸牌堆并洗牌）."""
+        self.draw_pile = list(self._all_cards)
         self.discard_pile.clear()
         self.shuffle()
 
     def shuffle(self) -> None:
-        """洗牌"""
+        """洗牌."""
         random.shuffle(self.draw_pile)
 
     def draw(self, count: int = 1) -> list[Card]:
-        """摸牌
+        """摸牌.
 
         Args:
             count: 摸牌数量
@@ -349,14 +354,14 @@ class Deck:
         return cards
 
     def _reshuffle_discard(self) -> None:
-        """将弃牌堆洗入摸牌堆"""
+        """将弃牌堆洗入摸牌堆."""
         if self.discard_pile:
             self.draw_pile.extend(self.discard_pile)
             self.discard_pile.clear()
             self.shuffle()
 
     def discard(self, cards: list[Card]) -> None:
-        """弃牌
+        """弃牌.
 
         Args:
             cards: 要弃置的卡牌列表
@@ -364,7 +369,7 @@ class Deck:
         self.discard_pile.extend(cards)
 
     def peek(self, count: int = 1) -> list[Card]:
-        """查看牌堆顶的牌（不取出）
+        """查看牌堆顶的牌（不取出）.
 
         Args:
             count: 查看数量
@@ -379,7 +384,7 @@ class Deck:
         return self.draw_pile[-count:] if count <= len(self.draw_pile) else self.draw_pile[:]
 
     def put_on_top(self, cards: list[Card]) -> None:
-        """将牌放到牌堆顶
+        """将牌放到牌堆顶.
 
         Args:
             cards: 要放置的卡牌列表
@@ -387,7 +392,7 @@ class Deck:
         self.draw_pile.extend(cards)
 
     def put_on_bottom(self, cards: list[Card]) -> None:
-        """将牌放到牌堆底
+        """将牌放到牌堆底.
 
         Args:
             cards: 要放置的卡牌列表
@@ -397,17 +402,17 @@ class Deck:
 
     @property
     def remaining(self) -> int:
-        """获取摸牌堆剩余牌数"""
+        """获取摸牌堆剩余牌数."""
         return len(self.draw_pile)
 
     @property
     def discarded(self) -> int:
-        """获取弃牌堆牌数"""
+        """获取弃牌堆牌数."""
         return len(self.discard_pile)
 
     @property
     def is_empty(self) -> bool:
-        """检查牌堆是否完全耗尽（摸牌堆和弃牌堆都为空）"""
+        """检查牌堆是否完全耗尽（摸牌堆和弃牌堆都为空）."""
         return len(self.draw_pile) == 0 and len(self.discard_pile) == 0
 
     def __len__(self) -> int:
@@ -466,7 +471,7 @@ class Deck:
     }
 
     def validate_deck(self) -> list[str]:
-        """验证牌堆完整性
+        """验证牌堆完整性.
 
         检查所有卡牌 (牌堆 + 弃牌堆 + 不含已分发给玩家的) 的名称和数量
         是否与预期匹配。
@@ -494,7 +499,7 @@ class Deck:
 
 # 卡牌名称常量
 class CardName:
-    """卡牌名称常量类"""
+    """卡牌名称常量类."""
 
     # 基本牌
     SHA = "杀"

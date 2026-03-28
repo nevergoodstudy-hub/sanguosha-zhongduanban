@@ -534,6 +534,127 @@
       ]
     },
     {
+      "id": "mouyuanshu",
+      "name": "谋袁术",
+      "kingdom": "qun",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "画脂镂冰",
+      "skills": [
+        {
+          "id": "jinming",
+          "name": "矜名",
+          "description": "回合开始时，你选择一项。若如此做，回合结束时，你摸记录的数值张牌并记录本次选择的选项序号（覆盖之前的记录），然后若你未于本回合：1.回复过1点体力；2.造成过2点伤害；3.使用过三种类型的牌；4.弃置过四张牌，则你失去1点体力并移除该选项。",
+          "type": "trigger"
+        },
+        {
+          "id": "xiaoshi",
+          "name": "枭噬",
+          "description": "每回合限一次，当你于出牌阶段内使用基本牌或普通锦囊牌指定目标时，你可以额外选择一名攻击范围为记录数值的角色为目标，然后其摸记录数值张牌。",
+          "type": "trigger"
+        },
+        {
+          "id": "yanliang",
+          "name": "厌粱",
+          "description": "主公技。其他群势力角色的出牌阶段限一次，该角色可以交给你一张装备牌，视为使用一张【酒】。",
+          "type": "trigger",
+          "is_lord_skill": true
+        }
+      ]
+    },
+    {
+      "id": "hujinding",
+      "name": "胡金定",
+      "kingdom": "shu",
+      "max_hp": 3,
+      "gender": "female",
+      "title": "怀子求怜",
+      "skills": [
+        {
+          "id": "qingyuan",
+          "name": "轻缘",
+          "description": "游戏开始时，或当你第一次受到伤害时，你令一名没有“轻缘”标记的其他角色获得“轻缘”标记。每回合限一次，当有此标记的其他角色获得牌后，你随机获得一名有此标记的其他角色的一张手牌。",
+          "type": "trigger"
+        },
+        {
+          "id": "zhongshen",
+          "name": "重身",
+          "description": "你可以将一张本轮获得的红色牌当【闪】使用。",
+          "type": "transform"
+        }
+      ]
+    },
+    {
+      "id": "jieliubiao",
+      "name": "界刘表",
+      "kingdom": "qun",
+      "max_hp": 3,
+      "gender": "male",
+      "title": "儁才秀拔",
+      "skills": [
+        {
+          "id": "zishou",
+          "name": "自守",
+          "description": "摸牌阶段，你可以多摸X张牌（X为全场势力数）。若你于本回合对其他角色造成过伤害，你于本回合的结束阶段弃置X张牌。",
+          "type": "trigger",
+          "phase": "draw"
+        },
+        {
+          "id": "zongshi",
+          "name": "宗室",
+          "description": "锁定技。①你的手牌上限+X（X为全场势力数）；②每个势力限一次，当其他角色对你造成伤害时，防止之，然后伤害来源摸一张牌。",
+          "type": "passive",
+          "is_compulsory": true
+        }
+      ]
+    },
+    {
+      "id": "jiefazheng",
+      "name": "界法正",
+      "kingdom": "shu",
+      "max_hp": 3,
+      "gender": "male",
+      "title": "蜀汉的辅翼",
+      "skills": [
+        {
+          "id": "xuanhuo",
+          "name": "眩惑",
+          "description": "摸牌阶段结束时，你可以将两张手牌交给一名其他角色，并选择另一名角色，然后令该角色选择一项：1.对你选择的角色使用一张【杀】；2.令你观看其手牌并获得其两张牌。",
+          "type": "trigger",
+          "phase": "draw"
+        },
+        {
+          "id": "enyuan",
+          "name": "恩怨",
+          "description": "①当你一次性获得一名其他角色的至少两张牌后，你可以令其摸一张牌；②当你受到1点伤害后，你可以令伤害来源选择一项：1.交给你一张红色手牌；2.失去1点体力。",
+          "type": "trigger"
+        }
+      ]
+    },
+    {
+      "id": "xiangchong",
+      "name": "向宠",
+      "kingdom": "shu",
+      "max_hp": 4,
+      "gender": "male",
+      "title": "镇军之岳",
+      "skills": [
+        {
+          "id": "guying",
+          "name": "固营",
+          "description": "每名其他角色的回合限一次，当你一次性仅失去一张牌后，当前回合角色选择一项：1.随机交给你一张牌；2.令你重新获得此牌（若此牌为装备牌则使用之）。若如此做，你于你的下个准备阶段弃置一张牌。",
+          "type": "trigger"
+        },
+        {
+          "id": "muzhen",
+          "name": "睦阵",
+          "description": "出牌阶段每项各限一次，你可以：1.交给一名装备区里有牌的其他角色两张牌，然后获得其装备区里的一张牌；2.将一张装备牌置入一名其他角色的装备区（不能替换原装备），然后获得该角色的一张手牌。",
+          "type": "active",
+          "phase": "play"
+        }
+      ]
+    },
+    {
       "id": "xushu",
       "name": "徐庶",
       "kingdom": "shu",

@@ -30,7 +30,7 @@ class TestStressBattle:
         timeouts = 0
         rng = random.Random(2026)
 
-        for i in range(STRESS_COUNT):
+        for _i in range(STRESS_COUNT):
             seed = rng.randint(0, 2**31)
             pc = rng.choice([2, 3, 4])
             diff = rng.choice(["easy", "normal", "hard"])

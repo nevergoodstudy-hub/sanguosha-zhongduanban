@@ -1,4 +1,4 @@
-"""技能插件系统 (P3-4)
+"""技能插件系统 (P3-4).
 
 扩展 skill_dsl.json 解释器，支持从外部目录加载自定义技能。
 插件文件为 JSON 格式，与 data/skill_dsl.json 同结构。
@@ -34,7 +34,7 @@ _PLUGIN_DIR = _BASE_DIR / "plugins" / "skills"
 
 @dataclass(slots=True)
 class PluginInfo:
-    """已加载插件的元信息。"""
+    """已加载插件的元信息。."""
 
     name: str
     path: str
@@ -46,14 +46,14 @@ class PluginInfo:
 
 @dataclass(slots=True)
 class LoadError:
-    """插件加载错误。"""
+    """插件加载错误。."""
 
     path: str
     error: str
 
 
 class SkillPluginLoader:
-    """技能插件加载器。
+    """技能插件加载器。.
 
     负责:
     - 加载内置 data/skill_dsl.json
@@ -76,11 +76,11 @@ class SkillPluginLoader:
 
     @property
     def plugins(self) -> list[PluginInfo]:
-        """已加载的插件列表。"""
+        """已加载的插件列表。."""
         return list(self._plugins)
 
     def load_builtin(self) -> int:
-        """加载内置技能定义。
+        """加载内置技能定义。.
 
         Returns:
             加载的技能数量
@@ -101,7 +101,7 @@ class SkillPluginLoader:
             return 0
 
     def discover(self) -> int:
-        """扫描插件目录并加载所有 JSON 插件。
+        """扫描插件目录并加载所有 JSON 插件。.
 
         Returns:
             新加载的插件技能总数
@@ -130,7 +130,7 @@ class SkillPluginLoader:
         return total
 
     def _load_plugin_file(self, path: Path) -> int:
-        """加载单个插件文件。"""
+        """加载单个插件文件。."""
         try:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
@@ -201,7 +201,7 @@ class SkillPluginLoader:
         return len(skill_ids)
 
     def _validate_skill(self, skill_id: str, skill_def: dict) -> list[str]:
-        """验证技能定义的基本合法性。"""
+        """验证技能定义的基本合法性。."""
         errors: list[str] = []
         try:
             dsl = SkillDsl.from_dict(skill_def)
@@ -216,21 +216,21 @@ class SkillPluginLoader:
         return errors
 
     def get_all_skills(self) -> dict[str, dict[str, Any]]:
-        """获取合并后的所有技能（内置 + 插件）。"""
+        """获取合并后的所有技能（内置 + 插件）。."""
         merged = dict(self._builtin_skills)
         merged.update(self._plugin_skills)
         return merged
 
     def get_builtin_skills(self) -> dict[str, dict[str, Any]]:
-        """仅内置技能。"""
+        """仅内置技能。."""
         return dict(self._builtin_skills)
 
     def get_plugin_skills(self) -> dict[str, dict[str, Any]]:
-        """仅插件技能。"""
+        """仅插件技能。."""
         return dict(self._plugin_skills)
 
     def get_skill_dsl(self, skill_id: str) -> SkillDsl | None:
-        """按 ID 获取解析后的 SkillDsl 对象。"""
+        """按 ID 获取解析后的 SkillDsl 对象。."""
         all_skills = self.get_all_skills()
         raw = all_skills.get(skill_id)
         if raw is None:
@@ -238,9 +238,9 @@ class SkillPluginLoader:
         return SkillDsl.from_dict(raw)
 
     def get_errors(self) -> list[LoadError]:
-        """获取所有加载错误。"""
+        """获取所有加载错误。."""
         return list(self._errors)
 
     def is_plugin_skill(self, skill_id: str) -> bool:
-        """检查技能是否来自插件。"""
+        """检查技能是否来自插件。."""
         return skill_id in self._plugin_skills

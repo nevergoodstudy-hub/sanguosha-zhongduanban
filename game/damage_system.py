@@ -1,4 +1,4 @@
-"""伤害系统数据模型
+"""伤害系统数据模型.
 
 提供伤害相关的数据结构 (DamageEvent / DamageResult) 和工具函数。
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class DamageEvent:
-    """伤害事件数据"""
+    """伤害事件数据."""
 
     source: Player | None  # 伤害来源，None 表示系统伤害
     target: Player  # 伤害目标
@@ -30,7 +30,7 @@ class DamageEvent:
 
 @dataclass(slots=True)
 class DamageResult:
-    """伤害结果"""
+    """伤害结果."""
 
     actual_damage: int  # 实际造成的伤害
     target_died: bool  # 目标是否死亡
@@ -42,7 +42,7 @@ class DamageResult:
 
 
 def calculate_damage_with_modifiers(base_damage: int, modifiers: list[int]) -> int:
-    """计算带修正的伤害
+    """计算带修正的伤害.
 
     Args:
         base_damage: 基础伤害

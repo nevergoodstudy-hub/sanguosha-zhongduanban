@@ -1,4 +1,4 @@
-"""简单 AI 策略 — 随机出牌
+"""简单 AI 策略 — 随机出牌.
 
 实现 AIStrategy 协议，用于 EASY 难度。
 """
@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from game.card import CardName, CardSubtype, CardType
 from game.config import get_config
 
-from .strategy import is_enemy
+from .strategy import execute_play_card_action, is_enemy
 
 if TYPE_CHECKING:
     from game.card import Card
@@ -20,10 +20,10 @@ if TYPE_CHECKING:
 
 
 class EasyStrategy:
-    """简单模式策略：随机出牌"""
+    """简单模式策略：随机出牌."""
 
     def play_phase(self, player: Player, engine: GameEngine) -> None:
-        """简单模式：随机出牌"""
+        """简单模式：随机出牌."""
         cfg = get_config()
         max_actions = cfg.ai_max_actions
         actions = 0
@@ -46,13 +46,13 @@ class EasyStrategy:
                 break
 
     def choose_discard(self, player: Player, count: int, engine: GameEngine) -> list[Card]:
-        """简单模式：随机弃牌"""
+        """简单模式：随机弃牌."""
         if not player.hand:
             return []
         return random.sample(player.hand, min(count, len(player.hand)))
 
     def should_use_qinglong(self, player: Player, target: Player, engine: GameEngine) -> bool:
-        """简单模式：有杀且是敌人就继续"""
+        """简单模式：有杀且是敌人就继续."""
         sha_count = len(player.get_cards_by_name(CardName.SHA))
         if sha_count > 1:
             return is_enemy(player, target)
@@ -61,10 +61,10 @@ class EasyStrategy:
     # ==================== 内部方法 ====================
 
     def _try_use_card(self, player: Player, card: Card, engine: GameEngine) -> bool:
-        """简单模式：尝试使用卡牌"""
+        """简单模式：尝试使用卡牌."""
         # 装备牌直接使用
         if card.card_type == CardType.EQUIPMENT:
-            return engine.use_card(player, card)
+            return execute_play_card_action(engine, player, card)
 
         # 自用锦囊
         if card.name in [CardName.WUZHONG, CardName.TAOYUAN]:
@@ -156,10 +156,13 @@ class EasyStrategy:
             if not has_shandian:
                 return engine.use_card(player, card)
 
-        elif card.subtype == CardSubtype.ALCOHOL:
-            if not player.alcohol_used and player.can_use_sha():
-                sha = player.get_cards_by_name(CardName.SHA)
-                if sha:
-                    return engine.use_card(player, card)
+        elif (
+            card.subtype == CardSubtype.ALCOHOL
+            and not player.alcohol_used
+            and player.can_use_sha()
+        ):
+            sha = player.get_cards_by_name(CardName.SHA)
+            if sha:
+                return engine.use_card(player, card)
 
         return False

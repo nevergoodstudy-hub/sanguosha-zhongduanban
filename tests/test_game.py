@@ -116,7 +116,6 @@ class TestDeck(unittest.TestCase):
 
         # 继续抽牌应该自动将弃牌堆洗入
         remaining = self.deck.remaining
-        discarded = self.deck.discarded
 
         cards = self.deck.draw(remaining + 1)
         self.assertGreater(len(cards), 0)

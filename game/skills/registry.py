@@ -1,4 +1,4 @@
-"""技能注册表与装饰器
+"""技能注册表与装饰器.
 
 提供统一的技能注册机制：
 
@@ -19,7 +19,7 @@ _SKILL_REGISTRY: dict[str, Callable[..., bool]] = {}
 
 
 def skill_handler(skill_id: str) -> Callable[[Callable[..., bool]], Callable[..., bool]]:
-    """装饰器：注册技能处理函数到全局注册表。
+    """装饰器：注册技能处理函数到全局注册表。.
 
     用法：
         @skill_handler("rende")
@@ -36,5 +36,5 @@ def skill_handler(skill_id: str) -> Callable[[Callable[..., bool]], Callable[...
 
 
 def get_registry() -> dict[str, Callable[..., bool]]:
-    """获取当前注册的 skill handlers（浅拷贝，避免外部修改）。"""
+    """获取当前注册的 skill handlers（浅拷贝，避免外部修改）。."""
     return dict(_SKILL_REGISTRY)

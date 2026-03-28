@@ -1,4 +1,4 @@
-"""卡牌选取弹窗 (M-C C6)
+"""卡牌选取弹窗 (M-C C6).
 
 用于过河拆桥 / 顺手牵羊等需要从目标玩家选一张牌的场景。
 修复 P0: 原 choose_card_from_player 使用 random.choice。
@@ -14,7 +14,7 @@ dismiss(None)            → 取消
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -26,8 +26,8 @@ if TYPE_CHECKING:
     pass
 
 
-class CardPickModal(AnimatedModalScreen[Optional[int]]):
-    """从目标玩家选一张牌"""
+class CardPickModal(AnimatedModalScreen[int | None]):
+    """从目标玩家选一张牌."""
 
     DEFAULT_CSS = """
     CardPickModal {
@@ -66,7 +66,7 @@ class CardPickModal(AnimatedModalScreen[Optional[int]]):
     def __init__(self, target, all_cards: list):
         """Args:
         target: Player — 被选牌的目标
-        all_cards: 该玩家所有牌列表（与 get_all_cards 返回一致）
+        all_cards: 该玩家所有牌列表（与 get_all_cards 返回一致）.
         """
         super().__init__()
         self._target = target

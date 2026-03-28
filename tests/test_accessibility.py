@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from ui.textual_ui.themes import THEMES, ThemeColors, ThemeManager
 
 

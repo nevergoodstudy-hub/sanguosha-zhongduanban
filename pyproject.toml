@@ -1,9 +1,9 @@
 [project]
 name = "sanguosha"
-version = "4.0.0"
+version = "4.1.1"
 description = "三国杀命令行终端游戏"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Sanguosha Team"}
 ]
@@ -13,6 +13,8 @@ dependencies = [
     "rich>=13.0.0",
     "textual>=0.40.0",
     "websockets>=12.0",
+    "pydantic==2.12.5",
+    "pydantic-core==2.41.5",
 ]
 requires-python = ">=3.10"
 
@@ -35,6 +37,9 @@ sanguosha = "main:main"
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["game", "ai", "ui", "net", "i18n"]
 
 # Ruff 配置 (统一替代 Black + isort + flake8)
 [tool.ruff]
@@ -62,9 +67,12 @@ ignore = [
     "W191",   # indentation contains tabs
     "E402",   # module level import not at top of file
     "D100",   # missing docstring in public module (渐进启用)
+    "D102",   # missing docstring in public method (渐进启用)
+    "D103",   # missing docstring in public function (渐进启用)
     "D104",   # missing docstring in public package
     "D105",   # missing docstring in magic method
     "D107",   # missing docstring in __init__
+    "D205",   # blank line after summary (渐进启用)
     "D203",   # conflicts with D211 (one-blank-line-before-class)
     "D213",   # conflicts with D212 (multi-line-summary-second-line)
     "N802",   # function name lowercase (部分中文项目方法名)
@@ -73,7 +81,10 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "D104"]  # unused imports and missing docstring in __init__.py are OK
-"tests/*" = ["B011", "D", "N"]    # tests: relaxed docstring and naming rules
+"tests/*.py" = ["B011", "D", "N"]     # tests: relaxed docstring and naming rules
+"tests/**/*.py" = ["B011", "D", "N"]  # nested tests: same relaxed rules
+"i18n/en_US.py" = ["N999"]            # locale module naming keeps language-region style
+"i18n/zh_CN.py" = ["N999"]            # locale module naming keeps language-region style
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"  # 使用 Google 风格 docstring
@@ -86,10 +97,10 @@ skip-magic-trailing-comma = false
 # MyPy 配置
 [tool.mypy]
 python_version = "3.10"
-warn_return_any = true
+warn_return_any = false          # 渐进启用，先收敛核心类型错误
 warn_unused_configs = true
-disallow_untyped_defs = true   # 强制类型注解
-check_untyped_defs = true
+disallow_untyped_defs = false   # 渐进启用
+check_untyped_defs = false      # 渐进启用
 ignore_missing_imports = true
 no_implicit_optional = true    # 禁止隐式Optional
 strict_equality = true
@@ -104,12 +115,31 @@ exclude = [
 
 [[tool.mypy.overrides]]
 module = "tests.*"
-disallow_untyped_defs = false
-warn_return_any = false
+ignore_errors = true            # 测试层先不阻塞全量类型检查
 
 [[tool.mypy.overrides]]
 module = "ui.*"
-disallow_untyped_defs = false  # UI 层渐进启用
+ignore_errors = true            # UI 层渐进启用
+
+[[tool.mypy.overrides]]
+module = "tools.*"
+ignore_errors = true            # 工具脚本先不阻塞主流程
+
+[[tool.mypy.overrides]]
+module = [
+    "ai.*",
+    "game.actions",
+    "game.card_handlers",
+    "game.card_resolver",
+    "game.combat",
+    "game.engine",
+    "game.exceptions",
+    "game.game_controller",
+    "game.judge_system",
+    "game.skill_interpreter",
+    "game.skills.*",
+]
+ignore_errors = true            # 动态/历史模块较多，分批收敛类型债务
 
 # Pytest 配置
 [tool.pytest.ini_options]

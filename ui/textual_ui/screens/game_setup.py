@@ -1,4 +1,4 @@
-"""游戏设置界面（选人数 + 难度）"""
+"""游戏设置界面（选人数 + 难度）."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from i18n import t as _t
 
 
 class GameSetupScreen(Screen):
-    """游戏设置界面（选人数 + 难度）"""
+    """游戏设置界面（选人数 + 难度）."""
 
     CSS = """
     GameSetupScreen {

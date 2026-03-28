@@ -1,4 +1,4 @@
-"""吴国武将技能处理器
+"""吴国武将技能处理器.
 
 包含以下武将技能：
   孙权 - 制衡(zhiheng)、救援(jiuyuan)
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 def handle_zhiheng(
     player: Player, engine: GameEngine, cards: list[Card] | None = None, **kwargs
 ) -> bool:
-    """制衡：弃置任意数量的牌，然后摸等量的牌"""
+    """制衡：弃置任意数量的牌，然后摸等量的牌."""
     if not cards:
         return False
 
@@ -55,7 +55,7 @@ def handle_zhiheng(
 
 @skill_handler("jiuyuan")
 def handle_jiuyuan(player: Player, engine: GameEngine, **kwargs) -> bool:
-    """救援：锁定技，其他吴势力角色对你使用桃时，额外回复1点体力（此技能在使用桃时自动触发）"""
+    """救援：锁定技，其他吴势力角色对你使用桃时，额外回复1点体力（此技能在使用桃时自动触发）."""
     return True
 
 
@@ -64,7 +64,7 @@ def handle_jiuyuan(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 @skill_handler("yingzi")
 def handle_yingzi(player: Player, engine: GameEngine, **kwargs) -> bool:
-    """英姿：摸牌阶段多摸一张牌（此技能在摸牌阶段自动触发）"""
+    """英姿：摸牌阶段多摸一张牌（此技能在摸牌阶段自动触发）."""
     return True
 
 
@@ -76,7 +76,7 @@ def handle_fanjian(
     cards: list[Card] | None = None,
     **kwargs,
 ) -> bool:
-    """反间：选择一名角色，展示一张手牌，让其猜花色"""
+    """反间：选择一名角色，展示一张手牌，让其猜花色."""
     if not targets or not cards:
         return False
 
@@ -120,7 +120,7 @@ def handle_guose(
     cards: list = None,
     **kwargs,
 ) -> bool:
-    """国色：出牌阶段，可以将一张方块牌当【乐不思蜀】使用"""
+    """国色：出牌阶段，可以将一张方块牌当【乐不思蜀】使用."""
     from ..card import Card, CardName, CardSubtype, CardSuit, CardType
 
     if target is None and targets:
@@ -178,7 +178,7 @@ def handle_guose(
 
 @skill_handler("liuli")
 def handle_liuli(player: Player, engine: GameEngine, new_target: Player = None, **kwargs) -> bool:
-    """流离：成为杀的目标时，可以弃置一张牌并选择攻击范围内的一名其他角色，将此杀转移给该角色"""
+    """流离：成为杀的目标时，可以弃置一张牌并选择攻击范围内的一名其他角色，将此杀转移给该角色."""
     if new_target is None or not player.hand:
         return False
 
@@ -203,7 +203,7 @@ def handle_qixi(
     cards: list = None,
     **kwargs,
 ) -> bool:
-    """奇袭：出牌阶段，可以将任意黑色牌当【过河拆桥】使用，可以被无懈可击抵消"""
+    """奇袭：出牌阶段，可以将任意黑色牌当【过河拆桥】使用，可以被无懈可击抵消."""
     from ..card import Card, CardName, CardSubtype, CardType
 
     if target is None and targets:
@@ -268,7 +268,7 @@ def handle_qixi(
 
 @skill_handler("keji")
 def handle_keji(player: Player, engine: GameEngine, **kwargs) -> bool:
-    """克己：若出牌阶段未使用杀，跳过弃牌阶段"""
+    """克己：若出牌阶段未使用杀，跳过弃牌阶段."""
     if player.sha_count == 0:
         engine.log_event("skill", _t("skill_msg.keji", name=player.name))
         return True
@@ -280,7 +280,7 @@ def handle_keji(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 @skill_handler("kurou")
 def handle_kurou(player: Player, engine: GameEngine, **kwargs) -> bool:
-    """苦肉：出牌阶段，失去1点体力摸两张牌。原版规则：允许 hp=1 时发动进入濒死，被救后摸牌"""
+    """苦肉：出牌阶段，失去1点体力摸两张牌。原版规则：允许 hp=1 时发动进入濒死，被救后摸牌."""
     player.hp -= 1
     engine.log_event("skill", _t("skill_msg.kurou", name=player.name))
 
@@ -305,7 +305,7 @@ def handle_kurou(player: Player, engine: GameEngine, **kwargs) -> bool:
 def handle_jieyin(
     player: Player, engine: GameEngine, target: Player = None, cards: list[Card] = None, **kwargs
 ) -> bool:
-    """结姻：弃两张手牌，自己和一名受伤男性各回复1点体力"""
+    """结姻：弃两张手牌，自己和一名受伤男性各回复1点体力."""
     if not target or not cards or len(cards) < 2:
         return False
 
@@ -324,7 +324,7 @@ def handle_jieyin(
 
 @skill_handler("xiaoji")
 def handle_xiaoji(player: Player, engine: GameEngine, **kwargs) -> bool:
-    """枭姬：失去装备区的牌后摸两张牌"""
+    """枭姬：失去装备区的牌后摸两张牌."""
     cards = engine.deck.draw(2)
     player.draw_cards(cards)
     engine.log_event("skill", _t("skill_msg.xiaoji", name=player.name))

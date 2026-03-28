@@ -1,5 +1,5 @@
 """AI模块
-提供游戏AI逻辑
+提供游戏AI逻辑.
 
 Phase 4.1: 策略模式重构 — 按难度拆分为 EasyStrategy / NormalStrategy / HardStrategy
 """

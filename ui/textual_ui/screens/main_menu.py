@@ -1,4 +1,4 @@
-"""主菜单界面"""
+"""主菜单界面."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from i18n import t as _t
 
 
 class MainMenuScreen(Screen):
-    """主菜单界面"""
+    """主菜单界面."""
 
     CSS = """
     MainMenuScreen {

@@ -1,6 +1,5 @@
 """Configuration validation tests (P2-5)."""
 
-import pytest
 
 from game.config import GameConfig
 

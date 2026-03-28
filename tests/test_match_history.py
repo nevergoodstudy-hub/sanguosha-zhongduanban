@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import tempfile
 from pathlib import Path
 
@@ -13,12 +12,12 @@ from game.match_history import MatchHistory, MatchResult, PlayerStat
 
 def _make_result(**overrides) -> MatchResult:
     """辅助：创建测试用 MatchResult。"""
-    defaults = dict(
-        winner="lord",
-        player_count=5,
-        rounds=10,
-        duration_seconds=300.0,
-        players=[
+    defaults = {
+        "winner": "lord",
+        "player_count": 5,
+        "rounds": 10,
+        "duration_seconds": 300.0,
+        "players": [
             PlayerStat(
                 name="P1",
                 hero="曹操",
@@ -65,7 +64,7 @@ def _make_result(**overrides) -> MatchResult:
                 damage_dealt=1,
             ),
         ],
-    )
+    }
     defaults.update(overrides)
     return MatchResult(**defaults)
 

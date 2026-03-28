@@ -1,4 +1,4 @@
-"""技能 DSL (Domain-Specific Language) 定义模块
+"""技能 DSL (Domain-Specific Language) 定义模块.
 
 M2-T01: 定义技能 DSL 的数据结构和 Schema。
 技能逻辑通过 JSON 声明式描述，由 SkillInterpreter 执行。
@@ -20,7 +20,8 @@ DSL 结构:
     heal       - 回复体力       {"heal": {"target": "self"|"target", "amount": N}}
     damage     - 造成伤害       {"damage": {"target": "source"|"target", "amount": N}}
     lose_hp    - 失去体力       {"lose_hp": N}
-    transfer   - 转移牌        {"transfer": {"from": "hand", "to": "target.hand", "cards": "selected"}}
+    transfer   - 转移牌        {"transfer": {"from": "hand", "to": "target.hand",
+                                             "cards": "selected"}}
     judge      - 判定          {"judge": {"success": {...}, "fail": {...}}}
     get_card   - 获取牌        {"get_card": {"from": "discard_pile"|"source", ...}}
     flip       - 翻面          {"flip": true}
@@ -36,7 +37,7 @@ from typing import Any
 
 
 class DslTrigger(str, Enum):
-    """DSL 触发类型"""
+    """DSL 触发类型."""
 
     ACTIVE = "active"  # 主动使用
     AFTER_DAMAGED = "after_damaged"  # 受到伤害后
@@ -92,7 +93,7 @@ VALID_STEPS = {
 
 @dataclass
 class SkillDsl:
-    """技能 DSL 数据对象
+    """技能 DSL 数据对象.
 
     从 heroes.json 中 skill 条目的 "dsl" 字段解析而来。
     """
@@ -107,7 +108,7 @@ class SkillDsl:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SkillDsl:
-        """从字典构建 SkillDsl"""
+        """从字典构建 SkillDsl."""
         return cls(
             trigger=data.get("trigger", "active"),
             steps=data.get("steps", []),
@@ -119,7 +120,7 @@ class SkillDsl:
         )
 
     def validate(self) -> list[str]:
-        """验证 DSL 合法性
+        """验证 DSL 合法性.
 
         Returns:
             错误信息列表（空 = 合法）

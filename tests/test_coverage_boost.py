@@ -48,6 +48,7 @@ def _mock_engine():
     engine.ai_bots = {}
     engine.skill_system = None
     engine.phase = GamePhase.PLAY
+    engine.request_handler = None
     return engine
 
 
@@ -492,8 +493,8 @@ class TestWeiSkillHandlers:
         player = _mock_player("P", hand=[card], is_ai=False)
         player.hand = [card]
         engine = _mock_engine()
-        # UI 返回 None 表示玩家不选择替换判定牌
-        engine.ui.choose_card_to_play = MagicMock(return_value=None)
+        engine.request_handler = MagicMock()
+        engine.request_handler.request_skill_card = MagicMock(return_value=None)
         assert handle_guicai(player, engine) is False
 
     def test_guicai_human_selects_card(self):
@@ -504,7 +505,8 @@ class TestWeiSkillHandlers:
         player = _mock_player("P", hand=[card], is_ai=False)
         player.hand = [card]
         engine = _mock_engine()
-        engine.ui.choose_card_to_play = MagicMock(return_value=card)
+        engine.request_handler = MagicMock()
+        engine.request_handler.request_skill_card = MagicMock(return_value=card)
         assert handle_guicai(player, engine) is True
 
     def test_ganglie_no_source(self):
@@ -551,6 +553,47 @@ class TestWeiSkillHandlers:
         assert result is True
         # Source discards, not takes damage
         engine.deal_damage.assert_not_called()
+
+    def test_ganglie_human_discards_two_via_request_handler(self):
+        from game.skills.wei import handle_ganglie
+
+        player = _mock_player("P")
+        c1 = make_card(CardName.SHA, card_id="g1")
+        c2 = make_card(CardName.SHAN, card_id="g2")
+        source = _mock_player("S", hand=[c1, c2], is_ai=False)
+        source.hand = [c1, c2]
+        source.hand_count = 2
+        judge_card = make_card(CardName.SHA, suit=CardSuit.SPADE)
+        engine = _mock_engine()
+        engine.deck.draw = MagicMock(return_value=[judge_card])
+        engine.request_handler = MagicMock()
+        engine.request_handler.request_discard = MagicMock(return_value=[c1, c2])
+
+        result = handle_ganglie(player, engine, source=source)
+
+        assert result is True
+        engine.request_handler.request_discard.assert_called_once_with(source, 0, 2)
+        engine.deal_damage.assert_not_called()
+
+    def test_ganglie_human_declines_discard_and_takes_damage(self):
+        from game.skills.wei import handle_ganglie
+
+        player = _mock_player("P")
+        c1 = make_card(CardName.SHA, card_id="g1")
+        c2 = make_card(CardName.SHAN, card_id="g2")
+        source = _mock_player("S", hand=[c1, c2], is_ai=False)
+        source.hand = [c1, c2]
+        source.hand_count = 2
+        judge_card = make_card(CardName.SHA, suit=CardSuit.SPADE)
+        engine = _mock_engine()
+        engine.deck.draw = MagicMock(return_value=[judge_card])
+        engine.request_handler = MagicMock()
+        engine.request_handler.request_discard = MagicMock(return_value=[])
+
+        result = handle_ganglie(player, engine, source=source)
+
+        assert result is True
+        engine.deal_damage.assert_called_once_with(player, source, 1)
 
     def test_ganglie_heart_judge_no_effect(self):
         from game.skills.wei import handle_ganglie
@@ -618,7 +661,8 @@ class TestWeiSkillHandlers:
 
 
 class TestAIStrategyUtils:
-    """Cover is_enemy, card_priority, smart_discard, pick_least_valuable, count_useless_cards, get_friends."""
+    """Cover is_enemy, card_priority, smart_discard, pick_least_valuable,
+    count_useless_cards, get_friends."""
 
     def test_is_enemy_lord_vs_rebel(self):
         from ai.strategy import is_enemy

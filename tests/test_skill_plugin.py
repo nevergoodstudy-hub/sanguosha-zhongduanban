@@ -8,8 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from game.skill_plugin import LoadError, PluginInfo, SkillPluginLoader
-
+from game.skill_plugin import SkillPluginLoader
 
 # ─── 固定的有效插件 JSON ───
 

@@ -1,5 +1,5 @@
 """胜利条件检查器模块
-负责判定游戏结束条件和确定获胜方
+负责判定游戏结束条件和确定获胜方.
 
 本模块将胜利判定逻辑从 GameEngine 中解耦，
 使得胜利条件可以独立测试和扩展。
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class WinResult(Enum):
-    """胜利结果"""
+    """胜利结果."""
 
     NOT_FINISHED = "not_finished"
     LORD_WIN = "lord_win"  # 主公和忠臣获胜
@@ -29,7 +29,7 @@ class WinResult(Enum):
 
 @dataclass(slots=True)
 class GameOverInfo:
-    """游戏结束信息"""
+    """游戏结束信息."""
 
     is_over: bool
     result: WinResult
@@ -38,7 +38,7 @@ class GameOverInfo:
 
 
 class WinConditionChecker:
-    """胜利条件检查器
+    """胜利条件检查器.
 
     负责检查各种胜利条件：
     - 主公死亡 → 反贼或内奸获胜
@@ -46,7 +46,7 @@ class WinConditionChecker:
     """
 
     def __init__(self, engine: GameEngine):
-        """初始化胜利条件检查器
+        """初始化胜利条件检查器.
 
         Args:
             engine: 游戏引擎引用
@@ -54,7 +54,7 @@ class WinConditionChecker:
         self.engine = engine
 
     def check_game_over(self) -> GameOverInfo:
-        """检查游戏是否结束
+        """检查游戏是否结束.
 
         Returns:
             GameOverInfo: 游戏结束信息
@@ -89,7 +89,7 @@ class WinConditionChecker:
         )
 
     def _find_lord(self, players: list[Player]) -> Player | None:
-        """查找主公"""
+        """查找主公."""
         from .player import Identity
 
         for p in players:
@@ -98,7 +98,7 @@ class WinConditionChecker:
         return None
 
     def _check_lord_dead(self, alive_players: list[Player]) -> GameOverInfo:
-        """检查主公死亡时的胜利条件
+        """检查主公死亡时的胜利条件.
 
         Args:
             alive_players: 存活玩家列表
@@ -129,12 +129,12 @@ class WinConditionChecker:
             )
 
     def get_winner_message(self) -> str:
-        """获取胜利消息"""
+        """获取胜利消息."""
         info = self.check_game_over()
         return info.message if info.is_over else _t("game.in_progress")
 
     def is_game_over(self) -> bool:
-        """检查游戏是否结束"""
+        """检查游戏是否结束."""
         return self.check_game_over().is_over
 
 
@@ -142,7 +142,7 @@ class WinConditionChecker:
 
 
 def get_identity_win_condition(identity_value: str) -> str:
-    """获取身份的胜利条件描述
+    """获取身份的胜利条件描述.
 
     Args:
         identity_value: 身份值
@@ -160,7 +160,7 @@ def get_identity_win_condition(identity_value: str) -> str:
 
 
 def check_team_win(alive_players: list[Player], team_identities: list[str]) -> bool:
-    """检查某一阵营是否获胜
+    """检查某一阵营是否获胜.
 
     Args:
         alive_players: 存活玩家列表
@@ -170,7 +170,4 @@ def check_team_win(alive_players: list[Player], team_identities: list[str]) -> b
         该阵营是否获胜
     """
     # 检查所有存活玩家是否都属于指定阵营
-    for p in alive_players:
-        if p.identity.value not in team_identities:
-            return False
-    return True
+    return all(p.identity.value in team_identities for p in alive_players)

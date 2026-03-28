@@ -8,6 +8,7 @@
 3. 验证引擎不崩溃、数据结构不被破坏
 """
 
+import contextlib
 import random
 
 from game.card import CardName
@@ -90,10 +91,8 @@ class TestFuzz:
         for _ in range(50):
             if engine.is_game_over():
                 break
-            try:
+            with contextlib.suppress(Exception):
                 engine.next_turn()
-            except Exception:
-                pass  # 某些状态下可能不允许切换
         self._verify_integrity(engine)
 
     # ==================== 辅助方法 ====================

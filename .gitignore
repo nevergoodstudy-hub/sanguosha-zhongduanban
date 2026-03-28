@@ -73,3 +73,20 @@ RESEARCH_SYNTHESIS.md
 
 # Ruff 缓存
 .ruff_cache/
+
+# Git worktrees
+.worktrees/
+worktrees/
+
+# 打包/发布产物
+msix_output/
+*.msix
+Package.appxmanifest
+*.egg-info/
+.pip-audit-cache/
+
+# 本地分析/性能产物
+perf_*.prof
+
+# 本地 AI/编辑器状态目录
+.cursor/

@@ -1,4 +1,4 @@
-"""无懈可击响应弹窗 (M-C C4)
+"""无懈可击响应弹窗 (M-C C4).
 
 修复 P0 缺陷: 原 ask_for_wuxie 硬编码 return None。
 弹窗显示锦囊信息 + 5秒倒计时，超时自动放弃。
@@ -9,6 +9,7 @@ dismiss(False) → 放弃 / 超时
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from textual.app import ComposeResult
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class WuxieResponseModal(AnimatedModalScreen[bool]):
-    """无懈可击响应弹窗 — 5秒倒计时，显示锦囊信息"""
+    """无懈可击响应弹窗 — 5秒倒计时，显示锦囊信息."""
 
     DEFAULT_CSS = """
     WuxieResponseModal {
@@ -102,10 +103,8 @@ class WuxieResponseModal(AnimatedModalScreen[bool]):
 
     def _tick(self) -> None:
         self._remaining -= 1
-        try:
+        with contextlib.suppress(Exception):
             self.query_one("#wuxie-countdown", Static).update(f"⏱ {self._remaining}s 后自动放弃")
-        except Exception:
-            pass
         if self._remaining <= 0:
             if self._countdown_timer:
                 self._countdown_timer.stop()

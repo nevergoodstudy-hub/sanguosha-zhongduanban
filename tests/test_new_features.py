@@ -157,7 +157,7 @@ class TestHuogong(unittest.TestCase):
 
         # 使用火攻
         try:
-            result = self.engine.use_card(user, huogong, [target])
+            self.engine.use_card(user, huogong, [target])
             print("✓ 火攻使用测试通过")
         except Exception as e:
             self.fail(f"火攻使用失败: {e}")
@@ -287,7 +287,9 @@ class TestChainDamage(unittest.TestCase):
 
         # 验证连环传导
         print(
-            f"✓ 连环传导测试: target1 HP {initial_hp1}->{target1.hp}, target2 HP {initial_hp2}->{target2.hp}"
+            "✓ 连环传导测试: "
+            f"target1 HP {initial_hp1}->{target1.hp}, "
+            f"target2 HP {initial_hp2}->{target2.hp}"
         )
 
 

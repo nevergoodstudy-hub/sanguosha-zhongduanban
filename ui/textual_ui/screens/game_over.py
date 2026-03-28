@@ -1,4 +1,4 @@
-"""游戏结束界面"""
+"""游戏结束界面."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from textual.widgets import Button, Static
 
 
 class GameOverScreen(Screen):
-    """游戏结束界面"""
+    """游戏结束界面."""
 
     CSS = """
     GameOverScreen {

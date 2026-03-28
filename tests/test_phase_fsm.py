@@ -102,7 +102,7 @@ class TestValidTransitions:
 
     def test_exactly_one_successor(self):
         """Each phase should have exactly one valid successor."""
-        for phase, targets in VALID_TRANSITIONS.items():
+        for _phase, targets in VALID_TRANSITIONS.items():
             assert len(targets) == 1
 
 

@@ -1,4 +1,4 @@
-"""锦囊牌效果处理器（M1-T02）"""
+"""锦囊牌效果处理器（M1-T02）."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class JuedouEffect(CardEffect):
-    """决斗"""
+    """决斗."""
 
     @property
     def needs_target(self) -> bool:
@@ -29,7 +29,7 @@ class JuedouEffect(CardEffect):
 
 
 class NanmanEffect(CardEffect):
-    """南蛮入侵"""
+    """南蛮入侵."""
 
     def can_use(self, engine, player, card, targets):
         return True, ""
@@ -39,7 +39,7 @@ class NanmanEffect(CardEffect):
 
 
 class WanjianEffect(CardEffect):
-    """万箭齐发"""
+    """万箭齐发."""
 
     def can_use(self, engine, player, card, targets):
         return True, ""
@@ -49,7 +49,7 @@ class WanjianEffect(CardEffect):
 
 
 class WuzhongEffect(CardEffect):
-    """无中生有"""
+    """无中生有."""
 
     def can_use(self, engine, player, card, targets):
         return True, ""
@@ -59,7 +59,7 @@ class WuzhongEffect(CardEffect):
 
 
 class GuoheEffect(CardEffect):
-    """过河拆桥"""
+    """过河拆桥."""
 
     @property
     def needs_target(self) -> bool:
@@ -75,7 +75,7 @@ class GuoheEffect(CardEffect):
 
 
 class ShunshouEffect(CardEffect):
-    """顺手牵羊"""
+    """顺手牵羊."""
 
     @property
     def needs_target(self) -> bool:
@@ -91,7 +91,7 @@ class ShunshouEffect(CardEffect):
 
 
 class TaoyuanEffect(CardEffect):
-    """桃园结义"""
+    """桃园结义."""
 
     def can_use(self, engine, player, card, targets):
         return True, ""
@@ -101,7 +101,7 @@ class TaoyuanEffect(CardEffect):
 
 
 class LebusishuEffect(CardEffect):
-    """乐不思蜀"""
+    """乐不思蜀."""
 
     @property
     def needs_target(self) -> bool:
@@ -117,7 +117,7 @@ class LebusishuEffect(CardEffect):
 
 
 class BingliangEffect(CardEffect):
-    """兵粮寸断"""
+    """兵粮寸断."""
 
     @property
     def needs_target(self) -> bool:
@@ -133,7 +133,7 @@ class BingliangEffect(CardEffect):
 
 
 class ShandianEffect(CardEffect):
-    """闪电"""
+    """闪电."""
 
     def can_use(self, engine, player, card, targets):
         return True, ""
@@ -143,7 +143,7 @@ class ShandianEffect(CardEffect):
 
 
 class HuogongEffect(CardEffect):
-    """火攻"""
+    """火攻."""
 
     @property
     def needs_target(self) -> bool:
@@ -159,7 +159,7 @@ class HuogongEffect(CardEffect):
 
 
 class TiesuoEffect(CardEffect):
-    """铁索连环"""
+    """铁索连环."""
 
     def can_use(self, engine, player, card, targets):
         return True, ""

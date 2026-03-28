@@ -1,5 +1,5 @@
 """游戏常量模块
-定义游戏中使用的各类常量和枚举
+定义游戏中使用的各类常量和枚举.
 
 本模块集中管理所有魔法字符串和常量值，
 避免硬编码分散在代码各处。
@@ -9,7 +9,7 @@ from enum import Enum
 
 
 class SkillId(str, Enum):
-    """技能ID枚举
+    """技能ID枚举.
 
     继承 str 以便直接与字符串比较
     """
@@ -28,6 +28,12 @@ class SkillId(str, Enum):
     QICAI = "qicai"  # 黄月英 - 奇才
     LIEGONG = "liegong"  # 黄忠 - 烈弓
     KUANGGU = "kuanggu"  # 魏延 - 狂骨
+    QINGYUAN = "qingyuan"  # 胡金定 - 轻缘
+    ZHONGSHEN = "zhongshen"  # 胡金定 - 重身
+    XUANHUO = "xuanhuo"  # 界法正 - 眩惑
+    ENYUAN = "enyuan"  # 界法正 - 恩怨
+    GUYING = "guying"  # 向宠 - 固营
+    MUZHEN = "muzhen"  # 向宠 - 睦阵
 
     # ========== 魏国武将技能 ==========
     JIANXIONG = "jianxiong"  # 曹操 - 奸雄
@@ -59,10 +65,15 @@ class SkillId(str, Enum):
     JIJIU = "jijiu"  # 华佗 - 急救
     LIJIAN = "lijian"  # 貂蝉 - 离间
     BIYUE = "biyue"  # 貂蝉 - 闭月
+    JINMING = "jinming"  # 谋袁术 - 矜名
+    XIAOSHI = "xiaoshi"  # 谋袁术 - 枭噬
+    YANLIANG = "yanliang"  # 谋袁术 - 厌粱
+    ZISHOU = "zishou"  # 界刘表 - 自守
+    ZONGSHI = "zongshi"  # 界刘表 - 宗室
 
 
 class SkillTiming(str, Enum):
-    """技能触发时机 (单一事实来源 - SSOT)"""
+    """技能触发时机 (单一事实来源 - SSOT)."""
 
     # 回合阶段
     PREPARE = "prepare"  # 准备阶段
@@ -91,7 +102,7 @@ class SkillTiming(str, Enum):
 
 
 class SkillCategory(str, Enum):
-    """技能类别"""
+    """技能类别."""
 
     ACTIVE = "active"  # 主动技
     PASSIVE = "passive"  # 被动技/锁定技
@@ -99,7 +110,7 @@ class SkillCategory(str, Enum):
 
 
 class DamageTypeStr(str, Enum):
-    """伤害类型字符串"""
+    """伤害类型字符串."""
 
     NORMAL = "normal"
     FIRE = "fire"
@@ -107,7 +118,7 @@ class DamageTypeStr(str, Enum):
 
 
 class IdentityValue(str, Enum):
-    """身份值"""
+    """身份值."""
 
     LORD = "lord"
     LOYALIST = "loyalist"
@@ -116,7 +127,7 @@ class IdentityValue(str, Enum):
 
 
 class KingdomValue(str, Enum):
-    """势力值"""
+    """势力值."""
 
     SHU = "shu"
     WEI = "wei"
@@ -128,7 +139,7 @@ class KingdomValue(str, Enum):
 
 
 class GameConfig:
-    """游戏配置常量"""
+    """游戏配置常量."""
 
     MIN_PLAYERS = 2
     MAX_PLAYERS = 8
@@ -139,7 +150,7 @@ class GameConfig:
 
 
 class IdentityConfig:
-    """身份配置
+    """身份配置.
 
     根据玩家人数分配身份数量
     """
@@ -156,7 +167,7 @@ class IdentityConfig:
 
     @classmethod
     def get_config(cls, player_count: int) -> dict:
-        """获取指定人数的身份配置"""
+        """获取指定人数的身份配置."""
         return cls.CONFIGS.get(player_count, cls.CONFIGS[2])
 
 
@@ -164,7 +175,7 @@ class IdentityConfig:
 
 
 class WeaponRange:
-    """武器攻击范围"""
+    """武器攻击范围."""
 
     ZHUGE = 1  # 诸葛连弩
     QINGGANG = 2  # 青釭剑
@@ -183,7 +194,7 @@ class WeaponRange:
 
 
 class DisplaySymbols:
-    """显示符号"""
+    """显示符号."""
 
     DAMAGE = "💔"
     HEAL = "💚"
@@ -199,7 +210,7 @@ class DisplaySymbols:
 
 
 class CardSuitSymbol:
-    """卡牌花色符号"""
+    """卡牌花色符号."""
 
     SPADE = "♠"
     HEART = "♥"
@@ -211,7 +222,7 @@ class CardSuitSymbol:
 
 
 def get_skill_chinese_name(skill_id: str) -> str:
-    """获取技能国际化显示名称
+    """获取技能国际化显示名称.
 
     Args:
         skill_id: 技能ID

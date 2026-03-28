@@ -1,4 +1,4 @@
-"""HandCardRow — 手牌行容器
+"""HandCardRow — 手牌行容器.
 
 Horizontal 滚动容器，内含 CardWidget 实例。
 支持刷新手牌和接收 CardClicked 消息。
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class HandCardRow(HorizontalScroll):
-    """手牌行容器"""
+    """手牌行容器."""
 
     DEFAULT_CSS = """
     HandCardRow {
@@ -29,7 +29,7 @@ class HandCardRow(HorizontalScroll):
     """
 
     class HandCardClicked(Message):
-        """手牌区卡牌被点击"""
+        """手牌区卡牌被点击."""
 
         def __init__(self, index: int, card=None) -> None:
             super().__init__()
@@ -37,12 +37,12 @@ class HandCardRow(HorizontalScroll):
             self.card = card
 
     def update_hand(self, cards: list) -> None:
-        """刷新手牌显示"""
+        """刷新手牌显示."""
         self.remove_children()
         for i, card in enumerate(cards):
             widget = CardWidget(card, index=i)
             self.mount(widget)
 
     def on_card_widget_card_clicked(self, event: CardWidget.CardClicked) -> None:
-        """将 CardWidget 的点击事件冒泡为 HandCardClicked"""
+        """将 CardWidget 的点击事件冒泡为 HandCardClicked."""
         self.post_message(self.HandCardClicked(event.index, event.card))

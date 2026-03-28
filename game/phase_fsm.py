@@ -1,4 +1,4 @@
-"""阶段有限状态机 (Phase FSM)
+"""阶段有限状态机 (Phase FSM).
 
 提供回合阶段的合法转换验证，防止非法阶段跳转。
 例如：不能从摸牌阶段直接跳到结束阶段，必须经过出牌和弃牌阶段。
@@ -25,8 +25,8 @@ VALID_TRANSITIONS: dict[GamePhase, set[GamePhase]] = {
 }
 
 
-class InvalidPhaseTransition(InvalidPhaseError):
-    """非法阶段转换异常
+class InvalidPhaseTransitionError(InvalidPhaseError):
+    """非法阶段转换异常.
 
     当尝试进行不合法的阶段转换时抛出，
     例如从 DRAW 直接跳到 END。
@@ -48,7 +48,7 @@ class InvalidPhaseTransition(InvalidPhaseError):
 
 
 class PhaseFSM:
-    """回合阶段有限状态机
+    """回合阶段有限状态机.
 
     管理当前阶段状态，并在转换时校验合法性。
 
@@ -64,26 +64,26 @@ class PhaseFSM:
 
     @property
     def current(self) -> GamePhase:
-        """当前阶段"""
+        """当前阶段."""
         return self._phase
 
     def transition(self, target: GamePhase) -> None:
-        """转换到目标阶段
+        """转换到目标阶段.
 
         Args:
             target: 目标阶段
 
         Raises:
-            InvalidPhaseTransition: 如果转换不合法
+            InvalidPhaseTransitionError: 如果转换不合法
         """
         valid = VALID_TRANSITIONS.get(self._phase, set())
         if target not in valid:
-            raise InvalidPhaseTransition(self._phase, target)
+            raise InvalidPhaseTransitionError(self._phase, target)
         logger.debug("Phase transition: %s → %s", self._phase.name, target.name)
         self._phase = target
 
     def can_transition(self, target: GamePhase) -> bool:
-        """检查是否可以转换到目标阶段
+        """检查是否可以转换到目标阶段.
 
         Args:
             target: 目标阶段
@@ -94,9 +94,13 @@ class PhaseFSM:
         return target in VALID_TRANSITIONS.get(self._phase, set())
 
     def can_play_card(self) -> bool:
-        """当前是否处于可出牌阶段"""
+        """当前是否处于可出牌阶段."""
         return self._phase == GamePhase.PLAY
 
     def reset(self) -> None:
-        """重置到准备阶段（新回合开始时调用）"""
+        """重置到准备阶段（新回合开始时调用）."""
         self._phase = GamePhase.PREPARE
+
+
+# 向后兼容旧名称
+InvalidPhaseTransition = InvalidPhaseTransitionError

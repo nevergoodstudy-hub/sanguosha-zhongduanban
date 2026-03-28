@@ -7,9 +7,7 @@ Validates:
 - Max depth limit prevents infinite chain
 """
 
-from unittest.mock import MagicMock, PropertyMock, call
-
-import pytest
+from unittest.mock import MagicMock
 
 from game.card import Card, CardName, CardSubtype, CardSuit, CardType
 from game.combat import CombatSystem

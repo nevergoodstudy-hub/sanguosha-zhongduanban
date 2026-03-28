@@ -13,13 +13,6 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-_project_root = str(Path(__file__).resolve().parents[2])
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
@@ -111,7 +104,7 @@ def test_sha_count_monotonic(n_uses: int) -> None:
 @settings(max_examples=20)
 def test_can_use_sha_default_limit(n_shas: int) -> None:
     p = _make_player()  # 无诸葛连弩，无咸哮
-    for i in range(n_shas):
+    for _i in range(n_shas):
         p.use_sha()
 
     if n_shas < 1:

@@ -1,4 +1,4 @@
-"""武将选择界面"""
+"""武将选择界面."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class HeroSelectScreen(Screen):
-    """武将选择界面"""
+    """武将选择界面."""
 
     CSS = """
     HeroSelectScreen {
@@ -51,7 +51,7 @@ class HeroSelectScreen(Screen):
         self.is_lord = False
 
     def on_mount(self) -> None:
-        """初始化引擎并准备武将选项"""
+        """初始化引擎并准备武将选项."""
         from game.engine import GameEngine
         from game.player import Identity
         from game.skill import SkillSystem
@@ -115,7 +115,7 @@ class HeroSelectScreen(Screen):
             self._finish_setup(chosen)
 
     def _finish_setup(self, chosen_hero: Hero) -> None:
-        """完成选将并进入游戏"""
+        """完成选将并进入游戏."""
         from ai.bot import AIBot, AIDifficulty
         from game.player import Identity
 

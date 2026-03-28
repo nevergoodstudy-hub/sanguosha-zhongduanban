@@ -1,4 +1,4 @@
-"""游戏回放系统 (P3-3)
+"""游戏回放系统 (P3-3).
 
 记录游戏事件并支持回放查看。使用 gzip 压缩存储。
 可作为 EventBus 全局监听器接入。
@@ -19,7 +19,7 @@ from typing import Any
 
 @dataclass(slots=True)
 class ReplayEvent:
-    """回放事件条目。"""
+    """回放事件条目。."""
 
     turn: int = 0
     phase: str = ""
@@ -32,14 +32,14 @@ class ReplayEvent:
 
 
 class ReplayRecorder:
-    """游戏回放录制器。"""
+    """游戏回放录制器。."""
 
     def __init__(self) -> None:
         self.events: list[ReplayEvent] = []
         self.metadata: dict[str, Any] = {}
 
     def start(self, metadata: dict[str, Any]) -> None:
-        """开始录制，记录元数据。"""
+        """开始录制，记录元数据。."""
         self.metadata = {
             "version": "1.0",
             "date": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -48,11 +48,11 @@ class ReplayRecorder:
         self.events.clear()
 
     def record(self, event: ReplayEvent) -> None:
-        """录制一条事件。"""
+        """录制一条事件。."""
         self.events.append(event)
 
     def save(self, path: str) -> None:
-        """保存回放文件 (gzip 压缩 JSON)。"""
+        """保存回放文件 (gzip 压缩 JSON)。."""
         data = {
             "metadata": self.metadata,
             "events": [asdict(e) for e in self.events],
@@ -62,7 +62,7 @@ class ReplayRecorder:
 
 
 class ReplayPlayer:
-    """游戏回放播放器。"""
+    """游戏回放播放器。."""
 
     def __init__(self, path: str) -> None:
         with gzip.open(path, "rt", encoding="utf-8") as f:
@@ -72,7 +72,7 @@ class ReplayPlayer:
         self._index: int = 0
 
     def next_event(self) -> dict[str, Any] | None:
-        """获取下一个事件，到末尾返回 None。"""
+        """获取下一个事件，到末尾返回 None。."""
         if self._index >= len(self.events):
             return None
         event = self.events[self._index]
@@ -80,7 +80,7 @@ class ReplayPlayer:
         return event
 
     def reset(self) -> None:
-        """重置到开头。"""
+        """重置到开头。."""
         self._index = 0
 
     @property

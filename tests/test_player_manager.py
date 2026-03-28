@@ -1,8 +1,6 @@
 """Tests for game/player_manager.py — PlayerManager unit tests (P0-4 validation)."""
 
-from unittest.mock import MagicMock, PropertyMock
-
-import pytest
+from unittest.mock import MagicMock
 
 from game.player import Identity
 from game.player_manager import PlayerManager

@@ -1,4 +1,4 @@
-"""PhaseIndicator — 回合阶段指示器
+"""PhaseIndicator — 回合阶段指示器.
 
 6 阶段列表：准备 → 判定 → 摸牌 → 出牌 → 弃牌 → 结束
 当前阶段高亮显示。
@@ -20,7 +20,7 @@ PHASES = [
 
 
 class PhaseIndicator(Static):
-    """回合阶段指示器"""
+    """回合阶段指示器."""
 
     DEFAULT_CSS = """
     PhaseIndicator {
@@ -71,7 +71,7 @@ class PhaseIndicator(Static):
         discard_count: int = 0,
         player_name: str = "",
     ) -> None:
-        """更新额外信息"""
+        """更新额外信息."""
         self.round_count = round_count
         self.deck_count = deck_count
         self.discard_count = discard_count

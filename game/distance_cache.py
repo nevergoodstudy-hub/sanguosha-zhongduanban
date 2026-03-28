@@ -1,4 +1,4 @@
-"""距离计算缓存 (P2-4)
+"""距离计算缓存 (P2-4).
 
 缓存玩家间距离矩阵，通过 EventBus 监听 DEATH / EQUIPMENT_EQUIPPED 等
 事件自动失效。避免每次 calculate_distance 时 O(n) 遍历。
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class DistanceCache:
-    """缓存玩家间距离，支持自动失效。"""
+    """缓存玩家间距离，支持自动失效。."""
 
     def __init__(self) -> None:
         self._cache: dict[tuple[int, int], int] = {}
@@ -36,19 +36,19 @@ class DistanceCache:
     # ==================== 查询 / 写入 ====================
 
     def get(self, from_id: int, to_id: int) -> int | None:
-        """查询缓存的距离，若缓存失效或未命中则返回 None。"""
+        """查询缓存的距离，若缓存失效或未命中则返回 None。."""
         if self._dirty:
             return None
         return self._cache.get((from_id, to_id))
 
     def set(self, from_id: int, to_id: int, distance: int) -> None:
-        """写入缓存条目。"""
+        """写入缓存条目。."""
         self._cache[(from_id, to_id)] = distance
 
     # ==================== 失效 ====================
 
     def invalidate(self) -> None:
-        """标记缓存为脏（需要重建）。"""
+        """标记缓存为脏（需要重建）。."""
         self._dirty = True
         self._cache.clear()
 
@@ -57,7 +57,7 @@ class DistanceCache:
         players: list[Player],
         calc_fn: Callable[[Player, Player], int],
     ) -> None:
-        """完全重建距离矩阵。
+        """完全重建距离矩阵。.
 
         Args:
             players: 所有玩家列表（含已死亡，内部自动过滤）
@@ -74,7 +74,7 @@ class DistanceCache:
     # ==================== EventBus 集成 ====================
 
     def register_events(self, event_bus: EventBus) -> None:
-        """订阅需要使缓存失效的事件。"""
+        """订阅需要使缓存失效的事件。."""
         from .events import EventType
 
         for et in (
@@ -86,7 +86,7 @@ class DistanceCache:
             event_bus.subscribe(et, self._on_invalidate)
 
     def _on_invalidate(self, event: GameEvent) -> None:
-        """事件回调：令缓存失效。"""
+        """事件回调：令缓存失效。."""
         if not self._dirty:
             logger.debug("DistanceCache invalidated by event %s", event.event_type)
             self.invalidate()

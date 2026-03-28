@@ -1,12 +1,18 @@
 """Deck integrity validation tests (P2-6)."""
 
-import pytest
+from pathlib import Path
 
 from game.card import Card, CardSubtype, CardSuit, CardType, Deck
 
 
 class TestDeckValidation:
     """Test Deck.validate_deck() method."""
+
+    def test_load_cards_resolves_project_relative_path_outside_repo_root(self, monkeypatch):
+        """Project-relative card paths should not depend on the current working directory."""
+        monkeypatch.chdir(Path(__file__).resolve().parents[2])
+        deck = Deck("data/cards.json")
+        assert len(deck._all_cards) > 0
 
     def test_validate_deck_passes_on_standard_deck(self):
         """Standard cards.json deck should validate without errors."""

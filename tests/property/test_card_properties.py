@@ -12,13 +12,6 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-_project_root = str(Path(__file__).resolve().parents[2])
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -293,7 +286,7 @@ def test_equipment_count_matches_filled_slots(
     ]
 
     expected = 0
-    for flag, sub in zip(equip_flags, subtypes):
+    for flag, sub in zip(equip_flags, subtypes, strict=False):
         if flag:
             equip.equip(_make_equip_card(sub))
             expected += 1

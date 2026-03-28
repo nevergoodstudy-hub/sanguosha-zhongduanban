@@ -1,4 +1,4 @@
-"""技能 DSL 解释器
+"""技能 DSL 解释器.
 
 M2-T02: 读取技能 DSL 并执行。
 与 SkillSystem 的 Python handler 共存（混合模式），
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class DslContext:
-    """DSL 执行上下文
+    """DSL 执行上下文.
 
     在一次技能执行过程中携带临时状态。
     """
@@ -55,7 +55,7 @@ class DslContext:
 
 
 class SkillInterpreter:
-    """技能 DSL 解释器
+    """技能 DSL 解释器.
 
     职责：
     - 解析 SkillDsl 数据
@@ -70,7 +70,7 @@ class SkillInterpreter:
     # ==================== 公开 API ====================
 
     def can_execute(self, dsl: SkillDsl, player: Player, **kwargs) -> bool:
-        """检查 DSL 技能是否可执行"""
+        """检查 DSL 技能是否可执行."""
         ctx = DslContext(self.engine, player, "", **kwargs)
 
         # 检查每回合限制
@@ -86,11 +86,7 @@ class SkillInterpreter:
                 return False
 
         # 检查代价可支付
-        for cost in dsl.cost:
-            if not self._can_pay_cost(cost, ctx):
-                return False
-
-        return True
+        return all(self._can_pay_cost(cost, ctx) for cost in dsl.cost)
 
     def execute(
         self,
@@ -101,7 +97,7 @@ class SkillInterpreter:
         cards: list[Card] | None = None,
         **kwargs,
     ) -> bool:
-        """执行 DSL 技能
+        """执行 DSL 技能.
 
         Args:
             dsl: 技能 DSL 定义
@@ -142,7 +138,7 @@ class SkillInterpreter:
     # ==================== 条件检查 ====================
 
     def _eval_condition(self, cond: dict[str, Any], ctx: DslContext) -> bool:
-        """评估单个条件"""
+        """评估单个条件."""
         check = cond.get("check", "")
 
         if check == "has_hand_cards":
@@ -185,7 +181,7 @@ class SkillInterpreter:
     # ==================== 代价 ====================
 
     def _can_pay_cost(self, cost: dict[str, Any], ctx: DslContext) -> bool:
-        """检查代价是否可支付"""
+        """检查代价是否可支付."""
         if "discard" in cost:
             info = cost["discard"]
             count = info.get("count", 1)
@@ -198,7 +194,7 @@ class SkillInterpreter:
         return True
 
     def _pay_cost(self, cost: dict[str, Any], ctx: DslContext) -> bool:
-        """支付代价"""
+        """支付代价."""
         if "discard" in cost:
             info = cost["discard"]
             count = info.get("count", 1)
@@ -224,7 +220,7 @@ class SkillInterpreter:
     # ==================== 步骤执行 ====================
 
     def _exec_step(self, step: dict[str, Any], ctx: DslContext) -> None:
-        """执行单个步骤"""
+        """执行单个步骤."""
         # ---------- draw ----------
         if "draw" in step:
             count = step["draw"]
@@ -365,7 +361,7 @@ class SkillInterpreter:
     # ==================== 辅助 ====================
 
     def _resolve_player(self, ref: str, ctx: DslContext) -> Player:
-        """解析玩家引用"""
+        """解析玩家引用."""
         if ref == "self":
             return ctx.player
         if ref == "target":
@@ -375,7 +371,7 @@ class SkillInterpreter:
         return ctx.player
 
     def _eval_judge(self, card: Card, cond: dict[str, Any]) -> bool:
-        """评估判定结果"""
+        """评估判定结果."""
         from .card import CardSuit
 
         if not cond:

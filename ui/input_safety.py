@@ -1,10 +1,10 @@
 """安全输入模块
-封装 input() 以优雅处理 EOFError 和 KeyboardInterrupt
+封装 input() 以优雅处理 EOFError 和 KeyboardInterrupt.
 """
 
 
 def safe_input(prompt: str = "", default: str = "") -> str:
-    """input() 的安全封装，防止 EOFError / KeyboardInterrupt 导致崩溃。
+    """input() 的安全封装，防止 EOFError / KeyboardInterrupt 导致崩溃。.
 
     Args:
         prompt: 输入提示文字
@@ -24,4 +24,4 @@ def safe_input(prompt: str = "", default: str = "") -> str:
     except KeyboardInterrupt:
         # 用户按 Ctrl+C — 换行后干净退出
         print()
-        raise SystemExit(0)
+        raise SystemExit(0) from None

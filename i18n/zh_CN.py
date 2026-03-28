@@ -1,4 +1,4 @@
-"""简体中文翻译表。"""
+"""简体中文翻译表。."""
 
 STRINGS: dict[str, str] = {
     # ── BaseTerminalUI ──

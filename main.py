@@ -15,24 +15,42 @@
 
 import logging
 import sys
-from importlib.metadata import version as pkg_version
-from pathlib import Path
+import warnings
 
 from logging_config import setup_logging
+from versioning import get_project_version
 
-__version__ = pkg_version("sanguosha") if __name__ != "__main__" else "3.0.0"
+__version__ = get_project_version()
 
 logger = logging.getLogger(__name__)
 
-# 确保可以导入项目模块
-sys.path.insert(0, str(Path(__file__).parent))
+__all__ = ["main", "__version__", "normalize_connect_url"]
 
-# 向后兼容：旧代码可能引用 SanguoshaGame
-from game.game_controller import GameController as SanguoshaGame  # noqa: F401
+
+def __getattr__(name: str):
+    """延迟暴露 legacy 控制器别名，避免主入口继续直接耦合旧 GameController."""
+    if name == "SanguoshaGame":
+        warnings.warn(
+            "main.SanguoshaGame 是 legacy 兼容别名；请改用 game.game_controller.GameController。",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from game.game_controller import GameController
+
+        return GameController
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def normalize_connect_url(connect: str) -> str:
+    """Normalize --connect parameter into a WebSocket URL."""
+    normalized = connect.strip()
+    if normalized.startswith(("ws://", "wss://")):
+        return normalized
+    return f"ws://{normalized}"
 
 
 def main():
-    """程序入口"""
+    """程序入口."""
     import argparse
 
     parser = argparse.ArgumentParser(description="三国杀 - 命令行终端版 (Textual TUI)")
@@ -40,15 +58,15 @@ def main():
     parser.add_argument(
         "--server",
         nargs="?",
-        const="0.0.0.0:8765",
+        const="127.0.0.1:8765",
         default=None,
-        help="启动服务端 (默认 0.0.0.0:8765)",
+        help="启动服务端 (默认 127.0.0.1:8765)",
     )
     parser.add_argument(
         "--connect",
         default=None,
-        metavar="HOST:PORT",
-        help="连接到服务端 (如 localhost:8765)",
+        metavar="HOST:PORT|WS_URL",
+        help="连接到服务端 (如 localhost:8765 / ws://localhost:8765 / wss://game.example.com)",
     )
     parser.add_argument(
         "--name",
@@ -90,7 +108,7 @@ def main():
 
         cfg = get_config()
         host, _, port = args.server.partition(":")
-        host = host or "0.0.0.0"
+        host = host or "127.0.0.1"
         port = int(port) if port else 8765
         server = GameServer(
             host=host,
@@ -114,7 +132,7 @@ def main():
 
         from net.client import cli_client_main
 
-        url = f"ws://{args.connect}"
+        url = normalize_connect_url(args.connect)
         name = args.name or "玩家"
         asyncio.run(cli_client_main(url, name))
         return

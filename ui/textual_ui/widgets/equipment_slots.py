@@ -1,4 +1,4 @@
-"""EquipmentSlots — 三国杀OL风格装备槽位组件 (4 槽)
+"""EquipmentSlots — 三国杀OL风格装备槽位组件 (4 槽).
 
 武器 / 防具 / 进攻马(-1) / 防御马(+1)
 水平布局，每个槽位显示装备名称和花色点数。
@@ -26,7 +26,7 @@ SUIT_COLORS = {"spade": "#ecf0f1", "heart": "#e74c3c", "club": "#ecf0f1", "diamo
 
 
 class EquipmentSlots(Static):
-    """三国杀OL风格装备区 4 槽 Widget（水平布局）"""
+    """三国杀OL风格装备区 4 槽 Widget（水平布局）."""
 
     DEFAULT_CSS = """
     EquipmentSlots {
@@ -42,7 +42,7 @@ class EquipmentSlots(Static):
         self._player = player
 
     def _render_slot(self, slot_key: str, card) -> str:
-        """渲染单个装备槽"""
+        """渲染单个装备槽."""
         icon, label = SLOT_LABELS[slot_key]
         if card:
             suit_val = getattr(card.suit, "value", "") if hasattr(card, "suit") else ""

@@ -146,7 +146,7 @@ class TestSkillInterpreter:
                 ],
             }
         )
-        initial = len(player.hand)
+        len(player.hand)
         result = interp.execute(dsl, player, "测试判定")
         assert result is True
         # 无论判定结果如何，技能执行成功
@@ -168,7 +168,7 @@ class TestSkillInterpreter:
         interp = SkillInterpreter(engine)
         player = engine.players[0]
         initial = len(player.hand)
-        initial_flip = getattr(player, "flipped", False)
+        getattr(player, "flipped", False)
 
         dsl = engine.skill_system.get_dsl("jushou")
         assert dsl is not None

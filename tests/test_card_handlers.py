@@ -24,7 +24,8 @@ class TestCardHandlerType:
 
 class TestCardHandlerInfo:
     def test_creation(self):
-        handler = lambda: None
+        def handler():
+            return None
         info = CardHandlerInfo(
             card_name="sha",
             handler_type=CardHandlerType.BASIC,

@@ -1,5 +1,5 @@
 """基本牌效果处理器（M1-T02）
-杀、桃、酒
+杀、桃、酒.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class ShaEffect(CardEffect):
-    """杀的效果"""
+    """杀的效果."""
 
     @property
     def needs_target(self) -> bool:
@@ -35,7 +35,7 @@ class ShaEffect(CardEffect):
 
 
 class TaoEffect(CardEffect):
-    """桃的效果"""
+    """桃的效果."""
 
     def can_use(self, engine, player, card, targets):
         if player.hp >= player.max_hp:
@@ -47,7 +47,7 @@ class TaoEffect(CardEffect):
 
 
 class JiuEffect(CardEffect):
-    """酒的效果"""
+    """酒的效果."""
 
     def can_use(self, engine, player, card, targets):
         if player.is_dying:

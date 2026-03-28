@@ -1,4 +1,4 @@
-"""技能处理器包 — 按势力拆分
+"""技能处理器包 — 按势力拆分.
 
 将原 skill.py 中 30+ 个 _handle_xxx 方法拆分到按势力组织的子模块：
   - shu.py  : 蜀国武将技能 (13 个)
@@ -44,7 +44,7 @@ except Exception:  # pragma: no cover
 
 
 def get_all_skill_handlers() -> dict[str, Callable[..., bool]]:
-    """优先返回装饰器注册表；若为空则回退合并各势力字典。"""
+    """优先返回装饰器注册表；若为空则回退合并各势力字典。."""
     reg = get_registry()
     if reg:
         return reg

@@ -1,4 +1,4 @@
-"""PlayerPanel — 可点击玩家面板 (M-B)
+"""PlayerPanel — 可点击玩家面板 (M-B).
 
 国籍色条 + 武将名 + HP条 + 手牌数 + 装备图标 + 身份标记。
 .targetable / .dead / .dying CSS 状态。
@@ -8,6 +8,7 @@ hover tooltip 显示技能描述。
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from textual.message import Message
@@ -29,7 +30,7 @@ KINGDOM_COLORS = {
 
 
 class PlayerPanel(Static, can_focus=True):
-    """可点击的玩家面板"""
+    """可点击的玩家面板."""
 
     DEFAULT_CSS = """
     PlayerPanel {
@@ -66,7 +67,7 @@ class PlayerPanel(Static, can_focus=True):
     player_index = reactive(-1)
 
     class PlayerClicked(Message):
-        """玩家面板被点击"""
+        """玩家面板被点击."""
 
         def __init__(self, index: int, player=None) -> None:
             super().__init__()
@@ -85,7 +86,7 @@ class PlayerPanel(Static, can_focus=True):
         self._update_tooltip()
 
     def _update_tooltip(self) -> None:
-        """设置 tooltip 显示技能描述"""
+        """设置 tooltip 显示技能描述."""
         p = self._player
         if p.hero and hasattr(p.hero, "skills"):
             lines = [f"【{p.hero.name}】 {p.hero.kingdom.chinese_name}"]
@@ -95,7 +96,7 @@ class PlayerPanel(Static, can_focus=True):
             self.tooltip = "\n".join(lines)
 
     def render(self) -> str:
-        """渲染三国杀OL风格玩家面板"""
+        """渲染三国杀OL风格玩家面板."""
         p = self._player
         hero_name = p.hero.name if p.hero else "?"
         kingdom = p.hero.kingdom.value if p.hero else ""
@@ -183,7 +184,7 @@ class PlayerPanel(Static, can_focus=True):
         self.post_message(self.PlayerClicked(self.player_index, self._player))
 
     def update_player(self, player, distance: int = -1, in_range: bool = False) -> None:
-        """更新玩家数据并刷新，带 HP 变化动画 (P2-1)"""
+        """更新玩家数据并刷新，带 HP 变化动画 (P2-1)."""
         old_hp = self._prev_hp
         new_hp = player.hp if hasattr(player, "hp") else 0
         self._player = player
@@ -211,7 +212,7 @@ class PlayerPanel(Static, can_focus=True):
         self.refresh()
 
     def _hp_flash_restore(self, css_cls: str) -> None:
-        """恢复 HP 闪烁 (P2-1)"""
+        """恢复 HP 闪烁 (P2-1)."""
         try:
             self.styles.animate(
                 "opacity",
@@ -225,7 +226,7 @@ class PlayerPanel(Static, can_focus=True):
 
     # P2-4: 死亡震动效果
     def death_shake(self) -> None:
-        """死亡时快速抖动面板 (timer-based offset toggle)
+        """死亡时快速抖动面板 (timer-based offset toggle).
 
         连续 4 次 ±1 水平偏移，每次 0.06s，最后恢复 offset=(0,0)。
         注意: Textual set_timer(0.0) 会导致 ZeroDivisionError，
@@ -245,14 +246,12 @@ class PlayerPanel(Static, can_focus=True):
         )
 
     def _apply_shake_offset(self, x: int, y: int) -> None:
-        """设置 offset 用于震动"""
-        try:
+        """设置 offset 用于震动."""
+        with contextlib.suppress(Exception):
             self.styles.offset = (x, y)
-        except Exception:
-            pass
 
     def _finish_death_shake(self) -> None:
-        """震动结束: opacity 渐隐并标记 dead"""
+        """震动结束: opacity 渐隐并标记 dead."""
         try:
             self.styles.offset = (0, 0)
             self.add_class("dead")
@@ -267,24 +266,22 @@ class PlayerPanel(Static, can_focus=True):
 
     # P1-3: 目标选择呼吸脉冲
     def start_pulse(self) -> None:
-        """启动 targetable 呼吸脉冲动画"""
+        """启动 targetable 呼吸脉冲动画."""
         if self._pulse_timer is not None:
             return
         self._pulse_dim = False
         self._pulse_timer = self.set_interval(0.8, self._pulse_tick)
 
     def stop_pulse(self) -> None:
-        """停止呼吸脉冲并恢复"""
+        """停止呼吸脉冲并恢复."""
         if self._pulse_timer is not None:
             self._pulse_timer.stop()
             self._pulse_timer = None
         self.styles.animate("opacity", value=1.0, duration=0.2)
 
     def _pulse_tick(self) -> None:
-        """呼吸脉冲 tick: opacity 在 0.6 和 1.0 之间交替"""
+        """呼吸脉冲 tick: opacity 在 0.6 和 1.0 之间交替."""
         target = 0.6 if not self._pulse_dim else 1.0
         self._pulse_dim = not self._pulse_dim
-        try:
+        with contextlib.suppress(Exception):
             self.styles.animate("opacity", value=target, duration=0.6, easing="in_out_cubic")
-        except Exception:
-            pass

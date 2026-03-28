@@ -1,6 +1,5 @@
 """Tests for net.session module."""
 
-import time
 
 from net.session import PlayerSession, SessionManager
 
@@ -90,7 +89,7 @@ class TestSessionManager:
     def test_cleanup_expired(self):
         mgr = SessionManager(timeout=1.0)
         s1 = mgr.create("p1")
-        s2 = mgr.create("p2")
+        mgr.create("p2")
         mgr.disconnect("p1")
         mgr.disconnect("p2")
 

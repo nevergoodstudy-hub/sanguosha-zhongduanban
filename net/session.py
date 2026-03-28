@@ -1,4 +1,4 @@
-"""玩家会话管理 — 支持断线重连
+"""玩家会话管理 — 支持断线重连.
 
 提供基于令牌的会话持久化，允许断线玩家在超时期内
 使用原始令牌重新连接并恢复游戏状态。
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PlayerSession:
-    """玩家会话信息"""
+    """玩家会话信息."""
 
     player_id: str
     token: str = field(default_factory=lambda: secrets.token_urlsafe(32))
@@ -27,7 +27,7 @@ class PlayerSession:
 
 
 class SessionManager:
-    """会话管理器
+    """会话管理器.
 
     维护玩家会话状态，支持断线重连。
     断线超过 timeout 秒后会话过期。
@@ -42,7 +42,7 @@ class SessionManager:
         self._timeout = timeout
 
     def create(self, player_id: str, room_id: str | None = None) -> PlayerSession:
-        """创建新会话
+        """创建新会话.
 
         Args:
             player_id: 玩家标识
@@ -63,11 +63,11 @@ class SessionManager:
         return session
 
     def get(self, player_id: str) -> PlayerSession | None:
-        """获取玩家会话"""
+        """获取玩家会话."""
         return self._sessions.get(player_id)
 
     def reconnect(self, token: str) -> PlayerSession | None:
-        """使用令牌尝试重连
+        """使用令牌尝试重连.
 
         Args:
             token: 玩家持有的会话令牌
@@ -98,7 +98,7 @@ class SessionManager:
         return session
 
     def disconnect(self, player_id: str) -> None:
-        """标记玩家断线（保留会话用于重连）"""
+        """标记玩家断线（保留会话用于重连）."""
         session = self._sessions.get(player_id)
         if session:
             session.connected = False
@@ -106,7 +106,7 @@ class SessionManager:
             logger.info("Player disconnected: %s", player_id)
 
     def remove(self, player_id: str) -> None:
-        """彻底移除会话"""
+        """彻底移除会话."""
         self._remove(player_id)
 
     def _remove(self, player_id: str) -> None:
@@ -115,7 +115,7 @@ class SessionManager:
             self._token_index.pop(session.token, None)
 
     def cleanup_expired(self) -> int:
-        """清理所有过期会话，返回清理数量"""
+        """清理所有过期会话，返回清理数量."""
         now = time.time()
         expired = [
             pid
@@ -128,10 +128,10 @@ class SessionManager:
 
     @property
     def active_count(self) -> int:
-        """活跃（已连接）会话数"""
+        """活跃（已连接）会话数."""
         return sum(1 for s in self._sessions.values() if s.connected)
 
     @property
     def total_count(self) -> int:
-        """总会话数（含断线未过期的）"""
+        """总会话数（含断线未过期的）."""
         return len(self._sessions)

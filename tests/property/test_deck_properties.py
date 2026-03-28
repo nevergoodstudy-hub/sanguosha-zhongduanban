@@ -8,14 +8,6 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-# 确保项目根目录在 sys.path 中
-_project_root = str(Path(__file__).resolve().parents[2])
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
