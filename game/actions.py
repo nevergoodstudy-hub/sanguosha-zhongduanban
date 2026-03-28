@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any
+import uuid
 
 from i18n import t as _t
 
@@ -56,6 +57,9 @@ class GameAction(ABC):
     action_type: ActionType
     player_id: int
     timestamp: float = field(default_factory=lambda: __import__("time").time())
+    action_id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    source_channel: str = "engine"
+    correlation_id: str | None = None
 
     @abstractmethod
     def validate(self, engine: GameEngine) -> tuple[bool, str]:
@@ -131,6 +135,7 @@ class UseSkillAction(GameAction):
     skill_id: str = ""
     target_ids: list[int] = field(default_factory=list)
     card_ids: list[str] = field(default_factory=list)
+    extra_payload: dict[str, Any] = field(default_factory=dict)
 
     def validate(self, engine: GameEngine) -> tuple[bool, str]:
         player = engine.get_player_by_id(self.player_id)
@@ -167,6 +172,7 @@ class UseSkillAction(GameAction):
             player,
             targets=targets if targets else None,
             cards=cards if cards else None,
+            **self.extra_payload,
         )
 
 
@@ -345,8 +351,24 @@ class ActionExecutor:
     def __init__(self, engine: GameEngine):
         self.engine = engine
 
+    def _emit_action_event(self, event_name: str, action: GameAction, **extra: Any) -> None:
+        if not self.engine.event_bus:
+            return
+        self.engine.event_bus.emit(
+            __import__("game.events", fromlist=["EventType"]).EventType.LOG_MESSAGE,
+            message=f"[action.{event_name}] {action.action_type.name}",
+            action_id=action.action_id,
+            action_type=action.action_type.name,
+            player_id=action.player_id,
+            source_channel=action.source_channel,
+            correlation_id=action.correlation_id,
+            **extra,
+        )
+
     def execute(self, action: GameAction) -> bool:
         """执行动作."""
+        self._emit_action_event("before", action)
+
         valid, msg = action.validate(self.engine)
         if not valid:
             # 发送错误事件
@@ -354,7 +376,16 @@ class ActionExecutor:
                 self.engine.event_bus.emit(
                     __import__("game.events", fromlist=["EventType"]).EventType.LOG_MESSAGE,
                     message=_t("error.invalid_action", msg=msg),
+                    action_id=action.action_id,
+                    action_type=action.action_type.name,
+                    player_id=action.player_id,
+                    source_channel=action.source_channel,
+                    correlation_id=action.correlation_id,
+                    validation_error=msg,
                 )
+            self._emit_action_event("rejected", action, validation_error=msg)
             return False
 
-        return action.execute(self.engine)
+        executed = action.execute(self.engine)
+        self._emit_action_event("after", action, success=executed)
+        return executed

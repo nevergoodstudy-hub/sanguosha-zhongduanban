@@ -112,11 +112,17 @@ GitHub Release 标签构建会产出 Windows / Linux / macOS 的 PyInstaller 制
 ### 其他模式
 
 ```bash
-python main.py --server              # 启动 WebSocket 服务端 (0.0.0.0:8765)
-python main.py --connect HOST:PORT   # 连接到服务端
-python main.py --replay FILE         # 回放存档
-python main.py --lang en_US          # 英文界面
+python main.py --server                         # 启动 WebSocket 服务端 (127.0.0.1:8765)
+python main.py --connect HOST:PORT              # 连接到 ws://HOST:PORT
+python main.py --connect ws://localhost:8765    # 显式 ws URL
+python main.py --connect wss://game.example.com # 显式 wss URL
+python main.py --replay FILE                    # 回放存档
+python main.py --lang en_US                     # 英文界面
 ```
+
+> 网络安全默认值：`SANGUOSHA_WS_ALLOWED_ORIGINS` 为空时，服务端会拒绝所有 WebSocket 连接（fail-closed）。
+> 生产环境请显式配置白名单，例如：
+> `SANGUOSHA_WS_ALLOWED_ORIGINS="https://game.example.com,http://localhost:3000"`
 
 ## 📖 游戏规则
 
@@ -241,6 +247,21 @@ python -m pytest --cov=game --cov=ai                                            
 python -m ruff check .                                                                     # 静态分析
 python -m mypy game ai net                                                                 # 类型检查
 ```
+
+### 性能 Profiling（Phase 5 收口）
+
+```bash
+# 1) 采集带 pytest 开销的性能快照
+python -m cProfile -o perf_auto_battle.prof -m pytest tests/test_auto_battle.py::TestAutoBattle::test_multiple_battles -q
+
+# 2) 查看 Top 热点（累计耗时）
+python -c "import pstats; p=pstats.Stats('perf_auto_battle.prof'); p.sort_stats('cumtime').print_stats(30)"
+
+# 3) 采集去除 pytest 框架开销的纯模拟快照
+python -c "import cProfile,pstats; from tests.test_auto_battle import AutoBattleSimulator; pr=cProfile.Profile(); pr.enable(); sim=AutoBattleSimulator(player_count=6,max_rounds=120); sim.run_game(); pr.disable(); pr.dump_stats('perf_sim.prof'); p=pstats.Stats('perf_sim.prof'); p.sort_stats('cumtime').print_stats(40)"
+```
+
+已完成的低风险优化：`i18n.card_name()` 引入翻译反向索引缓存，避免重复全表扫描。
 
 ### 扩展武将
 

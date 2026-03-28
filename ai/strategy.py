@@ -17,6 +17,49 @@ if TYPE_CHECKING:
     from game.player import Player
 
 
+def execute_play_card_action(
+    engine: GameEngine,
+    player: Player,
+    card: Card,
+    targets: list[Player] | None = None,
+) -> bool:
+    """统一通过动作执行器出牌（AI 路径）."""
+    from game.actions import PlayCardAction
+
+    if targets is None:
+        targets = []
+
+    action = PlayCardAction(
+        player_id=player.id,
+        card_id=card.id,
+        target_ids=[target.id for target in targets],
+        source_channel="ai",
+    )
+    return engine.execute_action(action)
+
+
+def execute_use_skill_action(
+    engine: GameEngine,
+    skill_id: str,
+    player: Player,
+    targets: list[Player] | None = None,
+    cards: list[Card] | None = None,
+    **extra_kwargs,
+) -> bool:
+    """统一通过动作执行器使用技能（AI 路径）."""
+    from game.actions import UseSkillAction
+
+    action = UseSkillAction(
+        player_id=player.id,
+        skill_id=skill_id,
+        target_ids=[target.id for target in (targets or [])],
+        card_ids=[card.id for card in (cards or [])],
+        extra_payload=extra_kwargs,
+        source_channel="ai",
+    )
+    return engine.execute_action(action)
+
+
 class AIStrategy(Protocol):
     """AI 策略协议 — 各难度共用接口."""
 

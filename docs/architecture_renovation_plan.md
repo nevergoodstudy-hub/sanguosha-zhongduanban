@@ -369,7 +369,7 @@ jobs:
 1. ✅ **[已完成]** Textual `pilot` UI 自动化测试 — tests/test_pilot_ui.py, 29 个 pilot 测试覆盖 GameScreen 渲染/玩家面板/手牌展示/操作按钮/游戏日志/阶段显示/装备区域等 UI 组件; async with app.run_test() 模式
 2. ✅ **[已完成]** `hypothesis` 属性测试 — tests/property/ 目录, 52 个属性测试覆盖 Card 不变量/Deck 洗牌守恒/Player 生命值边界/DamageSystem 属性/GameEvent 序列化往返/ActionValidator 一致性; @given + @settings 配置
 3. ✅ **[已完成]** 游戏回放系统完善 — tools/replay.py ReplayTool 类, 支持 record/load/step/goto/rewind/info 命令; JSON 文件持久化; tests/test_replay_cli.py 6 个测试
-4. ⏭️ **[跳过]** 性能 profiling 与优化 — 当前规模下无性能瓶颈, 留待后续按需执行
+4. ✅ **[已完成]** 性能 profiling 与优化 — 已补齐基线分析与轻量优化：使用 cProfile 对 `tests/test_auto_battle.py::TestAutoBattle::test_multiple_battles` 与 `AutoBattleSimulator.run_game()` 进行热点采样，确认主要耗时来自测试框架与导入；在运行时路径执行低风险优化（`i18n.card_name()` 由逐次全表扫描改为 locale 级反向索引缓存），并沉淀产物 `perf_auto_battle.prof`/`perf_sim.prof` 供后续持续对比
 5. ✅ **[已完成]** Docker 化部署方案 — Dockerfile 多阶段构建 (builder+runtime), 非 root 用户, healthcheck; docker-compose.yml 服务编排含环境变量/日志卷/存档卷; .dockerignore 排除测试/文档/IDE 文件
 6. ✅ **[已完成]** WebSocket TLS 支持文档 — docs/tls_setup.md, Nginx 反向代理 WSS 配置, Let's Encrypt 证书自动化, Docker Compose 集成, 安全建议 (HSTS/OCSP/TLS1.2+)
 

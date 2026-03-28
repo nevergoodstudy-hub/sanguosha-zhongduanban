@@ -50,10 +50,11 @@ class TestServerMsg:
         assert restored.seq == 42
 
     def test_error_factory(self):
-        msg = ServerMsg.error("房间已满", code=403)
+        msg = ServerMsg.error("房间已满", code=403, error_code="E_ROOM_FULL")
         assert msg.type == MsgType.ERROR
         assert msg.data["message"] == "房间已满"
         assert msg.data["code"] == 403
+        assert msg.data["error_code"] == "E_ROOM_FULL"
 
     def test_heartbeat_ack(self):
         msg = ServerMsg.heartbeat_ack()

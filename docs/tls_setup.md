@@ -113,6 +113,28 @@ services:
 uri = "wss://game.example.com"
 ```
 
+或使用 CLI：
+
+```bash
+python main.py --connect wss://game.example.com
+```
+
+## Origin 白名单配置（必需）
+
+服务端默认采取 **fail-closed** 策略：当 `SANGUOSHA_WS_ALLOWED_ORIGINS` 为空时，拒绝所有 WebSocket 连接。
+
+示例：
+
+```bash
+# Linux/macOS
+export SANGUOSHA_WS_ALLOWED_ORIGINS="https://game.example.com,http://localhost:3000"
+
+# Windows PowerShell
+$env:SANGUOSHA_WS_ALLOWED_ORIGINS="https://game.example.com,http://localhost:3000"
+```
+
+请确保浏览器端页面 Origin 在白名单中。
+
 ## 安全建议
 
 1. **定期续期证书**: Let's Encrypt 证书 90 天过期，配置 cron 自动续期

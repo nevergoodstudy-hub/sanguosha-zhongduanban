@@ -14,6 +14,8 @@ from game.constants import SkillId
 
 from .strategy import (
     count_useless_cards,
+    execute_play_card_action,
+    execute_use_skill_action,
     get_friends,
     is_enemy,
     pick_least_valuable,
@@ -44,7 +46,7 @@ class NormalStrategy:
             # 2. 使用装备
             # 1. 使用装备
             for card in list(player.hand):
-                if card.card_type == CardType.EQUIPMENT and engine.use_card(player, card):
+                if card.card_type == CardType.EQUIPMENT and execute_play_card_action(engine, player, card):
                     played = True
                     break
 
@@ -397,14 +399,14 @@ class NormalStrategy:
 
         if skill_id == SkillId.ZHIHENG:
             cards_to_discard = smart_discard(player, min(3, player.hand_count))
-            return engine.skill_system.use_skill(skill_id, player, cards=cards_to_discard)
+            return execute_use_skill_action(engine, skill_id, player, cards=cards_to_discard)
 
         elif skill_id == SkillId.RENDE:
             friends = get_friends(player, engine)
             if friends and player.hand_count > 2:
                 target = random.choice(friends)
                 cards = [player.hand[0]]
-                return engine.skill_system.use_skill(
+                return execute_use_skill_action(engine, 
                     skill_id, player, targets=[target], cards=cards
                 )
 

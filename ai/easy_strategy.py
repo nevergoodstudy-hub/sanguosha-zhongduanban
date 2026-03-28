@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from game.card import CardName, CardSubtype, CardType
 from game.config import get_config
 
-from .strategy import is_enemy
+from .strategy import execute_play_card_action, is_enemy
 
 if TYPE_CHECKING:
     from game.card import Card
@@ -64,7 +64,7 @@ class EasyStrategy:
         """简单模式：尝试使用卡牌."""
         # 装备牌直接使用
         if card.card_type == CardType.EQUIPMENT:
-            return engine.use_card(player, card)
+            return execute_play_card_action(engine, player, card)
 
         # 自用锦囊
         if card.name in [CardName.WUZHONG, CardName.TAOYUAN]:

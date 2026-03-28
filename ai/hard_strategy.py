@@ -12,7 +12,7 @@ from game.card import CardName
 from game.player import Identity
 
 from .normal_strategy import NormalStrategy
-from .strategy import is_enemy, smart_discard
+from .strategy import execute_play_card_action, is_enemy, smart_discard
 
 if TYPE_CHECKING:
     from game.card import Card
@@ -242,7 +242,7 @@ class HardStrategy:
         if state["danger_level"] > 60 and player.hp < player.max_hp:
             tao = player.get_cards_by_name(CardName.TAO)
             if tao:
-                engine.use_card(player, tao[0])
+                execute_play_card_action(engine, player, tao[0])
 
         # 使用普通AI逻辑（目标选择已利用嘲讽值）
         self._normal.play_phase(player, engine)

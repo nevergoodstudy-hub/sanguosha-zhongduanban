@@ -24,7 +24,7 @@ __version__ = get_project_version()
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["main", "__version__"]
+__all__ = ["main", "__version__", "normalize_connect_url"]
 
 
 def __getattr__(name: str):
@@ -39,6 +39,14 @@ def __getattr__(name: str):
 
         return GameController
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def normalize_connect_url(connect: str) -> str:
+    """Normalize --connect parameter into a WebSocket URL."""
+    normalized = connect.strip()
+    if normalized.startswith(("ws://", "wss://")):
+        return normalized
+    return f"ws://{normalized}"
 
 
 def main():
@@ -57,8 +65,8 @@ def main():
     parser.add_argument(
         "--connect",
         default=None,
-        metavar="HOST:PORT",
-        help="连接到服务端 (如 localhost:8765)",
+        metavar="HOST:PORT|WS_URL",
+        help="连接到服务端 (如 localhost:8765 / ws://localhost:8765 / wss://game.example.com)",
     )
     parser.add_argument(
         "--name",
@@ -124,7 +132,7 @@ def main():
 
         from net.client import cli_client_main
 
-        url = f"ws://{args.connect}"
+        url = normalize_connect_url(args.connect)
         name = args.name or "玩家"
         asyncio.run(cli_client_main(url, name))
         return

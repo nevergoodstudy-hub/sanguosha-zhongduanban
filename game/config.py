@@ -111,7 +111,9 @@ class GameConfig:
     ws_ssl_cert: str = field(default_factory=lambda: os.environ.get("SANGUOSHA_WS_SSL_CERT", ""))
     ws_ssl_key: str = field(default_factory=lambda: os.environ.get("SANGUOSHA_WS_SSL_KEY", ""))
 
-    # Origin 白名单 (逗号分隔，空表示允许所有)
+    # Origin 白名单 (逗号分隔).
+    # 安全默认值: 空字符串 => 拒绝所有连接 (fail-closed)
+    # 例如: "http://localhost:3000,https://game.example.com"
     ws_allowed_origins: str = field(
         default_factory=lambda: os.environ.get("SANGUOSHA_WS_ALLOWED_ORIGINS", "")
     )

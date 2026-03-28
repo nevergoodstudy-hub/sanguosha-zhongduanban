@@ -118,8 +118,20 @@ class ServerMsg:
     # ---------- 工厂方法 ----------
 
     @classmethod
-    def error(cls, message: str, code: int = 400) -> ServerMsg:
-        return cls(type=MsgType.ERROR, data={"message": message, "code": code})
+    def error(
+        cls,
+        message: str,
+        code: int = 400,
+        error_code: str = "E_GENERIC",
+    ) -> ServerMsg:
+        return cls(
+            type=MsgType.ERROR,
+            data={
+                "message": message,
+                "code": code,
+                "error_code": error_code,
+            },
+        )
 
     @classmethod
     def heartbeat_ack(cls) -> ServerMsg:

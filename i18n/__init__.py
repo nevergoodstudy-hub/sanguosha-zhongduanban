@@ -30,6 +30,8 @@ _LOCALE_DIR = Path(__file__).parent
 # 延迟导入翻译表，避免循环
 _locale: str = "zh_CN"
 _tables: dict[str, dict[str, str]] = {}
+# card 名称反向索引缓存: {locale: {localized_card_name: "card.xxx"}}
+_card_reverse_index: dict[str, dict[str, str]] = {}
 
 
 def _load_table(locale: str) -> dict[str, str]:
@@ -120,28 +122,47 @@ def _is_missing(key: str, result: str) -> bool:
     return result == f"[{key}]"
 
 
+def _get_card_reverse_index(locale: str) -> dict[str, str]:
+    """构建并缓存 card 名称反向索引。.
+
+    返回映射: {"杀": "card.sha", "Strike": "card.sha", ...}
+    """
+    index = _card_reverse_index.get(locale)
+    if index is not None:
+        return index
+
+    if locale not in _tables:
+        _tables[locale] = _load_table(locale)
+
+    table = _tables[locale]
+    index = {v: k for k, v in table.items() if k.startswith("card.")}
+    _card_reverse_index[locale] = index
+    return index
+
+
 def card_name(card_id: str) -> str:
     """获取卡牌的国际化显示名。.
 
     Args:
         card_id: 卡牌标识符，如 ``"sha"``、``"nanman"``。
-                 也接受中文原名（会自动反查）。
+                 也接受当前语言/中文原名（会自动反查）。
     """
     key = f"card.{card_id}"
     result = t(key)
     if not _is_missing(key, result):
         return result
 
-    # 尝试通过中文名反查 (兼容旧代码用中文名调用)
-    if _locale not in _tables:
-        _tables[_locale] = _load_table(_locale)
-    zh_table = _tables.get("zh_CN")
-    if zh_table is None:
-        zh_table = _load_table("zh_CN")
-        _tables["zh_CN"] = zh_table
-    for k, v in zh_table.items():
-        if k.startswith("card.") and v == card_id:
-            return t(k)
+    # 优先在当前 locale 的翻译值中反查，避免每次全表扫描
+    current_index = _get_card_reverse_index(_locale)
+    resolved_key = current_index.get(card_id)
+    if resolved_key is not None:
+        return t(resolved_key)
+
+    # 回退到 zh_CN 反查 (兼容旧代码传中文名)
+    zh_index = _get_card_reverse_index("zh_CN")
+    resolved_key = zh_index.get(card_id)
+    if resolved_key is not None:
+        return t(resolved_key)
 
     return card_id  # 未找到则原样返回
 
