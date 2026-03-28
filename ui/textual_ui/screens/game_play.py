@@ -19,6 +19,9 @@ from textual.widgets import Button, RichLog, Static
 from i18n import t as _t
 from ui.textual_ui.screens.game_play_helpers import (
     countdown_color,
+    handle_button_pressed,
+    handle_card_play,
+    handle_skill_button,
     parse_card_play_message,
     parse_damage_message,
     parse_skill_message,
@@ -532,133 +535,7 @@ class GamePlayScreen(Screen):
 
     def _handle_card_play(self, player: Player, card) -> None:
         """处理出牌."""
-        from game.card import CardName, CardSubtype, CardType
-
-        engine = self.engine
-
-        if card.card_type == CardType.EQUIPMENT:
-            self._execute_play_card_action(player, card)
-        elif card.name == CardName.SHA:
-            if not player.can_use_sha():
-                from game.constants import SkillId
-
-                if not player.has_skill(SkillId.PAOXIAO):
-                    self._post_log("⚠ 本回合已使用过杀")
-                    return
-            targets = engine.get_targets_in_range(player)
-            if not targets:
-                self._post_log("⚠ 没有可攻击的目标")
-                return
-            target = self._wait_for_target(player, targets, "选择杀的目标")
-            if target:
-                self._execute_play_card_action(player, card, [target])
-        elif card.name == CardName.TAO:
-            if player.hp >= player.max_hp:
-                self._post_log("⚠ 体力已满")
-                return
-            self._execute_play_card_action(player, card)
-        elif card.name == CardName.SHAN:
-            self._post_log("⚠ 闪不能主动使用")
-            return
-        elif card.name == CardName.WUXIE:
-            self._post_log("⚠ 无懈可击不能主动使用")
-            return
-        elif card.name == CardName.JUEDOU:
-            others = engine.get_other_players(player)
-            target = self._wait_for_target(player, others, "选择决斗目标")
-            if target:
-                engine.use_card(player, card, [target])
-        elif card.name in [CardName.GUOHE, CardName.SHUNSHOU]:
-            others = engine.get_other_players(player)
-            valid = [t for t in others if t.has_any_card()]
-            if card.name == CardName.SHUNSHOU:
-                valid = [t for t in valid if engine.calculate_distance(player, t) <= 1]
-            if not valid:
-                self._post_log("⚠ 没有有效目标")
-                return
-            target = self._wait_for_target(player, valid, f"选择{card.name}目标")
-            if target:
-                engine.use_card(player, card, [target])
-        elif card.name == CardName.LEBUSISHU:
-            # 乐不思蜀: 选择一个非自己的目标（无距离限制）
-            others = engine.get_other_players(player)
-            # 排除已有乐不思蜀的目标
-            valid = [
-                t for t in others if not any(c.name == CardName.LEBUSISHU for c in t.judge_area)
-            ]
-            if not valid:
-                self._post_log("⚠ 没有有效目标")
-                return
-            target = self._wait_for_target(player, valid, "选择乐不思蜀目标")
-            if target:
-                engine.use_card(player, card, [target])
-        elif card.name == CardName.BINGLIANG:
-            # 兵粮寸断: 选择距离≤1的非自己目标
-            others = engine.get_other_players(player)
-            valid = [
-                t
-                for t in others
-                if engine.calculate_distance(player, t) <= 1
-                and not any(c.name == CardName.BINGLIANG for c in t.judge_area)
-            ]
-            if not valid:
-                self._post_log("⚠ 没有有效目标（需距离≤1）")
-                return
-            target = self._wait_for_target(player, valid, "选择兵粮寸断目标")
-            if target:
-                engine.use_card(player, card, [target])
-        elif card.name == CardName.HUOGONG:
-            # 火攻: 选择一个有手牌的目标（可选自己）
-            alive = [p for p in engine.players if p.is_alive and p.hand_count > 0]
-            if not alive:
-                self._post_log("⚠ 没有有手牌的目标")
-                return
-            target = self._wait_for_target(player, alive, "选择火攻目标")
-            if target:
-                engine.use_card(player, card, [target])
-        elif card.name == CardName.JIEDAO:
-            # 借刀杀人: 先选有武器的其他玩家(wielder)，再选 wielder 攻击范围内的目标
-            others = engine.get_other_players(player)
-            with_weapon = [t for t in others if t.equipment.weapon and t.is_alive]
-            if not with_weapon:
-                self._post_log("⚠ 没有装备武器的目标")
-                return
-            wielder = self._wait_for_target(player, with_weapon, "选择持武器者（被借刀的人）")
-            if not wielder:
-                return
-            # 找 wielder 攻击范围内的目标（不含 wielder 自身和 player）
-            sha_targets = [
-                t
-                for t in engine.players
-                if t.is_alive
-                and t != wielder
-                and t != player
-                and engine.is_in_attack_range(wielder, t)
-            ]
-            if not sha_targets:
-                self._post_log(f"⚠ {wielder.name} 攻击范围内没有有效目标")
-                return
-            sha_target = self._wait_for_target(player, sha_targets, f"选择 {wielder.name} 杀的目标")
-            if sha_target:
-                engine.use_card(player, card, [wielder, sha_target])
-        elif card.name == CardName.TIESUO:
-            # 铁索连环: 选择0-2个目标（0=重铸）
-            others = [p for p in engine.players if p.is_alive]
-            targets = self._wait_for_multi_targets(
-                player, others, "铁索连环 — 选择0-2个目标（0个=重铸）", min_count=0, max_count=2
-            )
-            if targets is None:
-                return  # 取消
-            engine.use_card(player, card, targets)
-        elif card.subtype == CardSubtype.ALCOHOL:
-            # 酒: 检查本回合是否已使用
-            if player.alcohol_used:
-                self._post_log("⚠ 本回合已使用过酒")
-                return
-            engine.use_card(player, card)
-        else:
-            # 群体锦囊(南蛮/万箭/桃园/闪电)/其他
-            engine.use_card(player, card)
+        handle_card_play(self, player, card)
 
     def _handle_skill_use(self, player: Player, skill_id: str) -> None:
         """处理技能使用."""
@@ -1163,29 +1040,11 @@ class GamePlayScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id or ""
-        if btn_id.startswith("hcard-"):
-            idx = int(btn_id.split("-")[1])
-            self._respond(f"card:{idx}")
-        elif btn_id == "btn-end":
-            self._respond("end")
-        elif btn_id == "btn-play":
-            pass  # 手牌直接点击
-        elif btn_id == "btn-skill":
-            self._handle_skill_button()
-        elif btn_id.startswith("target-"):
-            idx = int(btn_id.split("-")[1])
-            self._respond(f"target:{idx}")
+        handle_button_pressed(self, btn_id)
 
     def _handle_skill_button(self) -> None:
         """技能按钮."""
-        engine = self.engine
-        human = engine.human_player
-        if engine.skill_system and human:
-            usable = engine.skill_system.get_usable_skills(human)
-            if usable:
-                self._respond(f"skill:{usable[0]}")
-            else:
-                self._log("⚠ 当前无可用技能")
+        handle_skill_button(self)
 
     def action_end_play(self) -> None:
         self._respond("end")
