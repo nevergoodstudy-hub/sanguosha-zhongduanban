@@ -85,6 +85,11 @@ from .engine_event_logging import (
     notify_cards_lost as _engine_notify_cards_lost,
     notify_cards_obtained as _engine_notify_cards_obtained,
 )
+from .engine_setup_helpers import (
+    assign_identities as _engine_assign_identities,
+    ensure_can_start_game as _engine_ensure_can_start_game,
+    setup_game as _engine_setup_game,
+)
 
 
 @dataclass(slots=True)
@@ -369,77 +374,17 @@ class GameEngine:
     def setup_game(
         self, player_count: int, human_player_index: int = 0, role_preference: str = "lord"
     ) -> None:
-        """设置游戏.
-
-        Args:
-            player_count: 玩家数量（2-8）
-            human_player_index: 人类玩家索引
-            role_preference: 身份偏好 ("lord" = 人类固定主公, "random" = 随机分配)
-        """
-        if player_count < 2 or player_count > 8:
-            from i18n import t as _t
-
-            raise ValueError(_t("error.player_count"))
-
-        self._role_preference = role_preference
-
-        # 创建玩家
-        self.players.clear()
-        self.human_player = None
-        for i in range(player_count):
-            is_human = i == human_player_index and human_player_index >= 0
-            from i18n import t as _t
-
-            player = Player(
-                id=i,
-                name=_t("game.player_name", index=i + 1) if is_human else f"AI_{i + 1}",
-                is_ai=not is_human,
-                seat=i,
-                game_engine=self,
-            )
-            self.players.append(player)
-            if is_human:
-                self.human_player = player
-
-        # 分配身份
-        self._assign_identities()
-
-        # 重置牌堆
-        self.deck.reset()
-
-        self.state = GameState.CHOOSING_HEROES
-        from i18n import t as _t
-
-        self.log_event("game_setup", _t("game.setup_complete", count=player_count))
+        """设置游戏."""
+        _engine_setup_game(
+            self,
+            player_count,
+            human_player_index=human_player_index,
+            role_preference=role_preference,
+        )
 
     def _assign_identities(self) -> None:
         """分配身份（支持2-8人）- 使用 IdentityConfig (SSOT)."""
-        player_count = len(self.players)
-
-        # 使用 constants.py 中的 IdentityConfig 作为单一事实来源
-        config = IdentityConfig.get_config(player_count)
-        identities = (
-            [Identity.LORD] * config.get("lord", 1)
-            + [Identity.LOYALIST] * config.get("loyalist", 0)
-            + [Identity.REBEL] * config.get("rebel", 1)
-            + [Identity.SPY] * config.get("spy", 0)
-        )
-
-        role_pref = getattr(self, "_role_preference", "lord")
-
-        if role_pref == "random":
-            # 完全随机分配：所有身份洗牌后按座位分配
-            random.shuffle(identities)
-            for i, player in enumerate(self.players):
-                player.identity = identities[i]
-        else:
-            # 兼容原行为：第一个玩家固定为主公
-            self.players[0].identity = identities[0]
-            remaining_identities = identities[1:]
-            random.shuffle(remaining_identities)
-            for i, player in enumerate(self.players[1:], 1):
-                if i - 1 < len(remaining_identities):
-                    player.identity = remaining_identities[i - 1]
+        _engine_assign_identities(self)
 
     @property
     def lord_player(self) -> Player | None:
@@ -502,16 +447,7 @@ class GameEngine:
 
     def start_game(self) -> None:
         """开始游戏."""
-        from i18n import t as _t
-
-        if self.state != GameState.CHOOSING_HEROES:
-            raise RuntimeError(_t("error.game_state_start"))
-
-        # 确保所有玩家都有武将
-        for player in self.players:
-            if player.hero is None:
-                raise RuntimeError(_t("error.no_hero", player=player.name))
-
+        _engine_ensure_can_start_game(self)
         self._deal_initial_hand_cards()
         self._begin_started_game()
 

@@ -18,6 +18,7 @@ from textual.widgets import Button, RichLog, Static
 
 from i18n import t as _t
 from ui.textual_ui.screens.game_play_helpers import (
+    build_player_info_text,
     countdown_color,
     parse_card_play_message,
     parse_damage_message,
@@ -1054,39 +1055,7 @@ class GamePlayScreen(Screen):
 
         # 更新信息面板
         try:
-            hp_bar = "●" * human.hp + "○" * (human.max_hp - human.hp)
-            hp_full = "●" * human.hp
-            hp_empty = "[dim]○[/dim]" * (human.max_hp - human.hp)
-            if human.hp <= 1:
-                hp_bar = f"[red]{hp_full}[/red]" + hp_empty
-            elif human.hp <= human.max_hp // 2:
-                hp_bar = f"[yellow]{hp_full}[/yellow]" + hp_empty
-            else:
-                hp_bar = f"[green]{hp_full}[/green]" + hp_empty
-            skills_lines = ""
-            if human.hero:
-                for s in human.hero.skills:
-                    tag = ""
-                    if s.is_compulsory:
-                        tag = "[dim]锁定技[/dim] "
-                    elif s.is_lord_skill:
-                        tag = "[dim]主公技[/dim] "
-                    skills_lines += f"  [bold yellow]【{s.name}】[/bold yellow]{tag}\n"
-                    skills_lines += f"    [dim]{s.description}[/dim]\n"
-            # 显示身份和对应胜利条件
-            identity_color = human.identity.color
-            identity_name = human.identity.chinese_name
-            from game.win_checker import get_identity_win_condition
-
-            win_cond = get_identity_win_condition(human.identity.value)
-            info_text = (
-                f"[bold]{human.name}[/bold] {human.hero.name if human.hero else ''}\n"
-                f"体力: {hp_bar} {human.hp}/{human.max_hp}\n"
-                f"身份: [{identity_color}]{identity_name}[/{identity_color}]\n"
-                f"目标: {win_cond}\n"
-                f"─── 技能 ───\n"
-                f"{skills_lines.rstrip()}"
-            )
+            info_text = build_player_info_text(human)
             self.query_one("#info-panel", Static).update(info_text)
         except Exception as exc:
             self._log_ui_recoverable_error(
