@@ -84,3 +84,9 @@ msix_output/
 Package.appxmanifest
 *.egg-info/
 .pip-audit-cache/
+
+# 本地分析/性能产物
+perf_*.prof
+
+# 本地 AI/编辑器状态目录
+.cursor/
