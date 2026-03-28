@@ -90,6 +90,14 @@ from .engine_setup_helpers import (
     ensure_can_start_game as _engine_ensure_can_start_game,
     setup_game as _engine_setup_game,
 )
+from .engine_phase_helpers import (
+    phase_discard as _engine_phase_discard,
+    phase_draw as _engine_phase_draw,
+    phase_end as _engine_phase_end,
+    phase_judge as _engine_phase_judge,
+    phase_play as _engine_phase_play,
+    phase_prepare as _engine_phase_prepare,
+)
 from .engine_turn_helpers import next_turn as _engine_next_turn
 
 
@@ -595,33 +603,27 @@ class GameEngine:
 
     def phase_prepare(self, player: Player) -> None:
         """准备阶段 — 委托给 TurnManager (Phase 2.6)."""
-        self.phase = GamePhase.PREPARE
-        self.turn_manager._execute_prepare_phase(player)
+        _engine_phase_prepare(self, player)
 
     def phase_judge(self, player: Player) -> None:
         """判定阶段 — 委托给 TurnManager (Phase 2.6)."""
-        self.phase = GamePhase.JUDGE
-        self.turn_manager._execute_judge_phase(player)
+        _engine_phase_judge(self, player)
 
     def phase_draw(self, player: Player) -> None:
         """摸牌阶段 — 委托给 TurnManager (Phase 2.6)."""
-        self.phase = GamePhase.DRAW
-        self.turn_manager._execute_draw_phase(player)
+        _engine_phase_draw(self, player)
 
     def phase_play(self, player: Player) -> None:
         """出牌阶段 — 委托给 TurnManager (Phase 2.6)."""
-        self.phase = GamePhase.PLAY
-        self.turn_manager._execute_play_phase(player)
+        _engine_phase_play(self, player)
 
     def phase_discard(self, player: Player) -> None:
         """弃牌阶段 — 委托给 TurnManager (Phase 2.6)."""
-        self.phase = GamePhase.DISCARD
-        self.turn_manager._execute_discard_phase(player)
+        _engine_phase_discard(self, player)
 
     def phase_end(self, player: Player) -> None:
         """结束阶段 — 委托给 TurnManager (Phase 2.6)."""
-        self.phase = GamePhase.END
-        self.turn_manager._execute_end_phase(player)
+        _engine_phase_end(self, player)
 
     def next_turn(self) -> None:
         """进入下一个玩家的回合."""
