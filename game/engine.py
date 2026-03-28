@@ -90,6 +90,7 @@ from .engine_setup_helpers import (
     ensure_can_start_game as _engine_ensure_can_start_game,
     setup_game as _engine_setup_game,
 )
+from .engine_turn_helpers import next_turn as _engine_next_turn
 
 
 @dataclass(slots=True)
@@ -624,33 +625,7 @@ class GameEngine:
 
     def next_turn(self) -> None:
         """进入下一个玩家的回合."""
-        previous_index = self.current_player_index
-
-        # 找到下一个存活的玩家
-        for i in range(1, len(self.players) + 1):
-            next_index = (self.current_player_index + i) % len(self.players)
-            if self.players[next_index].is_alive:
-                self.current_player_index = next_index
-                break
-
-        # 如果回到主公，回合数+1
-        if (
-            self.current_player_index == self.lord_player_index
-            and previous_index != self.lord_player_index
-        ):
-            self.event_bus.emit(
-                EventType.ROUND_END,
-                round=self.round_count,
-                player=self.players[previous_index],
-            )
-            self.round_count += 1
-            for player in self.players:
-                player.reset_round()
-            self.event_bus.emit(
-                EventType.ROUND_START,
-                round=self.round_count,
-                player=self.current_player,
-            )
+        _engine_next_turn(self)
 
     # ==================== 卡牌使用 ====================
 

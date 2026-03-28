@@ -18,11 +18,15 @@ from textual.widgets import Button, RichLog, Static
 
 from i18n import t as _t
 from ui.textual_ui.screens.game_play_helpers import (
-    build_player_info_text,
     countdown_color,
     parse_card_play_message,
     parse_damage_message,
     parse_skill_message,
+    refresh_equipment,
+    refresh_hand_cards,
+    refresh_info_panel,
+    refresh_opponents,
+    refresh_phase_bar,
 )
 
 if TYPE_CHECKING:
@@ -965,19 +969,7 @@ class GamePlayScreen(Screen):
 
         # 更新阶段指示器 + 额外信息
         try:
-            from ui.textual_ui.widgets.phase_indicator import PhaseIndicator
-
-            phase_bar = self.query_one("#phase-bar", PhaseIndicator)
-            phase_bar.set_phase(engine.phase.value)
-            current_name = engine.current_player.name if engine.current_player else ""
-            deck_remaining = engine.deck.remaining
-            discard_pile = engine.deck.discarded
-            phase_bar.set_info(
-                round_count=engine.round_count,
-                deck_count=deck_remaining,
-                discard_count=discard_pile,
-                player_name=current_name,
-            )
+            refresh_phase_bar(self, engine)
         except Exception as exc:
             self._log_ui_recoverable_error(
                 "refresh phase bar",
@@ -987,30 +979,7 @@ class GamePlayScreen(Screen):
 
         # 更新对手面板——显示所有其他玩家（含已死亡）
         try:
-            from ui.textual_ui.widgets.player_panel import PlayerPanel
-
-            opp_container = self.query_one("#opponents", VerticalScroll)
-            all_others = engine.get_all_other_players(human)
-            existing = list(opp_container.query(PlayerPanel))
-            if len(existing) != len(all_others):
-                with self.app.batch_update():
-                    opp_container.remove_children()
-                    for i, p in enumerate(all_others):
-                        panel = PlayerPanel(p, index=i, id=f"opp-{i}")
-                        if not p.is_alive:
-                            panel.add_class("dead")
-                        if p == engine.current_player:
-                            panel.add_class("active-turn")
-                        opp_container.mount(panel)
-            else:
-                for panel, p in zip(existing, all_others, strict=False):
-                    dist = engine.calculate_distance(human, p) if p.is_alive else -1
-                    in_rng = engine.is_in_attack_range(human, p) if p.is_alive else False
-                    panel.update_player(p, distance=dist, in_range=in_rng)
-                    if p == engine.current_player:
-                        panel.add_class("active-turn")
-                    else:
-                        panel.remove_class("active-turn")
+            refresh_opponents(self, engine, human)
         except Exception as exc:
             self._log_ui_recoverable_error(
                 "refresh opponent panels",
@@ -1020,19 +989,7 @@ class GamePlayScreen(Screen):
 
         # 更新手牌区——CardWidget + batch_update 防闪烁 + P0-3: .playable 提示
         try:
-            from ui.textual_ui.widgets.card_widget import CardWidget
-
-            hand_container = self.query_one("#hand-cards", Horizontal)
-            is_player_turn = engine.current_player == human
-            can_sha = human.can_use_sha() if hasattr(human, "can_use_sha") else True
-            has_targets = bool(engine.get_targets_in_range(human)) if is_player_turn else False
-            with self.app.batch_update():
-                hand_container.remove_children()
-                for i, card in enumerate(human.hand):
-                    widget = CardWidget(card, index=i)
-                    if is_player_turn and self._is_card_playable(card, human, can_sha, has_targets):
-                        widget.add_class("playable")
-                    hand_container.mount(widget)
+            refresh_hand_cards(self, engine, human)
         except Exception as exc:
             self._log_ui_recoverable_error(
                 "refresh hand cards",
@@ -1042,10 +999,7 @@ class GamePlayScreen(Screen):
 
         # 更新装备槽
         try:
-            from ui.textual_ui.widgets.equipment_slots import EquipmentSlots
-
-            equip_widget = self.query_one("#equip-section", EquipmentSlots)
-            equip_widget.update_player(human)
+            refresh_equipment(self, human)
         except Exception as exc:
             self._log_ui_recoverable_error(
                 "refresh equipment slots",
@@ -1055,8 +1009,7 @@ class GamePlayScreen(Screen):
 
         # 更新信息面板
         try:
-            info_text = build_player_info_text(human)
-            self.query_one("#info-panel", Static).update(info_text)
+            refresh_info_panel(self, human)
         except Exception as exc:
             self._log_ui_recoverable_error(
                 "refresh info panel",

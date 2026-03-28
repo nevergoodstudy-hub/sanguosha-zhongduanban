@@ -1,11 +1,16 @@
 """GamePlayScreen 辅助函数.
 
-将纯函数逻辑从 game_play.py 抽离，降低主屏幕文件复杂度。
+将纯函数与渲染片段从 game_play.py 抽离，降低主屏幕文件复杂度。
 """
 
 from __future__ import annotations
 
+import logging
 import re
+from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 def countdown_color(secs: int, total: int = 30) -> str:
@@ -103,3 +108,84 @@ def build_player_info_text(human) -> str:
         f"─── 技能 ───\n"
         f"{skills_lines.rstrip()}"
     )
+
+
+def refresh_phase_bar(screen: Any, engine: Any) -> None:
+    """刷新阶段栏与牌堆信息."""
+    from ui.textual_ui.widgets.phase_indicator import PhaseIndicator
+
+    phase_bar = screen.query_one("#phase-bar", PhaseIndicator)
+    phase_bar.set_phase(engine.phase.value)
+    current_name = engine.current_player.name if engine.current_player else ""
+    phase_bar.set_info(
+        round_count=engine.round_count,
+        deck_count=engine.deck.remaining,
+        discard_count=engine.deck.discarded,
+        player_name=current_name,
+    )
+
+
+def refresh_opponents(screen: Any, engine: Any, human: Any) -> None:
+    """刷新对手区（含已死亡玩家）."""
+    from textual.containers import VerticalScroll
+
+    from ui.textual_ui.widgets.player_panel import PlayerPanel
+
+    opp_container = screen.query_one("#opponents", VerticalScroll)
+    all_others = engine.get_all_other_players(human)
+    existing = list(opp_container.query(PlayerPanel))
+    if len(existing) != len(all_others):
+        with screen.app.batch_update():
+            opp_container.remove_children()
+            for i, p in enumerate(all_others):
+                panel = PlayerPanel(p, index=i, id=f"opp-{i}")
+                if not p.is_alive:
+                    panel.add_class("dead")
+                if p == engine.current_player:
+                    panel.add_class("active-turn")
+                opp_container.mount(panel)
+    else:
+        for panel, p in zip(existing, all_others, strict=False):
+            dist = engine.calculate_distance(human, p) if p.is_alive else -1
+            in_rng = engine.is_in_attack_range(human, p) if p.is_alive else False
+            panel.update_player(p, distance=dist, in_range=in_rng)
+            if p == engine.current_player:
+                panel.add_class("active-turn")
+            else:
+                panel.remove_class("active-turn")
+
+
+def refresh_hand_cards(screen: Any, engine: Any, human: Any) -> None:
+    """刷新手牌区及可用提示."""
+    from textual.containers import Horizontal
+
+    from ui.textual_ui.widgets.card_widget import CardWidget
+
+    hand_container = screen.query_one("#hand-cards", Horizontal)
+    is_player_turn = engine.current_player == human
+    can_sha = human.can_use_sha() if hasattr(human, "can_use_sha") else True
+    has_targets = bool(engine.get_targets_in_range(human)) if is_player_turn else False
+
+    with screen.app.batch_update():
+        hand_container.remove_children()
+        for i, card in enumerate(human.hand):
+            widget = CardWidget(card, index=i)
+            if is_player_turn and screen._is_card_playable(card, human, can_sha, has_targets):
+                widget.add_class("playable")
+            hand_container.mount(widget)
+
+
+def refresh_equipment(screen: Any, human: Any) -> None:
+    """刷新装备槽."""
+    from ui.textual_ui.widgets.equipment_slots import EquipmentSlots
+
+    equip_widget = screen.query_one("#equip-section", EquipmentSlots)
+    equip_widget.update_player(human)
+
+
+def refresh_info_panel(screen: Any, human: Any) -> None:
+    """刷新信息面板文本."""
+    from textual.widgets import Static
+
+    info_text = build_player_info_text(human)
+    screen.query_one("#info-panel", Static).update(info_text)
