@@ -1,5 +1,5 @@
 # 多平台构建 + 自动 Release 工作流
-# 触发条件: push tag v* (如 v4.1.0)
+# 触发条件: push 语义化版本 tag（vX.Y.Z）或手动触发
 # 构建: Windows (.exe) + macOS (binary) + Linux (binary)
 # 发布: 自动创建 GitHub Release 并上传三平台产物
 
@@ -8,7 +8,8 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -84,25 +85,25 @@ jobs:
       - name: Create Release & Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          name: 三国杀终端版 ${{ github.ref_name }}
+          name: Sanguosha CLI ${{ github.ref_name }}
           body: |
-            ## 三国杀终端版 ${{ github.ref_name }}
+            ## Sanguosha CLI ${{ github.ref_name }}
 
-            ### 📥 下载
-            | 平台 | 文件 |
-            |------|------|
+            ### Downloads
+            | Platform | File |
+            |---|---|
             | Windows (x64) | `sanguosha-windows-amd64.exe` |
             | Linux (x64) | `sanguosha-linux-amd64` |
             | macOS (x64) | `sanguosha-macos-amd64` |
 
-            ### 🚀 使用方法
-            - **Windows**: 双击 `.exe` 运行
-            - **Linux/macOS**: `chmod +x sanguosha-*-amd64 && ./sanguosha-*-amd64`
+            ### Quick Start
+            - Windows: double-click `.exe`
+            - Linux/macOS: `chmod +x sanguosha-*-amd64 && ./sanguosha-*-amd64`
 
-            ### ⚙️ 构建信息
+            ### Build Info
             - Python 3.14 + PyInstaller 6.18
-            - Textual TUI 跨平台终端界面
-            - 详细变更请参见本次自动生成的 Release Notes 与仓库中的 `CHANGELOG.md`
+            - Textual TUI cross-platform interface
+            - See generated Release Notes and `CHANGELOG.md` for details
           files: |
             release-assets/**/*
           fail_on_unmatched_files: false
