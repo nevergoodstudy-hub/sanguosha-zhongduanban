@@ -26,6 +26,7 @@
 > Release 规范说明：
 > - 当前仅保留最新稳定版本 `v4.1.1`
 > - 新版本发布仅使用语义化版本标签 `vX.Y.Z`（例如 `v4.1.2`）
+> - 发布流程文档：`docs/release-process.md`
 
 
 全鼠标点击交互的终端三国杀，基于 [Textual](https://textual.textualize.io/) TUI 框架构建。
