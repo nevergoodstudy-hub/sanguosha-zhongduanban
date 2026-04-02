@@ -113,6 +113,22 @@ class TestOriginValidator:
         v = OriginValidator("https://b.example, https://a.example")
         assert v.allowed_origins == ("https://a.example", "https://b.example")
 
+    def test_dev_localhost_allowlist_enabled(self):
+        v = OriginValidator("", allow_localhost_dev=True)
+        assert v.is_enabled is True
+        assert v.is_allowed("http://localhost") is True
+        assert v.is_allowed("https://127.0.0.1") is True
+        assert v.is_allowed("http://[::1]") is True
+
+    def test_dev_localhost_does_not_allow_external_origin(self):
+        v = OriginValidator("", allow_localhost_dev=True)
+        assert v.is_allowed("https://evil.example.com") is False
+
+    def test_dev_localhost_merged_with_explicit_allowlist(self):
+        v = OriginValidator("https://game.example.com", allow_localhost_dev=True)
+        assert v.is_allowed("https://game.example.com") is True
+        assert v.is_allowed("http://localhost") is True
+
 
 # ==================== RateLimiter ====================
 

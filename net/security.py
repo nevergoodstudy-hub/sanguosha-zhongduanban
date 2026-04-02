@@ -124,12 +124,22 @@ class OriginValidator:
     验证 WebSocket 握手请求的 Origin 头，防止跨站 WebSocket 劫持 (CSWSH)。
     """
 
-    def __init__(self, allowed_origins: str = ""):
+    _LOCALHOST_ORIGINS = {
+        "http://localhost",
+        "https://localhost",
+        "http://127.0.0.1",
+        "https://127.0.0.1",
+        "http://[::1]",
+        "https://[::1]",
+    }
+
+    def __init__(self, allowed_origins: str = "", allow_localhost_dev: bool = False):
         """初始化 Origin 验证器。.
 
         Args:
             allowed_origins: 逗号分隔的允许 Origin 列表。
                              空字符串时拒绝所有连接 (fail-closed)。
+            allow_localhost_dev: 开发态是否允许 localhost 相关 Origin。
         """
         self._allowed: set[str] = set()
         if allowed_origins.strip():
@@ -137,6 +147,8 @@ class OriginValidator:
                 origin = origin.strip().rstrip("/")
                 if origin:
                     self._allowed.add(origin.lower())
+        if allow_localhost_dev:
+            self._allowed.update(self._LOCALHOST_ORIGINS)
 
     @property
     def is_enabled(self) -> bool:

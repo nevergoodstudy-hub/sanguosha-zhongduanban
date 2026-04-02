@@ -117,6 +117,10 @@ class GameConfig:
     ws_allowed_origins: str = field(
         default_factory=lambda: os.environ.get("SANGUOSHA_WS_ALLOWED_ORIGINS", "")
     )
+    # 仅开发态快捷开关：允许 localhost/127.0.0.1/::1 Origin（生产应保持 False）
+    ws_dev_allow_localhost: bool = field(
+        default_factory=lambda: _get_env_bool("SANGUOSHA_DEV_ALLOW_LOCALHOST", False)
+    )
 
     # ==================== 日志与调试 ====================
     log_level: str = field(default_factory=lambda: os.environ.get("SANGUOSHA_LOG_LEVEL", "INFO"))
@@ -185,6 +189,23 @@ class GameConfig:
             errors.append(f"default_draw_count must be > 0, got {self.default_draw_count}")
 
         return errors
+
+    def validate_warnings(self) -> list[str]:
+        """返回非阻断型配置告警信息（用于运维提示）."""
+        warnings: list[str] = []
+
+        if self.ws_dev_allow_localhost:
+            warnings.append(
+                "SANGUOSHA_DEV_ALLOW_LOCALHOST 已启用：仅建议本地开发使用，生产环境应关闭。"
+            )
+
+        if self.ws_dev_allow_localhost and self.ws_allowed_origins.strip():
+            warnings.append(
+                "同时配置了 SANGUOSHA_DEV_ALLOW_LOCALHOST 与 SANGUOSHA_WS_ALLOWED_ORIGINS；"
+                "建议生产环境仅使用显式 Origin 白名单。"
+            )
+
+        return warnings
 
 
 # 全局配置单例

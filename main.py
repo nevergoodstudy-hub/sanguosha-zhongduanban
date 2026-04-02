@@ -14,8 +14,10 @@
 """
 
 import logging
+import os
 import sys
 import warnings
+from pathlib import Path
 
 from logging_config import setup_logging
 from versioning import get_project_version
@@ -42,11 +44,113 @@ def __getattr__(name: str):
 
 
 def normalize_connect_url(connect: str) -> str:
-    """Normalize --connect parameter into a WebSocket URL."""
+    """Normalize --connect parameter into a WebSocket URL.
+
+    Raises:
+        ValueError: 当输入为空、scheme 不合法、host 缺失或端口非法时。
+    """
+    from urllib.parse import urlsplit
+
     normalized = connect.strip()
-    if normalized.startswith(("ws://", "wss://")):
-        return normalized
-    return f"ws://{normalized}"
+    if not normalized:
+        raise ValueError("--connect value cannot be empty")
+
+    if normalized.startswith(("http://", "https://")):
+        raise ValueError("--connect must start with ws:// or wss://")
+
+    if not normalized.startswith(("ws://", "wss://")):
+        normalized = f"ws://{normalized}"
+
+    parsed = urlsplit(normalized)
+    if parsed.scheme not in {"ws", "wss"}:
+        raise ValueError("--connect must start with ws:// or wss://")
+
+    if not parsed.hostname:
+        raise ValueError("--connect missing host")
+
+    netloc_no_auth = parsed.netloc.rsplit("@", 1)[-1]
+    if netloc_no_auth.startswith("["):
+        right_bracket = netloc_no_auth.find("]")
+        port_str = netloc_no_auth[right_bracket + 2 :] if right_bracket != -1 and netloc_no_auth[right_bracket + 1 : right_bracket + 2] == ":" else ""
+    else:
+        port_str = netloc_no_auth.rsplit(":", 1)[1] if ":" in netloc_no_auth else ""
+
+    if port_str and not port_str.isdigit():
+        raise ValueError("--connect port must be numeric")
+
+    try:
+        _ = parsed.port
+    except ValueError as exc:
+        msg = str(exc)
+        if "out of range" in msg:
+            raise ValueError("--connect port must be in 1-65535") from exc
+        raise ValueError("--connect port must be numeric") from exc
+
+    return normalized
+
+
+def _validate_runtime_layout() -> list[str]:
+    """Validate current working directory layout for predictable startup."""
+    cwd = Path.cwd()
+    required_paths = [
+        cwd / "main.py",
+        cwd / "pyproject.toml",
+        cwd / "data",
+        cwd / "game",
+        cwd / "ui",
+    ]
+    missing = [str(path.name) for path in required_paths if not path.exists()]
+    return missing
+
+
+def _warn_if_runtime_layout_suspicious() -> None:
+    """Warn when startup is executed outside the project root directory."""
+    missing = _validate_runtime_layout()
+    if missing:
+        logger.warning(
+            "Current working directory may not be project root: missing %s",
+            ", ".join(missing),
+        )
+        print(
+            "[WARN] 当前运行目录可能不是项目根目录，缺少: "
+            f"{', '.join(missing)}\n"
+            "       建议先切换到项目目录再运行，例如:\n"
+            "       cd sanguosha_backup_20260121_071454"
+        )
+
+
+def _warn_for_network_security_defaults() -> None:
+    """Show explicit runtime warnings for common networking misconfigurations."""
+    if not os.environ.get("SANGUOSHA_WS_ALLOWED_ORIGINS", "").strip():
+        if os.environ.get("SANGUOSHA_DEV_ALLOW_LOCALHOST", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            print(
+                "[WARN] 未设置 SANGUOSHA_WS_ALLOWED_ORIGINS，"
+                "但已启用 SANGUOSHA_DEV_ALLOW_LOCALHOST。\n"
+                "       当前仅开发态 localhost/127.0.0.1/::1 Origin 可连接。"
+            )
+        else:
+            print(
+                "[WARN] 未设置 SANGUOSHA_WS_ALLOWED_ORIGINS。"
+                "服务端将拒绝所有 WebSocket 连接（安全默认）。\n"
+                "       例如设置:"
+                " SANGUOSHA_WS_ALLOWED_ORIGINS=http://localhost:3000"
+            )
+
+
+def _warn_for_tls_if_needed() -> None:
+    """Warn operator when server runs without TLS certificate/key."""
+    cert = os.environ.get("SANGUOSHA_WS_SSL_CERT", "").strip()
+    key = os.environ.get("SANGUOSHA_WS_SSL_KEY", "").strip()
+    if not cert or not key:
+        print(
+            "[WARN] 未配置 TLS 证书（SANGUOSHA_WS_SSL_CERT / SANGUOSHA_WS_SSL_KEY），"
+            "当前将使用 ws:// 明文传输。"
+        )
 
 
 def main():
@@ -98,6 +202,7 @@ def main():
     set_locale(args.lang)
 
     setup_logging(enable_console=False)
+    _warn_if_runtime_layout_suspicious()
 
     # M4: 服务端模式
     if args.server is not None:
@@ -107,6 +212,18 @@ def main():
         from net.server import GameServer
 
         cfg = get_config()
+        config_errors = cfg.validate()
+        if config_errors:
+            print("[ERROR] 配置校验失败:")
+            for error in config_errors:
+                print(f"  - {error}")
+            sys.exit(2)
+
+        for warning in cfg.validate_warnings():
+            print(f"[WARN] {warning}")
+
+        _warn_for_network_security_defaults()
+        _warn_for_tls_if_needed()
         host, _, port = args.server.partition(":")
         host = host or "127.0.0.1"
         port = int(port) if port else 8765
@@ -120,6 +237,7 @@ def main():
             max_message_size=cfg.ws_max_message_size,
             heartbeat_timeout=cfg.ws_heartbeat_timeout,
             allowed_origins=cfg.ws_allowed_origins,
+            allow_localhost_dev=cfg.ws_dev_allow_localhost,
             ssl_cert=cfg.ws_ssl_cert,
             ssl_key=cfg.ws_ssl_key,
         )
@@ -132,7 +250,12 @@ def main():
 
         from net.client import cli_client_main
 
-        url = normalize_connect_url(args.connect)
+        try:
+            url = normalize_connect_url(args.connect)
+        except ValueError as exc:
+            print(f"[ERROR] --connect 参数无效: {exc}")
+            sys.exit(2)
+
         name = args.name or "玩家"
         asyncio.run(cli_client_main(url, name))
         return

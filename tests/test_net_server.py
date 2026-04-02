@@ -98,6 +98,25 @@ class TestGameServer:
         ws.request.headers.get.return_value = "https://evil.com"
         assert server._check_origin(ws) is False
 
+    def test_get_serve_origins_with_dev_localhost_enabled(self):
+        server = GameServer(allowed_origins="", allow_localhost_dev=True)
+        origins = server._get_serve_origins()
+        assert origins is not None
+        assert "http://localhost" in origins
+        assert "https://127.0.0.1" in origins
+
+    def test_check_origin_allows_localhost_in_dev_mode(self):
+        server = GameServer(allowed_origins="", allow_localhost_dev=True)
+        ws = MagicMock()
+        ws.request.headers.get.return_value = "http://localhost"
+        assert server._check_origin(ws) is True
+
+    def test_check_origin_blocks_external_in_dev_mode(self):
+        server = GameServer(allowed_origins="", allow_localhost_dev=True)
+        ws = MagicMock()
+        ws.request.headers.get.return_value = "https://evil.com"
+        assert server._check_origin(ws) is False
+
     @pytest.mark.asyncio
     async def test_register(self):
         server = GameServer()

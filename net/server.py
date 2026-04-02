@@ -79,6 +79,7 @@ class GameServer:
         max_message_size: int = DEFAULT_MAX_MESSAGE_SIZE,
         heartbeat_timeout: float = DEFAULT_HEARTBEAT_TIMEOUT,
         allowed_origins: str = "",
+        allow_localhost_dev: bool = False,
         ssl_cert: str = "",
         ssl_key: str = "",
     ):
@@ -98,13 +99,26 @@ class GameServer:
         # 安全组件
         self._token_manager = ConnectionTokenManager()
         self._ip_tracker = IPConnectionTracker(max_per_ip=max_connections_per_ip)
-        self._origin_validator = OriginValidator(allowed_origins)
-        if not allowed_origins.strip():
+        self._origin_validator = OriginValidator(
+            allowed_origins,
+            allow_localhost_dev=allow_localhost_dev,
+        )
+        if not self._origin_validator.allowed_origins:
             logger.warning(
                 "No allowed_origins configured. All WebSocket connections "
                 "will be rejected (fail-closed). Set SANGUOSHA_WS_ALLOWED_ORIGINS "
                 "e.g. 'http://localhost:3000,https://game.example.com'."
             )
+        else:
+            logger.info(
+                "Origin allowlist enabled: %s",
+                ", ".join(self._origin_validator.allowed_origins),
+            )
+            if allow_localhost_dev:
+                logger.warning(
+                    "Development localhost origin bypass is enabled "
+                    "(SANGUOSHA_DEV_ALLOW_LOCALHOST=1)."
+                )
         self._rate_limiter = RateLimiter(rate_limit_window, rate_limit_max_msgs)
         # 房间管理
         self.rooms: dict[str, Room] = {}  # room_id → room
@@ -1086,8 +1100,15 @@ class GameServer:
 
     def _check_origin(self, websocket: ServerConnection) -> bool:
         """检查 WebSocket 握手中的 Origin 头。."""
+        remote_ip = self._get_remote_ip(websocket)
         if not self._origin_validator.is_enabled:
+            logger.warning(
+                "Reject websocket handshake: origin allowlist disabled "
+                "(fail-closed) remote_ip=%s",
+                remote_ip,
+            )
             return False
+
         origin = None
         try:
             request = websocket.request
@@ -1095,8 +1116,15 @@ class GameServer:
                 origin = request.headers.get("Origin")
         except Exception:
             pass
+
         if not self._origin_validator.is_allowed(origin):
-            logger.warning(f"Origin 验证失败: {origin}")
+            logger.warning(
+                "Reject websocket handshake: origin not allowed "
+                "origin=%s remote_ip=%s allowlist=%s",
+                origin,
+                remote_ip,
+                ", ".join(self._origin_validator.allowed_origins),
+            )
             return False
         return True
 

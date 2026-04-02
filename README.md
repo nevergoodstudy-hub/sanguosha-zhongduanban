@@ -124,6 +124,95 @@ python main.py --lang en_US                     # 英文界面
 > 生产环境请显式配置白名单，例如：
 > `SANGUOSHA_WS_ALLOWED_ORIGINS="https://game.example.com,http://localhost:3000"`
 
+## 🌐 联机启动故障排查
+
+如果你使用 `--server` / `--connect` 联机时遇到“连不上”或“握手失败”，可按下面顺序检查：
+
+### 1) 先确认运行目录
+服务端启动时会检查当前目录是否包含 `main.py`、`pyproject.toml`、`data/`、`game/`、`ui/`。
+若目录不对，先切换到项目根目录再启动。
+
+### 2) 检查 Origin 白名单（最常见）
+默认安全策略是 **fail-closed**：
+- `SANGUOSHA_WS_ALLOWED_ORIGINS` 为空时，会拒绝所有 WebSocket 连接。
+
+生产环境建议：
+
+```bash
+SANGUOSHA_WS_ALLOWED_ORIGINS="https://game.example.com"
+```
+
+本地开发快速联调（二选一）：
+
+```bash
+# 方式 A：显式白名单
+SANGUOSHA_WS_ALLOWED_ORIGINS="http://localhost:3000"
+
+# 方式 B：开发快捷开关（仅放行 localhost/127.0.0.1/::1）
+SANGUOSHA_DEV_ALLOW_LOCALHOST=1
+```
+
+### 3) 关注启动期“非阻断告警”（`validate_warnings()`）
+服务端启动时除了阻断型校验（失败会退出），还会输出配置告警（不阻断启动）：
+
+- 启用 `SANGUOSHA_DEV_ALLOW_LOCALHOST=1` 会提示“仅建议开发使用”
+- 同时启用 `SANGUOSHA_DEV_ALLOW_LOCALHOST` 与 `SANGUOSHA_WS_ALLOWED_ORIGINS` 会提示“生产建议仅保留显式白名单”
+
+这类提示用于降低“开发便捷开关误带到生产”的风险。
+
+### 4) 检查 TLS / URL 协议是否匹配
+- 未配置 `SANGUOSHA_WS_SSL_CERT` + `SANGUOSHA_WS_SSL_KEY` 时，服务端是 `ws://`
+- 配置证书后，服务端是 `wss://`
+
+客户端 URL 必须匹配协议，否则会握手失败。
+
+### 5) 检查端口与监听地址
+默认监听：`127.0.0.1:8765`
+
+```bash
+python main.py --server --host 0.0.0.0 --port 8765
+```
+
+如果前端/客户端不在同机，通常需要 `--host 0.0.0.0`。
+
+### 6) 查看服务端日志关键字
+- `Origin allowlist enabled`：白名单已启用
+- `Reject websocket handshake: origin not allowed`：Origin 不在白名单
+- `Reject websocket handshake: origin allowlist disabled`：白名单未配置，按安全默认拒绝
+
+### 7) 最小安全生产配置模板（建议）
+
+```bash
+# 必配：显式 Origin 白名单（不要留空）
+SANGUOSHA_WS_ALLOWED_ORIGINS="https://game.example.com"
+
+# 生产建议关闭开发快捷开关
+SANGUOSHA_DEV_ALLOW_LOCALHOST=0
+
+# 建议启用 TLS（客户端使用 wss://）
+SANGUOSHA_WS_SSL_CERT="/path/to/fullchain.pem"
+SANGUOSHA_WS_SSL_KEY="/path/to/privkey.pem"
+
+# 可选：按容量规划调整
+SANGUOSHA_WS_MAX_CONN=200
+SANGUOSHA_WS_MAX_CONN_PER_IP=8
+SANGUOSHA_WS_RATE_MAX=30
+```
+
+### 8) `--connect` 参数合法/非法示例
+
+| 输入示例 | 结果 | 说明 |
+|---|---|---|
+| `--connect localhost:8765` | ✅ 连接 `ws://localhost:8765` | 自动补全 `ws://` |
+| `--connect "  localhost:8765  "` | ✅ 连接 `ws://localhost:8765` | 自动去除首尾空白 |
+| `--connect ws://127.0.0.1:8765` | ✅ 直接使用 | 已是合法 ws URL |
+| `--connect wss://game.example.com` | ✅ 直接使用 | 已是合法 wss URL |
+| `--connect "   "` | ❌ 退出码 2 | 空值，提示 `--connect 参数无效` |
+| `--connect http://example.com` | ❌ 退出码 2 | 仅支持 `ws://` / `wss://` |
+| `--connect ws://:8765` | ❌ 退出码 2 | 缺少主机名 |
+| `--connect localhost:abc` | ❌ 退出码 2 | 端口必须是数字 |
+| `--connect localhost:70000` | ❌ 退出码 2 | 端口需在 `1-65535` |
+
 ## 📖 游戏规则
 
 ### 身份与胜利条件
