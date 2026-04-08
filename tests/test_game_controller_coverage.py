@@ -1,6 +1,6 @@
 """Tests for game.game_controller pure-logic helper methods."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -8,6 +8,7 @@ from game.card import CardName, CardType
 from game.engine import GamePhase, GameState
 from game.game_controller import GameController
 from game.player import Identity
+from i18n import t as _t
 
 
 def _make_ui():
@@ -510,6 +511,36 @@ class TestRunTurnEdgeCases:
         ctrl = _make_controller()
         ctrl.engine = None
         ctrl._human_discard_phase(MagicMock())  # should not raise
+
+
+class TestControllerIoBoundary:
+    @pytest.mark.asyncio
+    async def test_confirm_quit_uses_controller_io_prompt(self):
+        ctrl = _make_controller()
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.prompt_text = AsyncMock(return_value="Y")
+
+        with patch("game.game_controller.input", return_value="N"):
+            result = await ctrl._confirm_quit()
+
+        assert result is True
+        ctrl._controller_io.prompt_text.assert_awaited_once_with(_t("controller.confirm_quit"))
+
+    @pytest.mark.asyncio
+    async def test_select_cards_for_skill_uses_controller_io_prompt(self):
+        engine = _make_engine()
+        ctrl = _make_controller(engine=engine)
+        card_a = _make_card(name=CardName.SHA)
+        card_b = _make_card(name=CardName.SHAN)
+        player = _make_player(hand=[card_a, card_b])
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.prompt_text = AsyncMock(return_value="1 2")
+
+        with patch("game.game_controller.input", return_value=""):
+            result = await ctrl._select_cards_for_skill(player, 1, 2)
+
+        assert result == [card_a, card_b]
+        ctrl._controller_io.prompt_text.assert_awaited_once_with(_t("controller.input_prompt"))
 
 
 # ==================== _handle_play_specific_card branches ====================
