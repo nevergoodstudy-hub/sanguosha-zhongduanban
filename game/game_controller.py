@@ -398,7 +398,7 @@ class GameController:
                 card_idx = int(action) - 1
                 if 0 <= card_idx < len(player.hand):
                     card = player.hand[card_idx]
-                    self._handle_play_specific_card(player, card)
+                    await self._handle_play_specific_card(player, card)
                 else:
                     await self._controller_io.show_log(_t("controller.invalid_card_num"))
 
@@ -470,82 +470,88 @@ class GameController:
         """检查玩家是否可以进行任何操作."""
         return self._has_usable_cards(player) or self._has_usable_skills(player)
 
-    def _handle_play_specific_card(self, player: Player, card: Card) -> None:
+    async def _handle_play_specific_card(self, player: Player, card: Card) -> None:
         """处理使用指定卡牌."""
         if not self.engine:
             return
 
         if card.card_type == CardType.EQUIPMENT:
-            self.ui.show_log(_t("controller.equipped", card=card.name))
+            await self._controller_io.show_log(_t("controller.equipped", card=card.name))
             self.engine.use_card(player, card)
 
         elif card.name == CardName.SHA:
             if not player.can_use_sha():
-                self.ui.show_log(_t("controller.sha_used"))
+                await self._controller_io.show_log(_t("controller.sha_used"))
                 has_paoxiao = player.has_skill(SkillId.PAOXIAO)
                 if has_paoxiao:
-                    self.ui.show_log(_t("controller.sha_paoxiao"))
+                    await self._controller_io.show_log(_t("controller.sha_paoxiao"))
                 else:
                     return
 
             targets = self.engine.get_targets_in_range(player)
             if not targets:
-                self.ui.show_log(_t("controller.no_targets"))
+                await self._controller_io.show_log(_t("controller.no_targets"))
                 return
 
             target = self._controller_io.choose_target(
                 player, targets, _t("controller.choose_attack")
             )
             if target:
-                self.ui.show_log(_t("controller.use_sha", target=target.name))
+                await self._controller_io.show_log(
+                    _t("controller.use_sha", target=target.name)
+                )
                 self.engine.use_card(player, card, [target])
 
         elif card.name == CardName.TAO:
             if player.hp >= player.max_hp:
-                self.ui.show_log(_t("controller.hp_full"))
+                await self._controller_io.show_log(_t("controller.hp_full"))
                 return
-            self.ui.show_log(_t("controller.use_tao"))
+            await self._controller_io.show_log(_t("controller.use_tao"))
             self.engine.use_card(player, card)
 
         elif card.name == CardName.SHAN:
-            self.ui.show_log(_t("controller.shan_passive"))
+            await self._controller_io.show_log(_t("controller.shan_passive"))
             return
 
         elif card.name == CardName.WUZHONG:
-            self.ui.show_log(_t("controller.use_wuzhong"))
+            await self._controller_io.show_log(_t("controller.use_wuzhong"))
             self.engine.use_card(player, card)
 
         elif card.name in [CardName.NANMAN, CardName.WANJIAN]:
-            self.ui.show_log(_t("controller.use_card", card=card.name))
+            await self._controller_io.show_log(_t("controller.use_card", card=card.name))
             self.engine.use_card(player, card)
 
         elif card.name == CardName.TAOYUAN:
-            self.ui.show_log(_t("controller.use_taoyuan"))
+            await self._controller_io.show_log(_t("controller.use_taoyuan"))
             self.engine.use_card(player, card)
 
         elif card.name == CardName.JUEDOU:
             others = self.engine.get_other_players(player)
             if not others:
-                self.ui.show_log(_t("controller.no_other_targets"))
+                await self._controller_io.show_log(_t("controller.no_other_targets"))
                 return
             target = self._controller_io.choose_target(
                 player, others, _t("controller.choose_duel_target")
             )
             if target:
-                self.ui.show_log(_t("controller.use_juedou", target=target.name))
+                await self._controller_io.show_log(
+                    _t("controller.use_juedou", target=target.name)
+                )
                 self.engine.use_card(player, card, [target])
 
         elif card.name == CardName.GUOHE:
             others = self.engine.get_other_players(player)
             valid = [t for t in others if t.has_any_card()]
             if not valid:
-                self.ui.show_log(_t("controller.no_card_targets"))
+                await self._controller_io.show_log(_t("controller.no_card_targets"))
                 return
             target = self._controller_io.choose_target(
                 player, valid, _t("controller.choose_guohe_target")
             )
             if target:
-                self.ui.show_log(_t("controller.use_guohe", target=target.name))
+                await self._controller_io.show_log(
+                    _t("controller.use_guohe", target=target.name)
+                )
                 self.engine.use_card(player, card, [target])
 
         elif card.name == CardName.SHUNSHOU:
@@ -556,13 +562,15 @@ class GameController:
                 if self.engine.calculate_distance(player, t) <= 1 and t.has_any_card()
             ]
             if not valid:
-                self.ui.show_log(_t("controller.no_shunshou_targets"))
+                await self._controller_io.show_log(_t("controller.no_shunshou_targets"))
                 return
             target = self._controller_io.choose_target(
                 player, valid, _t("controller.choose_shunshou_target")
             )
             if target:
-                self.ui.show_log(_t("controller.use_shunshou", target=target.name))
+                await self._controller_io.show_log(
+                    _t("controller.use_shunshou", target=target.name)
+                )
                 self.engine.use_card(player, card, [target])
         else:
             self.engine.use_card(player, card)

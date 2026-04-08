@@ -622,10 +622,11 @@ class TestRunTurnEdgeCases:
         ctrl.engine = None
         await ctrl._human_play_phase(MagicMock())  # should not raise
 
-    def test_handle_play_specific_card_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_handle_play_specific_card_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._handle_play_specific_card(MagicMock(), MagicMock())  # should not raise
+        await ctrl._handle_play_specific_card(MagicMock(), MagicMock())  # should not raise
 
     @pytest.mark.asyncio
     async def test_handle_use_skill_no_engine(self):
@@ -814,15 +815,22 @@ class TestControllerIoBoundary:
 
 
 class TestHandlePlaySpecificCard:
-    def test_equipment(self):
+    @pytest.mark.asyncio
+    async def test_handle_play_specific_card_equipment_logs_via_controller_io(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player()
         card = _make_card(card_type=CardType.EQUIPMENT)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
+        ctrl._controller_io.show_log.assert_awaited_once_with(
+            _t("controller.equipped", card=card.name)
+        )
         engine.use_card.assert_called_once()
 
-    def test_sha_with_target(self):
+    @pytest.mark.asyncio
+    async def test_sha_with_target(self):
         engine = _make_engine()
         target = MagicMock(name="Target")
         engine.get_targets_in_range.return_value = [target]
@@ -831,30 +839,38 @@ class TestHandlePlaySpecificCard:
         player.can_use_sha.return_value = True
         ctrl.ui.choose_target.return_value = target
         card = _make_card(name=CardName.SHA)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_sha_no_targets(self):
+    @pytest.mark.asyncio
+    async def test_handle_play_specific_card_sha_no_targets_logs_via_controller_io(self):
         engine = _make_engine()
         engine.get_targets_in_range.return_value = []
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player()
         player.can_use_sha.return_value = True
         card = _make_card(name=CardName.SHA)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
+        ctrl._controller_io.show_log.assert_awaited_once_with(
+            _t("controller.no_targets")
+        )
         engine.use_card.assert_not_called()
 
-    def test_sha_cannot_use_no_paoxiao(self):
+    @pytest.mark.asyncio
+    async def test_sha_cannot_use_no_paoxiao(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         player.can_use_sha.return_value = False
         player.has_skill.return_value = False
         card = _make_card(name=CardName.SHA)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_sha_cannot_use_has_paoxiao(self):
+    @pytest.mark.asyncio
+    async def test_sha_cannot_use_has_paoxiao(self):
         engine = _make_engine()
         target = MagicMock()
         engine.get_targets_in_range.return_value = [target]
@@ -864,58 +880,70 @@ class TestHandlePlaySpecificCard:
         player.has_skill.return_value = True
         ctrl.ui.choose_target.return_value = target
         card = _make_card(name=CardName.SHA)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_tao_hp_full(self):
+    @pytest.mark.asyncio
+    async def test_handle_play_specific_card_tao_hp_full_logs_via_controller_io(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(hp=4, max_hp=4)
         card = _make_card(name=CardName.TAO, card_type=CardType.BASIC)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
+        ctrl._controller_io.show_log.assert_awaited_once_with(
+            _t("controller.hp_full")
+        )
         engine.use_card.assert_not_called()
 
-    def test_tao_ok(self):
+    @pytest.mark.asyncio
+    async def test_tao_ok(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player(hp=2, max_hp=4)
         card = _make_card(name=CardName.TAO, card_type=CardType.BASIC)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_shan_not_playable(self):
+    @pytest.mark.asyncio
+    async def test_shan_not_playable(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.SHAN, card_type=CardType.BASIC)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_wuzhong(self):
+    @pytest.mark.asyncio
+    async def test_wuzhong(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.WUZHONG, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_nanman(self):
+    @pytest.mark.asyncio
+    async def test_nanman(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.NANMAN, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_taoyuan(self):
+    @pytest.mark.asyncio
+    async def test_taoyuan(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.TAOYUAN, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_juedou_with_target(self):
+    @pytest.mark.asyncio
+    async def test_juedou_with_target(self):
         engine = _make_engine()
         target = MagicMock()
         engine.get_other_players.return_value = [target]
@@ -923,19 +951,21 @@ class TestHandlePlaySpecificCard:
         ctrl.ui.choose_target.return_value = target
         player = _make_player()
         card = _make_card(name=CardName.JUEDOU, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_juedou_no_others(self):
+    @pytest.mark.asyncio
+    async def test_juedou_no_others(self):
         engine = _make_engine()
         engine.get_other_players.return_value = []
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.JUEDOU, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_guohe_with_target(self):
+    @pytest.mark.asyncio
+    async def test_guohe_with_target(self):
         engine = _make_engine()
         target = MagicMock()
         target.has_any_card.return_value = True
@@ -944,10 +974,11 @@ class TestHandlePlaySpecificCard:
         ctrl.ui.choose_target.return_value = target
         player = _make_player()
         card = _make_card(name=CardName.GUOHE, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_guohe_no_valid_targets(self):
+    @pytest.mark.asyncio
+    async def test_guohe_no_valid_targets(self):
         engine = _make_engine()
         target = MagicMock()
         target.has_any_card.return_value = False
@@ -955,10 +986,11 @@ class TestHandlePlaySpecificCard:
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.GUOHE, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_shunshou_with_target(self):
+    @pytest.mark.asyncio
+    async def test_shunshou_with_target(self):
         engine = _make_engine()
         target = MagicMock()
         target.has_any_card.return_value = True
@@ -968,10 +1000,11 @@ class TestHandlePlaySpecificCard:
         ctrl.ui.choose_target.return_value = target
         player = _make_player()
         card = _make_card(name=CardName.SHUNSHOU, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_shunshou_no_valid(self):
+    @pytest.mark.asyncio
+    async def test_shunshou_no_valid(self):
         engine = _make_engine()
         target = MagicMock()
         target.has_any_card.return_value = True
@@ -980,13 +1013,14 @@ class TestHandlePlaySpecificCard:
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.SHUNSHOU, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_other_card(self):
+    @pytest.mark.asyncio
+    async def test_other_card(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.TIESUO, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
