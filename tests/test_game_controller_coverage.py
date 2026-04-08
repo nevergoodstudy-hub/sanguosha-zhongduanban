@@ -1,7 +1,7 @@
 """Tests for game.game_controller pure-logic helper methods."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
@@ -320,55 +320,128 @@ class TestUpdatePlayableMask:
 
 
 class TestShowTurnHeader:
-    def test_shows_header(self):
+    @pytest.mark.asyncio
+    async def test_shows_header_via_controller_io(self):
         engine = _make_engine()
         engine.round_count = 3
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player()
-        ctrl._show_turn_header(player)
-        assert ctrl.ui.show_log.call_count >= 3  # multiple lines
+
+        await ctrl._show_turn_header(player)
+
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(""),
+                call("鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲"),
+                call(
+                    _t(
+                        "controller.round_header",
+                        round=3,
+                        player="Player1",
+                        hero="TestHero",
+                    )
+                ),
+                call("鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲"),
+            ]
+        )
 
 
 # ==================== Phase execution helpers ====================
 
 
 class TestPhaseExecution:
-    def test_execute_prepare_phase(self):
+    @pytest.mark.asyncio
+    async def test_execute_prepare_phase(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player()
-        ctrl._execute_prepare_phase(player)
+
+        await ctrl._execute_prepare_phase(player)
+
         engine.phase_prepare.assert_called_once_with(player)
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.phase_prepare"))
 
-    def test_execute_draw_phase(self):
+    @pytest.mark.asyncio
+    async def test_execute_draw_phase(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(is_ai=True)
         player.hand_count = 4
-        ctrl._execute_draw_phase(player)
+        engine.phase_draw.side_effect = lambda current: setattr(current, "hand_count", 6)
+
+        drawn = await ctrl._execute_draw_phase(player)
+
         engine.phase_draw.assert_called_once_with(player)
+        assert drawn == 2
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.phase_draw")),
+                call(_t("controller.drew_cards_ai", player="Player1", count=2)),
+            ]
+        )
 
-    def test_execute_draw_phase_human(self):
+    @pytest.mark.asyncio
+    async def test_execute_draw_phase_human(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(is_ai=False)
         player.hand_count = 4
-        ctrl._execute_draw_phase(player)
+        engine.phase_draw.side_effect = lambda current: setattr(current, "hand_count", 5)
+
+        drawn = await ctrl._execute_draw_phase(player)
+
         engine.phase_draw.assert_called_once()
+        assert drawn == 1
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.phase_draw")),
+                call(_t("controller.drew_cards_human", count=1, hand_count=5)),
+            ]
+        )
 
-    def test_execute_end_phase_ai(self):
+    @pytest.mark.asyncio
+    async def test_execute_end_phase_ai(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(is_ai=True)
-        ctrl._execute_end_phase(player)
-        engine.phase_end.assert_called_once_with(player)
 
-    def test_execute_end_phase_human(self):
+        await ctrl._execute_end_phase(player)
+
+        engine.phase_end.assert_called_once_with(player)
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.phase_end")),
+                call(_t("controller.turn_end_ai", player="Player1")),
+            ]
+        )
+
+    @pytest.mark.asyncio
+    async def test_execute_end_phase_human(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(is_ai=False)
-        ctrl._execute_end_phase(player)
+
+        await ctrl._execute_end_phase(player)
+
         engine.phase_end.assert_called_once()
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.phase_end")),
+                call(_t("controller.turn_end_human")),
+            ]
+        )
 
     @pytest.mark.asyncio
     async def test_execute_discard_phase_no_discard(self):

@@ -234,12 +234,13 @@ class GameController:
 
         self._handle_game_over()
 
-    def _show_turn_header(self, player: Player) -> None:
+    async def _show_turn_header(self, player: Player) -> None:
         """显示回合头部信息."""
         assert self.engine is not None  # mypy type narrowing
-        self.ui.show_log("")
-        self.ui.show_log("════════════════════════")
-        self.ui.show_log(
+        border = "鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲"
+        await self._controller_io.show_log("")
+        await self._controller_io.show_log(border)
+        await self._controller_io.show_log(
             _t(
                 "controller.round_header",
                 round=self.engine.round_count,
@@ -247,28 +248,30 @@ class GameController:
                 hero=player.hero.name,
             )
         )
-        self.ui.show_log("════════════════════════")
+        await self._controller_io.show_log(border)
+        return
 
-    def _execute_prepare_phase(self, player: Player) -> None:
+    async def _execute_prepare_phase(self, player: Player) -> None:
         """执行准备阶段."""
         assert self.engine is not None  # mypy type narrowing
-        self.ui.show_log(_t("controller.phase_prepare"))
+        await self._controller_io.show_log(_t("controller.phase_prepare"))
         self.engine.phase_prepare(player)
+        return
 
-    def _execute_draw_phase(self, player: Player, show_count: bool = True) -> int:
+    async def _execute_draw_phase(self, player: Player, show_count: bool = True) -> int:
         """执行摸牌阶段，返回摸牌数量."""
         assert self.engine is not None  # mypy type narrowing
-        self.ui.show_log(_t("controller.phase_draw"))
+        await self._controller_io.show_log(_t("controller.phase_draw"))
         old_count = player.hand_count
         self.engine.phase_draw(player)
         new_cards = player.hand_count - old_count
         if show_count:
             if player.is_ai:
-                self.ui.show_log(
+                await self._controller_io.show_log(
                     _t("controller.drew_cards_ai", player=player.name, count=new_cards)
                 )
             else:
-                self.ui.show_log(
+                await self._controller_io.show_log(
                     _t("controller.drew_cards_human", count=new_cards, hand_count=player.hand_count)
                 )
         return new_cards
@@ -292,30 +295,31 @@ class GameController:
                 return
             self.engine.phase_discard(player)
 
-    def _execute_end_phase(self, player: Player) -> None:
+    async def _execute_end_phase(self, player: Player) -> None:
         """执行结束阶段."""
         assert self.engine is not None  # mypy type narrowing
-        self.ui.show_log(_t("controller.phase_end"))
+        await self._controller_io.show_log(_t("controller.phase_end"))
         self.engine.phase_end(player)
         turn_end_msg = (
             _t("controller.turn_end_ai", player=player.name)
             if player.is_ai
             else _t("controller.turn_end_human")
         )
-        self.ui.show_log(turn_end_msg)
+        await self._controller_io.show_log(turn_end_msg)
+        return
 
     async def _run_ai_turn(self, player: Player) -> None:
         """执行AI回合."""
         if not self.engine:
             return
 
-        self._show_turn_header(player)
+        await self._show_turn_header(player)
         await self._controller_io.show_game_state(self.engine, player)
 
         player.reset_turn()
 
-        self._execute_prepare_phase(player)
-        self._execute_draw_phase(player)
+        await self._execute_prepare_phase(player)
+        await self._execute_draw_phase(player)
         await self._controller_io.show_game_state(self.engine, player)
         cfg = get_config()
         if cfg.ai_turn_delay > 0:
@@ -331,7 +335,7 @@ class GameController:
             await asyncio.sleep(cfg.ai_turn_delay)
 
         await self._execute_discard_phase(player)
-        self._execute_end_phase(player)
+        await self._execute_end_phase(player)
         if cfg.ai_turn_delay > 0:
             await asyncio.sleep(cfg.ai_turn_delay)
 
@@ -340,13 +344,13 @@ class GameController:
         if not self.engine:
             return
 
-        self._show_turn_header(player)
+        await self._show_turn_header(player)
         player.reset_turn()
 
-        self._execute_prepare_phase(player)
+        await self._execute_prepare_phase(player)
         await self._controller_io.show_game_state(self.engine, player)
 
-        self._execute_draw_phase(player)
+        await self._execute_draw_phase(player)
         await self._controller_io.show_game_state(self.engine, player)
 
         await self._controller_io.show_log(_t("controller.phase_play"))
@@ -354,7 +358,7 @@ class GameController:
         await self._human_play_phase(player)
 
         await self._execute_discard_phase(player)
-        self._execute_end_phase(player)
+        await self._execute_end_phase(player)
 
     # ==================== 出牌交互 ====================
 
