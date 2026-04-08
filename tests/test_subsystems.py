@@ -97,6 +97,8 @@ class TestCombatSystem:
     def test_request_shan_no_cards(self, engine):
         """没有闪时 request_shan 返回 0"""
         player = engine.players[0]
+        player.has_skill = MagicMock(return_value=False)
+        player.equipment.armor = None
         player.hand = [make_card(CardName.SHA)]  # 只有杀，没有闪
         count = engine.combat.request_shan(player, 1)
         assert count == 0

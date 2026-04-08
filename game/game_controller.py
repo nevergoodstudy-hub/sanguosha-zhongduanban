@@ -271,20 +271,22 @@ class GameController:
                 )
         return new_cards
 
-    def _execute_discard_phase(self, player: Player) -> None:
+    async def _execute_discard_phase(self, player: Player) -> None:
         """执行弃牌阶段."""
         assert self.engine is not None  # mypy type narrowing
         if player.need_discard > 0:
-            self.ui.show_log(_t("controller.phase_discard"))
+            await self._controller_io.show_log(_t("controller.phase_discard"))
             if player.is_ai:
-                self.ui.show_log(_t("controller.need_discard", count=player.need_discard))
+                await self._controller_io.show_log(
+                    _t("controller.need_discard", count=player.need_discard)
+                )
             else:
-                self.ui.show_log(
+                await self._controller_io.show_log(
                     _t("controller.need_discard_limit", count=player.need_discard, limit=player.hp)
                 )
                 self.engine.phase = GamePhase.DISCARD
-                self.ui.show_game_state(self.engine, player)
-                self._human_discard_phase(player)
+                await self._controller_io.show_game_state(self.engine, player)
+                await self._human_discard_phase(player)
                 return
             self.engine.phase_discard(player)
 
@@ -326,7 +328,7 @@ class GameController:
         if cfg.ai_turn_delay > 0:
             await asyncio.sleep(cfg.ai_turn_delay)
 
-        self._execute_discard_phase(player)
+        await self._execute_discard_phase(player)
         self._execute_end_phase(player)
         if cfg.ai_turn_delay > 0:
             await asyncio.sleep(cfg.ai_turn_delay)
@@ -349,7 +351,7 @@ class GameController:
         self.engine.phase = GamePhase.PLAY
         await self._human_play_phase(player)
 
-        self._execute_discard_phase(player)
+        await self._execute_discard_phase(player)
         self._execute_end_phase(player)
 
     # ==================== 出牌交互 ====================
@@ -626,7 +628,7 @@ class GameController:
 
     # ==================== 弃牌 ====================
 
-    def _human_discard_phase(self, player: Player) -> None:
+    async def _human_discard_phase(self, player: Player) -> None:
         """人类玩家弃牌阶段."""
         if not self.engine:
             return
@@ -635,8 +637,8 @@ class GameController:
         if discard_count <= 0:
             return
 
-        self.ui.show_log(_t("controller.need_discard_cards", count=discard_count))
-        cards = self._controller_io.choose_cards_to_discard(player, discard_count)
+        await self._controller_io.show_log(_t("controller.need_discard_cards", count=discard_count))
+        cards = await self._controller_io.choose_cards_to_discard(player, discard_count)
 
         if cards:
             self.engine.discard_cards(player, cards)

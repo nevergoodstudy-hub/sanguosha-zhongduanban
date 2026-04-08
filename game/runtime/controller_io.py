@@ -58,5 +58,5 @@ class ControllerIO:
     def choose_card_to_play(self, player: Player):
         return self._ui.choose_card_to_play(player)
 
-    def choose_cards_to_discard(self, player: Player, count: int):
-        return self._ui.choose_cards_to_discard(player, count)
+    async def choose_cards_to_discard(self, player: Player, count: int):
+        return await self._run(self._ui.choose_cards_to_discard, player, count)

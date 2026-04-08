@@ -361,22 +361,42 @@ class TestPhaseExecution:
         ctrl._execute_end_phase(player)
         engine.phase_end.assert_called_once()
 
-    def test_execute_discard_phase_no_discard(self):
+    @pytest.mark.asyncio
+    async def test_execute_discard_phase_no_discard(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         player.need_discard = 0
-        ctrl._execute_discard_phase(player)
+        await ctrl._execute_discard_phase(player)
         # Should do nothing
         engine.phase_discard.assert_not_called()
 
-    def test_execute_discard_phase_ai(self):
+    @pytest.mark.asyncio
+    async def test_execute_discard_phase_ai(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player(is_ai=True)
         player.need_discard = 2
-        ctrl._execute_discard_phase(player)
+        await ctrl._execute_discard_phase(player)
         engine.phase_discard.assert_called_once_with(player)
+
+    @pytest.mark.asyncio
+    async def test_execute_discard_phase_human_routes_through_controller_io(self):
+        engine = _make_engine()
+        ctrl = _make_controller(engine=engine)
+        player = _make_player(is_ai=False)
+        player.need_discard = 2
+        selected = [MagicMock(), MagicMock()]
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.show_game_state = AsyncMock()
+        ctrl._controller_io.choose_cards_to_discard = AsyncMock(return_value=selected)
+
+        await ctrl._execute_discard_phase(player)
+
+        ctrl._controller_io.show_game_state.assert_awaited_once()
+        ctrl._controller_io.choose_cards_to_discard.assert_awaited_once_with(player, 2)
+        engine.discard_cards.assert_called_once_with(player, selected)
 
 
 # ==================== _handle_game_over ====================
@@ -507,10 +527,11 @@ class TestRunTurnEdgeCases:
         ctrl.engine = None
         await ctrl._handle_use_skill(MagicMock())  # should not raise
 
-    def test_human_discard_phase_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_human_discard_phase_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._human_discard_phase(MagicMock())  # should not raise
+        await ctrl._human_discard_phase(MagicMock())  # should not raise
 
 
 class TestControllerIoBoundary:
