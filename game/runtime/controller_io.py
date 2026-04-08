@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from game.engine import GameEngine
+    from game.hero import Hero
     from game.player import Player
     from ui.protocol import GameUI
 
@@ -33,6 +34,13 @@ class ControllerIO:
 
     async def show_difficulty_menu(self) -> str:
         return await self._run(self._ui.show_difficulty_menu)
+
+    async def show_hero_selection(
+        self, heroes: list[Hero], selected_count: int = 1, is_lord: bool = False
+    ) -> list[Hero]:
+        return await self._run(
+            self._ui.show_hero_selection, heroes, selected_count, is_lord
+        )
 
     async def show_game_state(self, engine: GameEngine, current_player: Player) -> None:
         await self._run(self._ui.show_game_state, engine, current_player)

@@ -93,7 +93,7 @@ class GameController:
         self.engine.set_skill_system(skill_system)
 
         # 选择武将
-        self._choose_heroes()
+        await self._choose_heroes()
 
         # 初始化AI
         self._setup_ai_bots()
@@ -106,7 +106,7 @@ class GameController:
 
     # ==================== 武将选择 ====================
 
-    def _choose_heroes(self) -> None:
+    async def _choose_heroes(self) -> None:
         """武将选择阶段 - 符合真实三国杀规则."""
         if not self.engine:
             return
@@ -125,7 +125,7 @@ class GameController:
             is_lord = self.engine.human_player.identity == Identity.LORD
 
             if is_lord:
-                self.ui.show_log(_t("controller.lord_choose_hero"))
+                await self._controller_io.show_log(_t("controller.lord_choose_hero"))
                 available = lord_heroes.copy()
                 remaining = 5 - len(available)
                 if remaining > 0:
@@ -134,10 +134,12 @@ class GameController:
                 random.shuffle(available)
                 available = available[:5]
             else:
-                self.ui.show_log(_t("controller.choose_hero"))
+                await self._controller_io.show_log(_t("controller.choose_hero"))
                 available = random.sample(normal_heroes, min(3, len(normal_heroes)))
 
-            selected = self.ui.show_hero_selection(available, 1, is_lord)
+            selected = await self._controller_io.show_hero_selection(
+                available, 1, is_lord
+            )
 
             if selected:
                 hero = copy.deepcopy(selected[0])
@@ -145,7 +147,7 @@ class GameController:
                 used_heroes.append(hero.id)
 
                 if is_lord:
-                    self.ui.show_log(
+                    await self._controller_io.show_log(
                         _t(
                             "controller.hero_chosen",
                             player=self.engine.human_player.name,
@@ -154,10 +156,10 @@ class GameController:
                     )
 
         # AI玩家自动选择武将（避免重复）
-        ai_choices = self._auto_choose_heroes_for_ai(used_heroes)
+        ai_choices = await self._auto_choose_heroes_for_ai(used_heroes)
         self.engine.choose_heroes(ai_choices)
 
-    def _auto_choose_heroes_for_ai(self, used_heroes: list[str]) -> dict[int, str]:
+    async def _auto_choose_heroes_for_ai(self, used_heroes: list[str]) -> dict[int, str]:
         """为AI玩家自动选择武将."""
         all_heroes = self.engine.hero_repo.get_all_heroes()
         available = [h for h in all_heroes if h.id not in used_heroes]
@@ -168,7 +170,7 @@ class GameController:
                 hero = self._select_hero_for_ai(player, available)
                 ai_choices[player.id] = hero.id
                 available.remove(hero)
-                self.ui.show_log(
+                await self._controller_io.show_log(
                     _t("controller.hero_chosen", player=player.name, hero=hero.name)
                 )
 

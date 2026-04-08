@@ -1,5 +1,6 @@
 """Tests for game.game_controller pure-logic helper methods."""
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -59,6 +60,14 @@ def _make_player(is_ai=False, hp=4, max_hp=4, hand=None):
     player.need_discard = 0
     player.identity = Identity.LORD
     return player
+
+
+def _make_hero(hero_id: str, name: str, *, is_lord_skill: bool = False):
+    return SimpleNamespace(
+        id=hero_id,
+        name=name,
+        skills=[SimpleNamespace(is_lord_skill=is_lord_skill)],
+    )
 
 
 # ==================== __init__ ====================
@@ -500,10 +509,11 @@ class TestRunTurnEdgeCases:
         ctrl.engine = None
         await ctrl._game_loop()  # should not raise
 
-    def test_choose_heroes_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_choose_heroes_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._choose_heroes()  # should not raise
+        await ctrl._choose_heroes()  # should not raise
 
     def test_setup_ai_bots_no_engine(self):
         ctrl = _make_controller()
@@ -535,6 +545,71 @@ class TestRunTurnEdgeCases:
 
 
 class TestControllerIoBoundary:
+    @pytest.mark.asyncio
+    async def test_choose_heroes_lord_routes_through_controller_io(self):
+        engine = _make_engine()
+        human = _make_player(is_ai=False)
+        human.id = 1
+        human.name = "Human"
+        human.identity = Identity.LORD
+        human.hero = None
+        engine.human_player = human
+        engine.players = [human]
+
+        lord_hero = _make_hero("lord_hero", "Lord Hero", is_lord_skill=True)
+        normal_heroes = [_make_hero(f"hero_{i}", f"Hero {i}") for i in range(4)]
+        engine.hero_repo = MagicMock()
+        engine.hero_repo.get_all_heroes.return_value = [lord_hero, *normal_heroes]
+
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.show_hero_selection = AsyncMock(return_value=[lord_hero])
+
+        await ctrl._choose_heroes()
+
+        ctrl._controller_io.show_log.assert_any_await(
+            _t("controller.lord_choose_hero")
+        )
+        ctrl._controller_io.show_log.assert_any_await(
+            _t("controller.hero_chosen", player="Human", hero="Lord Hero")
+        )
+        available, selected_count, is_lord = (
+            ctrl._controller_io.show_hero_selection.await_args.args
+        )
+        assert len(available) == 5
+        assert selected_count == 1
+        assert is_lord is True
+        human.set_hero.assert_called_once()
+        engine.choose_heroes.assert_called_once_with({})
+
+    @pytest.mark.asyncio
+    async def test_auto_choose_heroes_for_ai_routes_logs_through_controller_io(self):
+        engine = _make_engine()
+        ai_player = _make_player(is_ai=True)
+        ai_player.id = 2
+        ai_player.name = "AI-1"
+        ai_player.hero = None
+        engine.players = [ai_player]
+
+        chosen_hero = _make_hero("ai_hero", "AI Hero")
+        engine.hero_repo = MagicMock()
+        engine.hero_repo.get_all_heroes.return_value = [chosen_hero]
+
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._select_hero_for_ai = MagicMock(return_value=chosen_hero)
+
+        result = await ctrl._auto_choose_heroes_for_ai([])
+
+        assert result == {2: "ai_hero"}
+        ctrl._select_hero_for_ai.assert_called_once()
+        assert ctrl._select_hero_for_ai.call_args.args[0] is ai_player
+        ctrl._controller_io.show_log.assert_awaited_once_with(
+            _t("controller.hero_chosen", player="AI-1", hero="AI Hero")
+        )
+
     @pytest.mark.asyncio
     async def test_confirm_quit_uses_controller_io_prompt(self):
         ctrl = _make_controller()
