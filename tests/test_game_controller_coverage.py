@@ -485,12 +485,18 @@ class TestPhaseExecution:
 
 
 class TestHandleGameOver:
-    def test_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._handle_game_over()  # no error
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-    def test_lord_wins_lord_player(self):
+        await ctrl._handle_game_over()  # no error
+        ctrl._controller_io.show_game_over.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_lord_wins_lord_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Lord wins!"
         engine.winner_identity = Identity.LORD
@@ -498,11 +504,14 @@ class TestHandleGameOver:
         human.identity = Identity.LORD
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Lord wins!", True)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Lord wins!", True)
 
-    def test_lord_wins_loyalist_player(self):
+    @pytest.mark.asyncio
+    async def test_lord_wins_loyalist_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Lord wins!"
         engine.winner_identity = Identity.LORD
@@ -510,11 +519,14 @@ class TestHandleGameOver:
         human.identity = Identity.LOYALIST
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Lord wins!", True)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Lord wins!", True)
 
-    def test_rebel_wins_rebel_player(self):
+    @pytest.mark.asyncio
+    async def test_rebel_wins_rebel_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Rebels win!"
         engine.winner_identity = Identity.REBEL
@@ -522,11 +534,14 @@ class TestHandleGameOver:
         human.identity = Identity.REBEL
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Rebels win!", True)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Rebels win!", True)
 
-    def test_spy_wins_spy_player(self):
+    @pytest.mark.asyncio
+    async def test_spy_wins_spy_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Spy wins!"
         engine.winner_identity = Identity.SPY
@@ -534,11 +549,14 @@ class TestHandleGameOver:
         human.identity = Identity.SPY
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Spy wins!", True)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Spy wins!", True)
 
-    def test_loss(self):
+    @pytest.mark.asyncio
+    async def test_loss(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Lord wins!"
         engine.winner_identity = Identity.LORD
@@ -546,18 +564,23 @@ class TestHandleGameOver:
         human.identity = Identity.REBEL
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Lord wins!", False)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Lord wins!", False)
 
-    def test_no_human_player(self):
+    @pytest.mark.asyncio
+    async def test_no_human_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Game over"
         engine.human_player = None
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Game over", False)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Game over", False)
 
 
 # ==================== Edge cases for _run_ai_turn / _run_human_turn ====================

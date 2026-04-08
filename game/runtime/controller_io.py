@@ -45,6 +45,9 @@ class ControllerIO:
     async def show_game_state(self, engine: GameEngine, current_player: Player) -> None:
         await self._run(self._ui.show_game_state, engine, current_player)
 
+    async def show_game_over(self, winner_message: str, is_victory: bool) -> None:
+        await self._run(self._ui.show_game_over, winner_message, is_victory)
+
     async def show_log(self, message: str) -> None:
         await self._run(self._ui.show_log, message)
 

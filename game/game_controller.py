@@ -232,7 +232,7 @@ class GameController:
 
             self.engine.next_turn()
 
-        self._handle_game_over()
+        await self._handle_game_over()
 
     async def _show_turn_header(self, player: Player) -> None:
         """显示回合头部信息."""
@@ -651,7 +651,7 @@ class GameController:
 
     # ==================== 游戏结算 ====================
 
-    def _handle_game_over(self) -> None:
+    async def _handle_game_over(self) -> None:
         """处理游戏结束."""
         if not self.engine:
             return
@@ -668,7 +668,7 @@ class GameController:
             elif self.engine.winner_identity == Identity.SPY:
                 is_victory = human_identity == Identity.SPY
 
-        self.ui.show_game_over(winner_message, is_victory)
+        await self._controller_io.show_game_over(winner_message, is_victory)
 
     async def _confirm_quit(self) -> bool:
         """确认退出."""
