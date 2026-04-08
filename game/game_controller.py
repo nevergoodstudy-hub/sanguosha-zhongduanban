@@ -580,7 +580,7 @@ class GameController:
 
         if skill_id == "zhiheng":
             if player.hand:
-                self.ui.show_log(_t("controller.choose_discard_cards"))
+                await self._controller_io.show_log(_t("controller.choose_discard_cards"))
                 cards = await self._select_cards_for_skill(player, 1, len(player.hand))
                 if cards:
                     self.engine.skill_system.use_skill(skill_id, player, cards=cards)
@@ -597,7 +597,7 @@ class GameController:
                             skill_id, player, targets=[target], cards=cards
                         )
         elif skill_id == "fanjian" and player.hand:
-            self.ui.show_log(_t("controller.choose_show_card"))
+            await self._controller_io.show_log(_t("controller.choose_show_card"))
             card = self._controller_io.choose_card_to_play(player)
             if card:
                 others = self.engine.get_other_players(player)
@@ -613,9 +613,11 @@ class GameController:
         self, player: Player, min_count: int, max_count: int
     ) -> list[Card]:
         """为技能选择卡牌."""
-        self.ui.show_log(_t("controller.select_cards", min=min_count, max=max_count))
+        await self._controller_io.show_log(
+            _t("controller.select_cards", min=min_count, max=max_count)
+        )
         for i, card in enumerate(player.hand, 1):
-            self.ui.show_log(f"  [{i}] {card.display_name}")
+            await self._controller_io.show_log(f"  [{i}] {card.display_name}")
 
         while True:
             choice = await self._controller_io.prompt_text(_t("controller.input_prompt"))
@@ -630,7 +632,9 @@ class GameController:
                     return [player.hand[i] for i in indices]
             except ValueError:
                 pass
-            self.ui.show_log(_t("controller.select_cards_range", min=min_count, max=max_count))
+            await self._controller_io.show_log(
+                _t("controller.select_cards_range", min=min_count, max=max_count)
+            )
 
     # ==================== 弃牌 ====================
 

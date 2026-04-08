@@ -634,6 +634,52 @@ class TestRunTurnEdgeCases:
         await ctrl._handle_use_skill(MagicMock())  # should not raise
 
     @pytest.mark.asyncio
+    async def test_handle_use_skill_zhiheng_logs_via_controller_io(self):
+        engine = _make_engine()
+        engine.skill_system = MagicMock()
+        engine.skill_system.get_usable_skills.return_value = ["zhiheng"]
+        player = _make_player(hand=[_make_card(name=CardName.SHA)])
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.show_skill_menu = MagicMock(return_value="zhiheng")
+        ctrl._select_cards_for_skill = AsyncMock(return_value=player.hand)
+
+        await ctrl._handle_use_skill(player)
+
+        ctrl._controller_io.show_log.assert_awaited_once_with(
+            _t("controller.choose_discard_cards")
+        )
+        engine.skill_system.use_skill.assert_called_once_with(
+            "zhiheng", player, cards=player.hand
+        )
+
+    @pytest.mark.asyncio
+    async def test_handle_use_skill_fanjian_logs_via_controller_io(self):
+        engine = _make_engine()
+        engine.skill_system = MagicMock()
+        engine.skill_system.get_usable_skills.return_value = ["fanjian"]
+        player = _make_player(hand=[_make_card(name=CardName.SHA)])
+        target = _make_player()
+        target.name = "Target"
+        engine.get_other_players.return_value = [target]
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.show_skill_menu = MagicMock(return_value="fanjian")
+        ctrl._controller_io.choose_card_to_play = MagicMock(return_value=player.hand[0])
+        ctrl._controller_io.choose_target = MagicMock(return_value=target)
+
+        await ctrl._handle_use_skill(player)
+
+        ctrl._controller_io.show_log.assert_awaited_once_with(
+            _t("controller.choose_show_card")
+        )
+        engine.skill_system.use_skill.assert_called_once_with(
+            "fanjian", player, targets=[target], cards=[player.hand[0]]
+        )
+
+    @pytest.mark.asyncio
     async def test_human_discard_phase_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
@@ -719,20 +765,49 @@ class TestControllerIoBoundary:
         ctrl._controller_io.prompt_text.assert_awaited_once_with(_t("controller.confirm_quit"))
 
     @pytest.mark.asyncio
-    async def test_select_cards_for_skill_uses_controller_io_prompt(self):
+    async def test_select_cards_for_skill_uses_controller_io_logs(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         card_a = _make_card(name=CardName.SHA)
         card_b = _make_card(name=CardName.SHAN)
         player = _make_player(hand=[card_a, card_b])
         ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         ctrl._controller_io.prompt_text = AsyncMock(return_value="1 2")
 
         with patch("game.game_controller.input", return_value=""):
             result = await ctrl._select_cards_for_skill(player, 1, 2)
 
         assert result == [card_a, card_b]
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.select_cards", min=1, max=2)),
+                call(f"  [1] {card_a.display_name}"),
+                call(f"  [2] {card_b.display_name}"),
+            ]
+        )
         ctrl._controller_io.prompt_text.assert_awaited_once_with(_t("controller.input_prompt"))
+
+    @pytest.mark.asyncio
+    async def test_select_cards_for_skill_invalid_choice_logs_range_error(self):
+        engine = _make_engine()
+        ctrl = _make_controller(engine=engine)
+        card_a = _make_card(name=CardName.SHA)
+        player = _make_player(hand=[card_a])
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.prompt_text = AsyncMock(side_effect=["2", "1"])
+
+        result = await ctrl._select_cards_for_skill(player, 1, 1)
+
+        assert result == [card_a]
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.select_cards", min=1, max=1)),
+                call(f"  [1] {card_a.display_name}"),
+                call(_t("controller.select_cards_range", min=1, max=1)),
+            ]
+        )
 
 
 # ==================== _handle_play_specific_card branches ====================
