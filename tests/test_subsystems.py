@@ -3,13 +3,14 @@
 覆盖 CombatSystem / EquipmentSystem / JudgeSystem / CardResolver
 """
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from game.card import Card, CardName, CardSubtype, CardSuit, CardType
 from game.card_resolver import CardResolver
 from game.combat import CombatSystem
+from game.constants import SkillId
 from game.engine import GameEngine
 from game.equipment_system import EquipmentSystem
 from game.judge_system import JudgeSystem
@@ -108,6 +109,22 @@ class TestCombatSystem:
         count = engine.combat.request_shan(player, 1)
         assert count == 1
 
+    def test_request_shan_ai_longdan_routes_through_request_skill_card(self, engine):
+        """AI 龙胆转闪也应经过统一 request_skill_card 边界。"""
+        player = engine.players[0]
+        sha = make_card(CardName.SHA, card_id="longdan_sha")
+        player.is_ai = True
+        player.hand = [sha]
+        player.has_skill = MagicMock(side_effect=lambda sid: sid == SkillId.LONGDAN)
+        engine.request_handler.request_skill_card = MagicMock(return_value=sha)
+
+        count = engine.combat.request_shan(player, 1)
+
+        assert count == 1
+        engine.request_handler.request_skill_card.assert_called_once_with(
+            player, "longdan_as_shan", [sha]
+        )
+
     def test_request_sha_no_cards(self, engine):
         """没有杀时 request_sha 返回 0"""
         player = engine.players[0]
@@ -117,6 +134,22 @@ class TestCombatSystem:
         player.hand = [make_card(CardName.SHAN, subtype=CardSubtype.DODGE)]
         count = engine.combat.request_sha(player, 1)
         assert count == 0
+
+    def test_request_sha_ai_wusheng_routes_through_request_skill_card(self, engine):
+        """AI 武圣转杀也应经过统一 request_skill_card 边界。"""
+        player = engine.players[0]
+        red_card = make_card(CardName.SHAN, suit=CardSuit.HEART, card_id="wusheng_red")
+        player.is_ai = True
+        player.hand = [red_card]
+        player.has_skill = MagicMock(side_effect=lambda sid: sid == SkillId.WUSHENG)
+        engine.request_handler.request_skill_card = MagicMock(return_value=red_card)
+
+        count = engine.combat.request_sha(player, 1)
+
+        assert count == 1
+        engine.request_handler.request_skill_card.assert_called_once_with(
+            player, "wusheng_as_sha", [red_card]
+        )
 
     def test_use_juedou_no_targets(self, engine):
         """决斗无目标返回 False"""
