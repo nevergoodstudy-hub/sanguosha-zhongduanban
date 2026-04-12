@@ -17,7 +17,7 @@
 **Files:**
 - Test: `tests/test_game_controller_coverage.py`
 
-- [ ] **Step 1: Add failing tests for hero-selection routing**
+- [x] **Step 1: Add failing tests for hero-selection routing**
 
 ```python
 @pytest.mark.asyncio
@@ -27,7 +27,7 @@ async def test_choose_heroes_lord_routes_through_controller_io(): ...
 async def test_auto_choose_heroes_for_ai_routes_logs_through_controller_io(): ...
 ```
 
-- [ ] **Step 2: Run the focused tests and confirm failure**
+- [x] **Step 2: Run the focused tests and confirm failure**
 
 Run:
 `python -m pytest tests/test_game_controller_coverage.py -q -k "choose_heroes or auto_choose_heroes"`
@@ -41,7 +41,7 @@ Tests fail because hero selection is still synchronous and still routes through 
 - Modify: `game/runtime/controller_io.py`
 - Modify: `game/game_controller.py`
 
-- [ ] **Step 1: Add async hero-selection helper to `ControllerIO`**
+- [x] **Step 1: Add async hero-selection helper to `ControllerIO`**
 
 ```python
 async def show_hero_selection(self, heroes, selected_count=1, is_lord=False):
@@ -50,20 +50,20 @@ async def show_hero_selection(self, heroes, selected_count=1, is_lord=False):
     )
 ```
 
-- [ ] **Step 2: Convert hero setup helpers to async**
+- [x] **Step 2: Convert hero setup helpers to async**
 
 ```python
 async def _choose_heroes(self) -> None: ...
 async def _auto_choose_heroes_for_ai(self, used_heroes: list[str]) -> dict[int, str]: ...
 ```
 
-- [ ] **Step 3: Update new-game initialization to await hero setup**
+- [x] **Step 3: Update new-game initialization to await hero setup**
 
 ```python
 await self._choose_heroes()
 ```
 
-- [ ] **Step 4: Verify focused tests**
+- [x] **Step 4: Verify focused tests**
 
 Run:
 `python -m pytest tests/test_game_controller_coverage.py -q -k "choose_heroes or auto_choose_heroes"`
@@ -71,7 +71,7 @@ Run:
 Expected:
 PASS
 
-- [ ] **Step 5: Verify broader controller regressions**
+- [x] **Step 5: Verify broader controller regressions**
 
 Run:
 `python -m pytest tests/test_game_controller_coverage.py -q`
@@ -79,7 +79,7 @@ Run:
 Expected:
 PASS
 
-- [ ] **Step 6: Verify project regression slice**
+- [x] **Step 6: Verify project regression slice**
 
 Run:
 `python -m pytest tests/test_game.py tests/test_game_controller_coverage.py tests/test_request_handler_coverage.py tests/test_phase_fsm.py tests/test_subsystems.py -q`
@@ -87,7 +87,7 @@ Run:
 Expected:
 PASS
 
-- [ ] **Step 7: Verify style**
+- [x] **Step 7: Verify style**
 
 Run:
 `python -m ruff check game/game_controller.py game/runtime/controller_io.py tests/test_game_controller_coverage.py`
@@ -95,7 +95,7 @@ Run:
 Expected:
 All checks pass
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add game/runtime/controller_io.py game/game_controller.py tests/test_game_controller_coverage.py docs/superpowers/plans/2026-04-08-controller-hero-selection-async.md

@@ -113,6 +113,7 @@ class GameContext(Protocol):
     def discard_cards(self, player: Player, cards: list[Card]) -> None:
         """弃置玩家的卡牌到弃牌堆。."""
         ...
+
     def notify_cards_obtained(
         self,
         player: Player,
@@ -124,6 +125,7 @@ class GameContext(Protocol):
     ) -> None:
         """发布获得牌语义事件。."""
         ...
+
     def notify_cards_lost(
         self,
         player: Player,

@@ -13,9 +13,10 @@ from typing import TYPE_CHECKING, Any
 from .protocol import RoomState, ServerMsg
 
 if TYPE_CHECKING:
+    from websockets.asyncio.server import ServerConnection
+
     from game.actions import GameResponse, RequestType
     from game.engine import GameEngine
-    from websockets.asyncio.server import ServerConnection
 
 
 @dataclass

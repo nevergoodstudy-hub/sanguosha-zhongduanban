@@ -79,13 +79,7 @@ Run:
 
 `python -m pytest tests/test_game_controller_coverage.py -q`
 
-- [ ] **Step 2: Run regression slice**
-
-Observed blocker:
-- `python -m pytest tests/test_game.py tests/test_game_controller_coverage.py tests/test_request_handler_coverage.py tests/test_phase_fsm.py tests/test_subsystems.py -q`
-  fails on `tests/test_subsystems.py::TestCardResolver::test_use_tiesuo_reforge`
-- reproduced standalone with `python -m pytest tests/test_subsystems.py -q -k test_use_tiesuo_reforge --randomly-seed=1207118530 -vv`
-- this failure is outside the files touched in this slice and appears to be a pre-existing seed-dependent subsystem test issue
+- [x] **Step 2: Run regression slice**
 
 Run:
 
@@ -97,7 +91,7 @@ Run:
 
 `python -m ruff check game/game_controller.py tests/test_game_controller_coverage.py docs/superpowers/plans/2026-04-08-controller-play-card-log-async.md`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add game/game_controller.py tests/test_game_controller_coverage.py docs/superpowers/plans/2026-04-08-controller-play-card-log-async.md

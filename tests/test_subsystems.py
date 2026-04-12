@@ -326,13 +326,19 @@ class TestCardResolver:
     def test_use_wuzhong(self, engine):
         """使用无中生有摸 2 张牌"""
         player = engine.players[0]
-        hand_before = len(player.hand)
         wz = make_card(
             CardName.WUZHONG, card_type=CardType.TRICK, subtype=CardSubtype.SELF, card_id="wz_test"
         )
+        drawn_cards = [
+            make_card(CardName.SHA, card_id="wz_draw_1"),
+            make_card(CardName.TAO, subtype=CardSubtype.HEAL, card_id="wz_draw_2"),
+        ]
+        engine.deck.draw = MagicMock(return_value=drawn_cards)
+        player.draw_cards = MagicMock()
         result = engine.card_resolver.use_wuzhong(player, wz)
         assert result is True
-        assert len(player.hand) == hand_before + 2
+        engine.deck.draw.assert_called_once_with(2)
+        player.draw_cards.assert_called_once_with(drawn_cards)
 
     def test_use_jiu_alcohol(self, engine):
         """使用酒增加杀伤害"""

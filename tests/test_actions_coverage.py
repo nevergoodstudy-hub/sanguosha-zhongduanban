@@ -241,6 +241,8 @@ class TestActionExecutor:
     def test_execute_emits_before_and_after_events(self):
         engine = MagicMock()
         engine.event_bus = MagicMock()
+        engine.current_player = MagicMock()
+        engine.current_player.id = 1
         action = EndPhaseAction(player_id=1, source_channel="textual_ui", correlation_id="corr-1")
 
         executor = ActionExecutor(engine)

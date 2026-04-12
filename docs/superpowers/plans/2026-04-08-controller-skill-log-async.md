@@ -15,7 +15,7 @@
 **Files:**
 - Test: `tests/test_game_controller_coverage.py`
 
-- [ ] **Step 1: Add focused async boundary tests**
+- [x] **Step 1: Add focused async boundary tests**
 
 ```python
 @pytest.mark.asyncio
@@ -28,7 +28,7 @@ async def test_handle_use_skill_fanjian_logs_via_controller_io(self): ...
 async def test_select_cards_for_skill_uses_controller_io_logs(self): ...
 ```
 
-- [ ] **Step 2: Run focused tests to verify they fail**
+- [x] **Step 2: Run focused tests to verify they fail**
 
 Run: `python -m pytest tests/test_game_controller_coverage.py -q -k "zhiheng_logs_via_controller_io or fanjian_logs_via_controller_io or select_cards_for_skill_uses_controller_io_logs"`
 
@@ -39,20 +39,20 @@ Expected: FAIL because the methods still write logs through `self.ui.show_log(..
 **Files:**
 - Modify: `game/game_controller.py`
 
-- [ ] **Step 1: Route `_handle_use_skill()` prompt logs through `ControllerIO.show_log()`**
+- [x] **Step 1: Route `_handle_use_skill()` prompt logs through `ControllerIO.show_log()`**
 
 ```python
 await self._controller_io.show_log(_t("controller.choose_discard_cards"))
 await self._controller_io.show_log(_t("controller.choose_show_card"))
 ```
 
-- [ ] **Step 2: Route `_select_cards_for_skill()` logs through `ControllerIO.show_log()`**
+- [x] **Step 2: Route `_select_cards_for_skill()` logs through `ControllerIO.show_log()`**
 
 ```python
 await self._controller_io.show_log(...)
 ```
 
-- [ ] **Step 3: Verify focused tests**
+- [x] **Step 3: Verify focused tests**
 
 Run: `python -m pytest tests/test_game_controller_coverage.py -q -k "zhiheng_logs_via_controller_io or fanjian_logs_via_controller_io or select_cards_for_skill_uses_controller_io_logs"`
 
@@ -64,19 +64,19 @@ Expected: PASS
 - Modify: `game/game_controller.py`
 - Modify: `tests/test_game_controller_coverage.py`
 
-- [ ] **Step 1: Run controller coverage**
+- [x] **Step 1: Run controller coverage**
 
 Run: `python -m pytest tests/test_game_controller_coverage.py -q`
 
-- [ ] **Step 2: Run regression slice**
+- [x] **Step 2: Run regression slice**
 
 Run: `python -m pytest tests/test_game.py tests/test_game_controller_coverage.py tests/test_request_handler_coverage.py tests/test_phase_fsm.py tests/test_subsystems.py -q`
 
-- [ ] **Step 3: Run style checks**
+- [x] **Step 3: Run style checks**
 
 Run: `python -m ruff check game/game_controller.py tests/test_game_controller_coverage.py docs/superpowers/plans/2026-04-08-controller-skill-log-async.md`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add game/game_controller.py tests/test_game_controller_coverage.py docs/superpowers/plans/2026-04-08-controller-skill-log-async.md

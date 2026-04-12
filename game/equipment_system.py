@@ -58,7 +58,9 @@ class EquipmentSystem:
 
         if old_equipment:
             ctx.log_event("equip", _t("equipment.replaced", card=old_equipment.name))
-            ctx.notify_cards_lost(player, [old_equipment], source=player, reason="replace_equipment")
+            ctx.notify_cards_lost(
+                player, [old_equipment], source=player, reason="replace_equipment"
+            )
             ctx.deck.discard([old_equipment])
 
         # 装备后事件

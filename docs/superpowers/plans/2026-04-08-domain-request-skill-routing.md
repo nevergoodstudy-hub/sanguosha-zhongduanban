@@ -93,7 +93,7 @@ Expected: PASS
 Run: `python -m ruff check game/combat.py tests/test_subsystems.py`
 Expected: All checks pass
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add game/combat.py tests/test_subsystems.py docs/superpowers/plans/2026-04-08-domain-request-skill-routing.md

@@ -46,7 +46,9 @@ class NormalStrategy:
             # 2. 使用装备
             # 1. 使用装备
             for card in list(player.hand):
-                if card.card_type == CardType.EQUIPMENT and execute_play_card_action(engine, player, card):
+                if card.card_type == CardType.EQUIPMENT and execute_play_card_action(
+                    engine, player, card
+                ):
                     played = True
                     break
 
@@ -161,7 +163,6 @@ class NormalStrategy:
 
             # 7.6 使用酒（配合杀使用）
             if player.can_use_sha() and not player.alcohol_used:
-
                 jiu_cards = [c for c in player.hand if c.subtype == CardSubtype.ALCOHOL]
                 sha_cards = player.get_cards_by_name(CardName.SHA)
                 if jiu_cards and sha_cards:
@@ -388,7 +389,9 @@ class NormalStrategy:
             return len(enemies) > 0
 
         elif skill_id == SkillId.MUZHEN:
-            return engine.skill_system is not None and engine.skill_system.can_use_skill(skill_id, player)
+            return engine.skill_system is not None and engine.skill_system.can_use_skill(
+                skill_id, player
+            )
 
         return False
 
@@ -406,8 +409,8 @@ class NormalStrategy:
             if friends and player.hand_count > 2:
                 target = random.choice(friends)
                 cards = [player.hand[0]]
-                return execute_use_skill_action(engine, 
-                    skill_id, player, targets=[target], cards=cards
+                return execute_use_skill_action(
+                    engine, skill_id, player, targets=[target], cards=cards
                 )
 
         elif skill_id == SkillId.FANJIAN:
@@ -484,14 +487,21 @@ class NormalStrategy:
                 option_one_targets = [
                     other
                     for other in others
-                    if other.is_alive and other.equipment.has_equipment() and is_enemy(player, other)
+                    if other.is_alive
+                    and other.equipment.has_equipment()
+                    and is_enemy(player, other)
                 ]
                 if not option_one_targets:
                     option_one_targets = [
-                        other for other in others if other.is_alive and other.equipment.has_equipment()
+                        other
+                        for other in others
+                        if other.is_alive and other.equipment.has_equipment()
                     ]
                 if option_one_targets:
-                    target = max(option_one_targets, key=lambda other: (other.equipment.count, other.hand_count))
+                    target = max(
+                        option_one_targets,
+                        key=lambda other: (other.equipment.count, other.hand_count),
+                    )
                     cards = self._pick_least_valuable_cards(player, 2)
                     equipment_cards = target.equipment.get_all_cards()
                     if cards and equipment_cards:

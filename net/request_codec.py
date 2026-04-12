@@ -26,7 +26,9 @@ def encode_game_request(request_id: str, request: GameRequest) -> ServerMsg:
     )
 
 
-def decode_game_response(player_id: int, response_data: dict[str, Any]) -> tuple[str | None, GameResponse]:
+def decode_game_response(
+    player_id: int, response_data: dict[str, Any]
+) -> tuple[str | None, GameResponse]:
     """把客户端响应负载解码为领域层 GameResponse."""
     request_type_raw = response_data.get("request_type", "")
     if not isinstance(request_type_raw, str) or not request_type_raw:
@@ -56,7 +58,9 @@ def decode_game_response(player_id: int, response_data: dict[str, Any]) -> tuple
         raise ValueError("card_ids must be a list of strings")
 
     target_ids = response_data.get("target_ids", [])
-    if not isinstance(target_ids, list) or not all(isinstance(target_id, int) for target_id in target_ids):
+    if not isinstance(target_ids, list) or not all(
+        isinstance(target_id, int) for target_id in target_ids
+    ):
         raise ValueError("target_ids must be a list of integers")
 
     return request_id, GameResponse(

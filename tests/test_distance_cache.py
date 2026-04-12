@@ -1,6 +1,5 @@
 """Distance calculation cache tests (P2-4)."""
 
-
 from game.distance_cache import DistanceCache
 from game.events import EventBus, EventType
 

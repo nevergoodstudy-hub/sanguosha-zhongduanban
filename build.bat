@@ -6,10 +6,10 @@ echo ========================================
 echo.
 
 echo [1/4] 检查 PyInstaller...
-pip show pyinstaller >nul 2>&1
+python -m pip show pyinstaller >nul 2>&1
 if errorlevel 1 (
     echo     正在安装 PyInstaller...
-    pip install pyinstaller -q
+    python -m pip install ".[build]" -q
 )
 echo     PyInstaller 已就绪
 

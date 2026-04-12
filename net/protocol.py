@@ -223,9 +223,7 @@ class ServerMsg:
         )
 
     @classmethod
-    def game_over(
-        cls, winner: str, reason: str, stats: dict[str, Any] | None = None
-    ) -> ServerMsg:
+    def game_over(cls, winner: str, reason: str, stats: dict[str, Any] | None = None) -> ServerMsg:
         return cls(
             type=MsgType.GAME_OVER,
             data={

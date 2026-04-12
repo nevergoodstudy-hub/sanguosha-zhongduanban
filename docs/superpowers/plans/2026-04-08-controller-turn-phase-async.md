@@ -106,7 +106,7 @@ Run: `python -m pytest tests/test_game.py tests/test_game_controller_coverage.py
 
 Run: `python -m ruff check game/game_controller.py tests/test_game_controller_coverage.py`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add game/game_controller.py tests/test_game_controller_coverage.py docs/superpowers/plans/2026-04-08-controller-turn-phase-async.md

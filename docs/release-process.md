@@ -1,48 +1,67 @@
 # Release Process
 
-本项目采用 **Tag 驱动发布**，以 GitHub Actions 自动构建并发布三平台产物。
+This project uses a tag-driven release flow. GitHub Actions builds cross-platform artifacts and uploads them to a GitHub Release.
 
-## 版本规范
+## Versioning
 
-- 版本号遵循语义化版本：`vX.Y.Z`
-- 示例：`v4.1.2`
-- `CHANGELOG.md` 记录格式使用 `[X.Y.Z]`（不带 `v`）
+- Use semantic version tags in the form `vX.Y.Z`.
+- Example: `v4.1.2`
+- Keep the `CHANGELOG.md` section title without the `v` prefix, for example `[4.1.2]`.
 
-## 发布触发规则
+## Triggers
 
-- 工作流文件：`.github/workflows/release.yml`
-- 自动触发：`push` 到 `v*.*.*` 标签
-- 手动触发：`workflow_dispatch` 仅用于构建验证，不创建 Release
+- Automatic release: pushing a `v*.*.*` tag triggers `.github/workflows/release.yml`.
+- The release workflow builds artifacts for all supported platforms and creates or updates the matching GitHub Release.
+- Manual validation: `workflow_dispatch` runs build validation only.
+- Non-tag runs do not create a GitHub Release.
 
-## 标准发布步骤
+## Standard Release Steps
 
-1. 确认本地 `main` 最新并通过测试
-2. 更新 `CHANGELOG.md`，新增对应版本条目（如 `[4.1.2] - YYYY-MM-DD`）
-3. 创建并推送标签：
+1. Confirm local `main` is up to date and key tests are passing.
+2. Update `CHANGELOG.md`.
+3. Create and push the version tag:
 
 ```bash
 git tag v4.1.2
 git push origin v4.1.2
 ```
 
-4. 等待 GitHub Actions `Release` 工作流完成
-5. 检查 Release 页面：
-   - 标题是否为 `Sanguosha CLI v4.1.2`
-   - 是否包含三平台产物
-   - 自动生成 Notes 是否正常
+4. Wait for the GitHub Actions `Release` workflow to finish.
+5. Verify the Release title, artifacts, and notes on GitHub.
 
-## 产物清单
+## Pre-release Environment Check
 
-- Windows: `sanguosha-windows-amd64.exe`
-- Linux: `sanguosha-linux-amd64`
-- macOS: `sanguosha-macos-amd64`
+Keep local release validation aligned with CI by installing dependencies from project metadata rather than assembling the environment by hand:
 
-## 常见问题
+```bash
+python -m pip install ".[dev]"
+python -c "from pydantic.version import version_info; print(version_info())"
+python -m pytest tests/test_build_script.py tests/test_build_msix.py tests/test_dependency_metadata.py tests/test_versioning.py -q
+```
 
-### 为什么手动触发没有创建 Release？
+- `version_info()` is a quick sanity check for the active `pydantic` and `pydantic-core` combination.
+- If the reported versions do not match the current dependency declarations, reinstall the environment before building or tagging.
+- The GitHub Release workflow now installs build tooling with `python -m pip install ".[build]"`.
+- CI intentionally uses a regular `python -m pip install ".[dev]"` install so it stays closer to release and deployment behavior.
 
-这是预期行为。当前策略避免非 tag 触发导致错误版本（如 `main`）被发布。
+## Release Artifacts
 
-### 什么时候会创建 Release？
+- Windows: `sanguosha-windows-amd64.zip`
+- Linux: `sanguosha-linux-amd64.tar.gz`
+- macOS: `sanguosha-macos-amd64.tar.gz`
 
-仅当推送 `vX.Y.Z` 格式标签时创建。
+## Artifact Notes
+
+- The Windows artifact is a zip archive containing the PyInstaller-built `.exe`.
+- Linux and macOS artifacts are packaged as `tar.gz` archives so executable permissions are preserved.
+- The release job publishes artifacts with GitHub CLI via `gh release create` and `gh release upload`, not a third-party release action.
+
+## FAQ
+
+### Why does a manually triggered workflow not create a Release?
+
+That is expected. Only runs triggered from `refs/tags/v*.*.*` enter the publishing stage.
+
+### Why are Linux and macOS artifacts packaged as `tar.gz`?
+
+GitHub Actions artifacts do not preserve POSIX executable bits when they move across jobs. Packaging the binaries as `tar.gz` keeps those permissions intact and avoids extra manual fixups after download.

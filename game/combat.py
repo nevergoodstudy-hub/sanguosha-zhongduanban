@@ -207,9 +207,7 @@ class CombatSystem:
             if player.has_skill(SkillId.LONGDAN):
                 sha_cards = player.get_cards_by_name(CardName.SHA)
                 if sha_cards:
-                    card = self._request_skill_conversion_card(
-                        player, "longdan_as_shan", sha_cards
-                    )
+                    card = self._request_skill_conversion_card(player, "longdan_as_shan", sha_cards)
                     if card:
                         player.remove_card(card)
                         ctx.deck.discard([card])
@@ -224,7 +222,9 @@ class CombatSystem:
             if player.has_skill(SkillId.ZHONGSHEN):
                 zhongshen_state = player.get_skill_state(SkillId.ZHONGSHEN)
                 obtained_ids = set(zhongshen_state.get("round_red_card_ids", set()))
-                red_cards = [card for card in player.hand if card.is_red and card.id in obtained_ids]
+                red_cards = [
+                    card for card in player.hand if card.is_red and card.id in obtained_ids
+                ]
                 if red_cards:
                     card = self._request_skill_conversion_card(
                         player, "zhongshen_as_shan", red_cards
@@ -261,9 +261,7 @@ class CombatSystem:
             if player.has_skill(SkillId.WUSHENG):
                 red_cards = player.get_red_cards()
                 if red_cards:
-                    card = self._request_skill_conversion_card(
-                        player, "wusheng_as_sha", red_cards
-                    )
+                    card = self._request_skill_conversion_card(player, "wusheng_as_sha", red_cards)
                     if card:
                         player.remove_card(card)
                         ctx.deck.discard([card])
@@ -278,9 +276,7 @@ class CombatSystem:
             if player.has_skill(SkillId.LONGDAN):
                 shan_cards = player.get_cards_by_name(CardName.SHAN)
                 if shan_cards:
-                    card = self._request_skill_conversion_card(
-                        player, "longdan_as_sha", shan_cards
-                    )
+                    card = self._request_skill_conversion_card(player, "longdan_as_sha", shan_cards)
                     if card:
                         player.remove_card(card)
                         ctx.deck.discard([card])

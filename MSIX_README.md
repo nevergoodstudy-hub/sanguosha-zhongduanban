@@ -1,76 +1,172 @@
-# Microsoft Store Package (MSIX) 构建指南
+# MSIX Packaging Guide
 
-本项目已配置为可以打包为 MSIX 包发布到 Microsoft 应用商店。
+This project includes a dedicated MSIX helper script,
+[`build_msix.py`](./build_msix.py), for preparing a Microsoft Store style
+package from the current PyInstaller output.
 
-## 前置要求
+## What Changed
 
-1. Windows 10/11 开发环境
-2. 安装 Windows SDK (包含 makeappx.exe)
-3. 证书签名工具 (signtool.exe)
-4. Microsoft Store 开发者账号
+The packaging flow is no longer tied to a single hard-coded executable path.
 
-## 准备资源文件
+The current script supports:
 
-正式构建前，请在项目根目录准备 `Assets` 目录，并提供以下真实图片资源：
+- onefile outputs such as `dist/sanguosha.exe`
+- onedir outputs such as `dist/sanguosha/sanguosha.exe`
+- named builds from `python build.py --name <value>`
+- explicit executable selection through `--exe-path`
+- manifest executable renaming through `--package-executable`
 
-- `StoreLogo.png`（50x50）
-- `Square44x44Logo.png`（44x44）
-- `Square150x150Logo.png`（150x150）
-- `Wide310x150Logo.png`（310x150）
-- `SplashScreen.png`（620x300）
+## Prerequisites
 
-> 正式发布不要使用占位图标。
-> 构建脚本现在只会在你显式传入 `--allow-placeholder-assets` 时，才在 `msix_output/Assets` 中生成或复用开发占位图标；如果 `Assets/` 目录里仍然是占位 PNG，默认构建也会直接拒绝，避免把占位资源误当正式资源打进发布包。
+You need the following on Windows:
 
-## 构建步骤
+1. Python and project dependencies
+2. PyInstaller
+3. Windows SDK tooling with `makeappx.exe`
+4. `signtool.exe` if you plan to sign the package
+5. Real MSIX artwork in the `Assets/` directory for a release-quality package
 
-### 方式 1: 使用脚本自动构建 (推荐)
+Official Microsoft references:
+
+- [Create an app package with the MakeAppx tool](https://learn.microsoft.com/en-us/windows/msix/package/create-app-package-with-makeappx-tool)
+- [SignTool](https://learn.microsoft.com/en-us/windows/win32/seccrypto/signtool)
+
+## Required Artwork
+
+Provide these files in [`Assets/`](./Assets):
+
+- `StoreLogo.png`
+- `Square44x44Logo.png`
+- `Square150x150Logo.png`
+- `Wide310x150Logo.png`
+- `SplashScreen.png`
+
+`build_msix.py` can generate or reuse placeholder assets only when you
+explicitly pass `--allow-placeholder-assets`. That path is meant for local
+validation, not for a real Store submission.
+
+## Step 1: Build the Desktop App
+
+### Default onefile build
 
 ```powershell
-# 使用真实资源构建
-python build_msix.py
+python build.py
 ```
 
-仅在本地开发验证时，可以显式允许生成占位图标：
+### Named onefile build
 
 ```powershell
-python build_msix.py --allow-placeholder-assets
+python build.py --name sanguosha-store
 ```
 
-### 方式 2: 手动构建
+### Named onedir build
 
-1. 确保已构建可执行文件：
 ```powershell
-python build.py --name sanguosha
+python build.py --onedir --name sanguosha-store
 ```
 
-2. 创建 `Assets` 文件夹并添加真实图标
+## Step 2: Package the Selected Build as MSIX
 
-3. 打包为 MSIX：
+### Package by build name
+
+Use this when the executable was created by `build.py --name ...`.
+
 ```powershell
-# 使用 makeappx
-& "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\makeappx.exe" pack /d dist\sanguosha /p sanguosha.msix /o
+python build_msix.py --exe-name sanguosha-store
 ```
 
-4. 签名 (需要证书，推荐通过环境变量传递密码)：
+### Package an explicit executable path
+
+Use this when you want to point directly at a specific `.exe`.
+
 ```powershell
-$bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR((Read-Host "证书密码" -AsSecureString))
-$env:SANGUOSHA_MSIX_CERT_PASSWORD = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-python build_msix.py --sign --cert certificate.pfx --password-env SANGUOSHA_MSIX_CERT_PASSWORD
+python build_msix.py --exe-path dist\sanguosha-store.exe
+```
+
+### Rename the executable inside the package manifest
+
+This changes the filename referenced by the MSIX manifest, not the source build
+name on disk.
+
+```powershell
+python build_msix.py --exe-name sanguosha-store --package-executable sanguosha.exe
+```
+
+### Local validation with placeholder artwork
+
+```powershell
+python build_msix.py --exe-name sanguosha-store --allow-placeholder-assets
+```
+
+## Signing
+
+Signing is optional for local staging and required for a proper signed package
+distribution workflow.
+
+Recommended pattern:
+
+```powershell
+$env:SANGUOSHA_MSIX_CERT_PASSWORD = "your-password"
+python build_msix.py `
+  --exe-name sanguosha-store `
+  --sign `
+  --cert .\certificate.pfx `
+  --password-env SANGUOSHA_MSIX_CERT_PASSWORD
 Remove-Item Env:SANGUOSHA_MSIX_CERT_PASSWORD
 ```
 
-## 发布到 Microsoft Store
+You can also pass `--password`, but `--password-env` is safer for routine use.
 
-1. 访问 [Microsoft Partner Center](https://partner.microsoft.com)
-2. 创建新的应用提交
-3. 上传 MSIX 包
-4. 填写应用信息（描述、截图、年龄分级等）
-5. 提交审核
+## Output Behavior
 
-## 注意事项
+### When `makeappx.exe` is available
 
-- 应用需要通过 Windows App Certification Kit (WACK) 测试
-- 确保遵守 Microsoft Store 政策
-- 需要准备隐私政策链接
-- 应用名称需要唯一
+The script produces:
+
+- `sanguosha.msix`
+- `msix_output/` staging directory
+
+### When `makeappx.exe` is not available
+
+The script still prepares `msix_output/` and exits after warning that the final
+`.msix` package could not be produced.
+
+This is useful when validating staging contents on a machine that does not yet
+have the Windows SDK installed.
+
+## Troubleshooting
+
+### "built executable not found"
+
+Run a matching build first, for example:
+
+```powershell
+python build.py --name sanguosha-store
+python build_msix.py --exe-name sanguosha-store
+```
+
+Or point directly at the file with `--exe-path`.
+
+### "missing required MSIX asset files"
+
+Add the required files to `Assets/`, or use `--allow-placeholder-assets` for
+local validation only.
+
+### Wrong executable is packaged
+
+Use one of these:
+
+- `--exe-name` when packaging a named `build.py` output
+- `--exe-path` when you want an explicit file
+- `--package-executable` when you only need to rename the executable inside the
+  package
+
+## Suggested Release Flow
+
+```powershell
+python -m pip install ".[build]"
+python build.py --name sanguosha-store
+python build_msix.py --exe-name sanguosha-store --sign --cert .\certificate.pfx --password-env SANGUOSHA_MSIX_CERT_PASSWORD
+```
+
+Then validate the produced package before any Store submission.

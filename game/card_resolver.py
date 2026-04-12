@@ -582,7 +582,9 @@ class CardResolver:
         if card:
             if card in target.hand:
                 target.remove_card(card)
-                ctx.notify_cards_lost(target, [card], source=player, to_player=player, reason="steal")
+                ctx.notify_cards_lost(
+                    target, [card], source=player, to_player=player, reason="steal"
+                )
             else:
                 ctx.equipment_sys.remove(
                     target,

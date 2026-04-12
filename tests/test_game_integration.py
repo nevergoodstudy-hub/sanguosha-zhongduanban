@@ -4,7 +4,6 @@ Tests for combat, game over detection, distance calculation,
 and damage/death flow using real GameEngine instances.
 """
 
-
 import pytest
 
 from game.card import Card, CardName, CardSubtype, CardSuit, CardType

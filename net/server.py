@@ -1,17 +1,16 @@
-"""WebSocket 游戏服务端 (M4-T02)
-基于 asyncio 的三国杀网络对战服务端.
+"""WebSocket 娓告垙鏈嶅姟绔?(M4-T02)
+鍩轰簬 asyncio 鐨勪笁鍥芥潃缃戠粶瀵规垬鏈嶅姟绔?
 
-功能:
-- 房间管理 (创建/加入/开始)
-- 游戏状态同步 (增量事件广播)
-- 断线重连 (基于事件序号重放)
-- 心跳检测
+鍔熻兘:
+- 鎴块棿绠＄悊 (鍒涘缓/鍔犲叆/寮€濮?
+- 娓告垙鐘舵€佸悓姝?(澧為噺浜嬩欢骞挎挱)
+- 鏂嚎閲嶈繛 (鍩轰簬浜嬩欢搴忓彿閲嶆斁)
+- 蹇冭烦妫€娴?
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import ssl
 import time
@@ -32,9 +31,8 @@ from game.events import EventType
 from i18n import t as _t
 
 from .action_codec import decode_client_action
-from .models import validate_client_message
-from .protocol import ClientMsg, MsgType, RoomState, ServerMsg, parse_message
-from .request_codec import decode_game_response, encode_game_request
+from .protocol import ClientMsg, MsgType, RoomState, ServerMsg
+from .request_codec import encode_game_request
 from .security import (
     DEFAULT_HEARTBEAT_TIMEOUT,
     DEFAULT_MAX_CONNECTIONS,
@@ -44,28 +42,30 @@ from .security import (
     IPConnectionTracker,
     OriginValidator,
     RateLimiter,
-    sanitize_chat_message,
 )
+from .server_dispatcher import ServerMessageDispatcher
+from .server_session import ServerSessionManager
 from .server_types import ConnectedPlayer, PendingGameRequest, Room
+from .settings import ServerSettings
 
 logger = logging.getLogger(__name__)
 
 
-# ==================== 服务端核心 ====================
+# ==================== 鏈嶅姟绔牳蹇?====================
 
-# 速率限制默认值
-RATE_LIMIT_WINDOW: float = 1.0  # 滑动窗口 (秒)
-RATE_LIMIT_MAX_MSGS: int = 30  # 窗口内最大消息数
+# 閫熺巼闄愬埗榛樿鍊?
+RATE_LIMIT_WINDOW: float = 1.0  # 婊戝姩绐楀彛 (绉?
+RATE_LIMIT_MAX_MSGS: int = 30  # 绐楀彛鍐呮渶澶ф秷鎭暟
 
 
 class GameServer:
-    """三国杀 WebSocket 游戏服务端.
+    """涓夊浗鏉€ WebSocket 娓告垙鏈嶅姟绔?
 
-    职责:
-    1. 管理 WebSocket 连接
-    2. 房间生命周期管理
-    3. 将引擎事件广播给客户端
-    4. 路由客户端消息到对应处理器
+    鑱岃矗:
+    1. 绠＄悊 WebSocket 杩炴帴
+    2. 鎴块棿鐢熷懡鍛ㄦ湡绠＄悊
+    3. 灏嗗紩鎿庝簨浠跺箍鎾粰瀹㈡埛绔?
+    4. 璺敱瀹㈡埛绔秷鎭埌瀵瑰簲澶勭悊鍣?
     """
 
     def __init__(
@@ -82,21 +82,36 @@ class GameServer:
         allow_localhost_dev: bool = False,
         ssl_cert: str = "",
         ssl_key: str = "",
+        settings: ServerSettings | None = None,
     ):
+        if settings is not None:
+            host = settings.host
+            port = settings.port
+            rate_limit_window = settings.rate_limit_window
+            rate_limit_max_msgs = settings.rate_limit_max_msgs
+            max_connections = settings.max_connections
+            max_connections_per_ip = settings.max_connections_per_ip
+            max_message_size = settings.max_message_size
+            heartbeat_timeout = settings.heartbeat_timeout
+            allowed_origins = settings.allowed_origins
+            allow_localhost_dev = settings.allow_localhost_dev
+            ssl_cert = settings.ssl_cert
+            ssl_key = settings.ssl_key
+
         self.host = host
         self.port = port
-        # 安全参数
+        # 瀹夊叏鍙傛暟
         self._max_connections = max_connections
         self._max_message_size = max_message_size
         self._heartbeat_timeout = heartbeat_timeout
         # TLS
         self._ssl_cert = ssl_cert
         self._ssl_key = ssl_key
-        # 连接管理
-        self.connections: dict[int, ConnectedPlayer] = {}  # player_id → player
-        self.ws_to_player: dict[ServerConnection, int] = {}  # websocket → player_id
+        # 杩炴帴绠＄悊
+        self.connections: dict[int, ConnectedPlayer] = {}  # player_id 鈫?player
+        self.ws_to_player: dict[ServerConnection, int] = {}  # websocket 鈫?player_id
         self._next_player_id: int = 1
-        # 安全组件
+        # 瀹夊叏缁勪欢
         self._token_manager = ConnectionTokenManager()
         self._ip_tracker = IPConnectionTracker(max_per_ip=max_connections_per_ip)
         self._origin_validator = OriginValidator(
@@ -120,36 +135,28 @@ class GameServer:
                     "(SANGUOSHA_DEV_ALLOW_LOCALHOST=1)."
                 )
         self._rate_limiter = RateLimiter(rate_limit_window, rate_limit_max_msgs)
-        # 房间管理
-        self.rooms: dict[str, Room] = {}  # room_id → room
-        # 消息路由表
-        self._handlers: dict[MsgType, Callable[[ConnectedPlayer, ClientMsg], Awaitable[None]]] = {
-            MsgType.HEARTBEAT: self._handle_heartbeat,
-            MsgType.ROOM_CREATE: self._handle_room_create,
-            MsgType.ROOM_JOIN: self._handle_room_join,
-            MsgType.ROOM_LEAVE: self._handle_room_leave,
-            MsgType.ROOM_LIST: self._handle_room_list,
-            MsgType.ROOM_READY: self._handle_room_ready,
-            MsgType.ROOM_START: self._handle_room_start,
-            MsgType.GAME_ACTION: self._handle_game_action,
-            MsgType.GAME_RESPONSE: self._handle_game_response,
-            MsgType.HERO_CHOSEN: self._handle_hero_chosen,
-            MsgType.CHAT: self._handle_chat,
-        }
-        # 服务端状态
+        # 鎴块棿绠＄悊
+        self.rooms: dict[str, Room] = {}  # room_id 鈫?room
+        # 娑堟伅璺敱琛?
+        self._dispatcher = ServerMessageDispatcher(self)
+        self._session_manager = ServerSessionManager(self)
+        self._handlers: dict[MsgType, Callable[[ConnectedPlayer, ClientMsg], Awaitable[None]]] = (
+            self._dispatcher.handlers
+        )
+        # 鏈嶅姟绔姸鎬?
         self._running = False
         self._heartbeat_task: asyncio.Task | None = None
 
-    # ==================== 连接管理 ====================
+    # ==================== 杩炴帴绠＄悊 ====================
 
     def _assign_player_id(self) -> int:
-        """分配唯一玩家 ID."""
+        """鍒嗛厤鍞竴鐜╁ ID."""
         pid = self._next_player_id
         self._next_player_id += 1
         return pid
 
     def _get_remote_ip(self, websocket: ServerConnection) -> str:
-        """获取客户端 IP 地址."""
+        """鑾峰彇瀹㈡埛绔?IP 鍦板潃."""
         try:
             peername = websocket.transport.get_extra_info("peername")
             if peername:
@@ -159,18 +166,18 @@ class GameServer:
         return "unknown"
 
     async def _register(self, websocket: ServerConnection) -> ConnectedPlayer | None:
-        """注册新连接 (含连接数限制和令牌签发)."""
+        """娉ㄥ唽鏂拌繛鎺?(鍚繛鎺ユ暟闄愬埗鍜屼护鐗岀鍙?."""
         remote_ip = self._get_remote_ip(websocket)
 
-        # 总连接数检查
+        # 鎬昏繛鎺ユ暟妫€鏌?
         if len(self.connections) >= self._max_connections:
-            logger.warning(f"连接数已达上限 ({self._max_connections}), 拒绝 {remote_ip}")
+            logger.warning(f"杩炴帴鏁板凡杈句笂闄?({self._max_connections}), 鎷掔粷 {remote_ip}")
             await websocket.close(1013, _t("server.full"))  # 1013 = Try Again Later
             return None
 
-        # 单 IP 连接数检查
+        # 鍗?IP 杩炴帴鏁版鏌?
         if not self._ip_tracker.can_connect(remote_ip):
-            logger.warning(f"IP {remote_ip} 连接数超限, 拒绝")
+            logger.warning(f"IP {remote_ip} 杩炴帴鏁拌秴闄? 鎷掔粷")
             await websocket.close(1008, _t("server.ip_limit"))  # 1008 = Policy Violation
             return None
 
@@ -187,7 +194,7 @@ class GameServer:
         self.ws_to_player[websocket] = pid
         self._ip_tracker.add(remote_ip)
 
-        # 发送欢迎消息 (包含令牌)
+        # 鍙戦€佹杩庢秷鎭?(鍖呭惈浠ょ墝)
         welcome = ServerMsg(
             type=MsgType.HEARTBEAT_ACK,
             data={
@@ -196,55 +203,44 @@ class GameServer:
             },
         )
         await self._send(player, welcome)
-        logger.info(f"玩家 {pid} 已连接 (IP: {remote_ip})")
+        logger.info(f"鐜╁ {pid} 宸茶繛鎺?(IP: {remote_ip})")
         return player
 
     async def _unregister(self, websocket: ServerConnection) -> None:
-        """注销连接."""
+        """娉ㄩ攢杩炴帴."""
         pid = self.ws_to_player.pop(websocket, None)
         if pid is None:
             return
         player = self.connections.pop(pid, None)
         if player:
             self._ip_tracker.remove(player.remote_ip)
-            self._token_manager.revoke(player_id=pid)
-            self._rate_limiter.remove_player(pid)
-            if player.room_id:
-                room = self.rooms.get(player.room_id)
-                if room:
-                    room.players.pop(pid, None)
-                    # 通知房间内其他玩家
-                    await self._broadcast_room_update(room)
-                    # 如果房间空了，清理
-                    if not room.players:
-                        self.rooms.pop(room.room_id, None)
-                        logger.info(f"房间 {room.room_id} 已空，已删除")
-        logger.info(f"玩家 {pid} 已断开")
+            await self._session_manager.unregister_player(player)
+        logger.info("Player %s disconnected", pid)
 
-    # ==================== 消息收发 ====================
+    # ==================== 娑堟伅鏀跺彂 ====================
 
     async def _send(self, player: ConnectedPlayer, msg: ServerMsg) -> None:
-        """发送消息给单个玩家."""
+        """鍙戦€佹秷鎭粰鍗曚釜鐜╁."""
         try:
             await player.websocket.send(msg.to_json())
         except Exception as e:
-            logger.warning(f"发送消息失败 (玩家{player.player_id}): {e}")
+            logger.warning(f"鍙戦€佹秷鎭け璐?(鐜╁{player.player_id}): {e}")
 
     async def _broadcast_room(self, room: Room, msg: ServerMsg, exclude: int | None = None) -> None:
-        """广播消息给房间内所有玩家."""
+        """骞挎挱娑堟伅缁欐埧闂村唴鎵€鏈夌帺瀹?"""
         for pid, player in room.players.items():
             if pid != exclude:
                 await self._send(player, msg)
 
     async def _broadcast_room_update(self, room: Room) -> None:
-        """广播房间状态更新."""
+        """骞挎挱鎴块棿鐘舵€佹洿鏂?"""
         msg = ServerMsg.room_update(room.room_id, room.player_list_data(), room.state)
         await self._broadcast_room(room, msg)
 
     async def _broadcast_game_event(
         self, room: Room, event_type: str, event_data: dict[str, Any]
     ) -> None:
-        """广播游戏事件并记录到事件日志."""
+        """骞挎挱娓告垙浜嬩欢骞惰褰曞埌浜嬩欢鏃ュ織."""
         seq = room.next_seq()
         msg = ServerMsg.game_event(event_type, event_data, seq=seq)
         room.event_log.append(msg)
@@ -259,7 +255,9 @@ class GameServer:
         from game.actions import GameResponse
 
         try:
-            future = asyncio.run_coroutine_threadsafe(self._request_game_response(room, request), loop)
+            future = asyncio.run_coroutine_threadsafe(
+                self._request_game_response(room, request), loop
+            )
             return future.result(timeout=request.timeout + 1.0)
         except FutureTimeoutError:
             logger.info(
@@ -333,298 +331,52 @@ class GameServer:
         ]
         return candidates[0] if len(candidates) == 1 else None
 
-    # ==================== 消息路由 ====================
+    # ==================== 娑堟伅璺敱 ====================
 
     def _check_rate_limit(self, player: ConnectedPlayer) -> bool:
-        """检查玩家是否超出消息速率限制。.
+        """妫€鏌ョ帺瀹舵槸鍚﹁秴鍑烘秷鎭€熺巼闄愬埗銆?
 
         Returns:
-            True 表示允许处理, False 表示应丢弃
+            True 琛ㄧず鍏佽澶勭悊, False 琛ㄧず搴斾涪寮?
         """
         return bool(self._rate_limiter.check(player.player_id))
 
     async def _handle_message(self, websocket: ServerConnection, raw: str) -> None:
-        """路由消息到对应处理器（含 Pydantic 校验）."""
-        try:
-            # Phase 3.3: Pydantic 校验 — 拒绝结构不合法的消息
-            try:
-                validate_client_message(raw)
-            except Exception as ve:
-                logger.warning(f"消息校验失败: {ve}")
-                pid = self.ws_to_player.get(websocket)
-                player = self.connections.get(pid) if pid else None
-                if player:
-                    await self._send(
-                        player,
-                        ServerMsg.error(
-                            _t("server.invalid_format"),
-                            code=400,
-                            error_code="E_PROTO_INVALID_FORMAT",
-                        ),
-                    )
-                return
+        """Delegate raw message validation and routing to the dispatcher."""
+        await self._dispatcher.dispatch(websocket, raw)
 
-            type_str, obj = parse_message(raw)
-            msg_type = MsgType(type_str)
-            client_msg = ClientMsg.from_json(raw)
-
-            # 获取玩家
-            pid = self.ws_to_player.get(websocket)
-            player = self.connections.get(pid) if pid else None
-            if not player:
-                return
-
-            # 速率限制 (心跳不受限)
-            if msg_type != MsgType.HEARTBEAT and not self._check_rate_limit(player):
-                logger.warning(f"速率限制: 玩家 {player.player_id} 消息过快，已丢弃")
-                await self._send(
-                    player,
-                    ServerMsg.error(
-                        _t("server.rate_limited"),
-                        code=429,
-                        error_code="E_RATE_LIMITED",
-                    ),
-                )
-                return
-
-            # 覆盖 player_id 为服务端分配的 (防伪造)
-            client_msg.player_id = player.player_id
-
-            handler = self._handlers.get(msg_type)
-            if handler:
-                await handler(player, client_msg)
-            else:
-                await self._send(
-                    player,
-                    ServerMsg.error(
-                        _t("server.unknown_type", type=type_str),
-                        code=400,
-                        error_code="E_PROTO_UNKNOWN_TYPE",
-                    ),
-                )
-
-        except json.JSONDecodeError:
-            logger.warning("收到无效 JSON")
-        except ValueError as e:
-            logger.warning(f"消息解析错误: {e}")
-        except Exception as e:
-            logger.exception(f"处理消息异常: {e}")
-
-    # ==================== 房间管理处理器 ====================
+    # ==================== 鎴块棿绠＄悊澶勭悊鍣?====================
 
     async def _handle_heartbeat(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        player.last_heartbeat = time.time()
-        await self._send(player, ServerMsg.heartbeat_ack())
+        await self._dispatcher.handle_heartbeat(player, msg)
 
     async def _handle_room_create(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        if player.room_id:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.already_in_room"),
-                    code=409,
-                    error_code="E_ROOM_ALREADY_IN_ROOM",
-                ),
-            )
-            return
-
-        room_id = str(uuid.uuid4())[:8]
-        player_name = msg.data.get("player_name", player.name)
-        player.name = player_name
-        max_players = msg.data.get("max_players", 4)
-        ai_fill = msg.data.get("ai_fill", True)
-
-        room = Room(
-            room_id=room_id,
-            host_id=player.player_id,
-            max_players=max_players,
-            ai_fill=ai_fill,
-        )
-        room.players[player.player_id] = player
-        player.room_id = room_id
-        self.rooms[room_id] = room
-
-        logger.info(f"房间 {room_id} 已创建 (房主: {player.name})")
-        await self._send(
-            player,
-            ServerMsg.room_created(
-                room_id,
-                {
-                    "max_players": max_players,
-                    "ai_fill": ai_fill,
-                    "host_id": player.player_id,
-                },
-            ),
-        )
+        await self._dispatcher.handle_room_create(player, msg)
 
     async def _handle_room_join(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        if player.room_id:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.already_in_room"),
-                    code=409,
-                    error_code="E_ROOM_ALREADY_IN_ROOM",
-                ),
-            )
-            return
-
-        room_id = msg.data.get("room_id", "")
-        reconnect = bool(msg.data.get("reconnect", False))
-        reconnect_last_seq = int(msg.data.get("last_seq", 0))
-        reconnect_token = msg.data.get("token", "")
-        room = self.rooms.get(room_id)
-        if not room:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.room_not_found"),
-                    code=404,
-                    error_code="E_ROOM_NOT_FOUND",
-                ),
-            )
-            return
-        if reconnect:
-            if not reconnect_token:
-                await self._send(
-                    player,
-                    ServerMsg.error(
-                        _t("server.invalid_token"),
-                        code=401,
-                        error_code="E_AUTH_INVALID_TOKEN",
-                    ),
-                )
-                return
-            if not await self.reconnect_player(
-                player,
-                room_id,
-                max(reconnect_last_seq, 0),
-                token=reconnect_token,
-            ):
-                return
-            await self._send(
-                player,
-                ServerMsg.room_joined(
-                    room_id, player.player_id, player.name, room.player_list_data()
-                ),
-            )
-            await self._broadcast_room_update(room)
-            return
-        if room.is_full:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.room_full"),
-                    code=409,
-                    error_code="E_ROOM_FULL",
-                ),
-            )
-            return
-        if room.state != RoomState.WAITING:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.game_started"),
-                    code=409,
-                    error_code="E_ROOM_ALREADY_PLAYING",
-                ),
-            )
-            return
-
-        player_name = msg.data.get("player_name", player.name)
-        player.name = player_name
-        room.players[player.player_id] = player
-        player.room_id = room_id
-
-        logger.info(f"玩家 {player.name} 加入房间 {room_id}")
-        await self._send(
-            player,
-            ServerMsg.room_joined(room_id, player.player_id, player.name, room.player_list_data()),
-        )
-        await self._broadcast_room_update(room)
+        await self._dispatcher.handle_room_join(player, msg)
 
     async def _handle_room_leave(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        if not player.room_id:
-            return
-        room = self.rooms.get(player.room_id)
-        if room:
-            room.players.pop(player.player_id, None)
-            await self._broadcast_room_update(room)
-            if not room.players:
-                self.rooms.pop(room.room_id, None)
-        player.room_id = None
-        player.ready = False
-        await self._send(player, ServerMsg(type=MsgType.ROOM_LEFT))
+        await self._dispatcher.handle_room_leave(player, msg)
 
     async def _handle_room_list(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        rooms_data = [
-            {
-                "room_id": r.room_id,
-                "host_id": r.host_id,
-                "player_count": r.player_count,
-                "max_players": r.max_players,
-                "state": r.state.value,
-            }
-            for r in self.rooms.values()
-        ]
-        await self._send(player, ServerMsg.room_listing(rooms_data))
+        await self._dispatcher.handle_room_list(player, msg)
 
     async def _handle_room_ready(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        player.ready = msg.data.get("ready", True)
-        room = self.rooms.get(player.room_id or "")
-        if room:
-            await self._broadcast_room_update(room)
+        await self._dispatcher.handle_room_ready(player, msg)
 
     async def _handle_room_start(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        """房主开始游戏."""
-        room = self.rooms.get(player.room_id or "")
-        if not room:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.not_in_room"),
-                    code=400,
-                    error_code="E_ROOM_NOT_IN_ROOM",
-                ),
-            )
-            return
-        if room.host_id != player.player_id:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.not_owner"),
-                    code=403,
-                    error_code="E_ROOM_NOT_OWNER",
-                ),
-            )
-            return
-        if room.state != RoomState.WAITING:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.game_in_progress"),
-                    code=409,
-                    error_code="E_ROOM_GAME_IN_PROGRESS",
-                ),
-            )
-            return
+        await self._dispatcher.handle_room_start(player, msg)
 
-        room.state = RoomState.PLAYING
-        await self._broadcast_room(room, ServerMsg(type=MsgType.ROOM_STARTED))
-        logger.info(f"房间 {room.room_id} 游戏开始 ({room.player_count} 人)")
+    # ==================== 娓告垙閫昏緫 ====================
 
-        # 启动游戏引擎 (异步)
-        asyncio.create_task(self._run_game(room))
-
-    # ==================== 游戏逻辑 ====================
-
-    # 人类玩家操作超时（秒）
+    # 浜虹被鐜╁鎿嶄綔瓒呮椂锛堢锛?
     _ACTION_TIMEOUT: float = 60.0
 
     async def _run_game(self, room: Room) -> None:
-        """在房间中启动交互式异步游戏循环.
+        """鍦ㄦ埧闂翠腑鍚姩浜や簰寮忓紓姝ユ父鎴忓惊鐜?
 
-        第一阶段先打通“房间玩家 -> 引擎玩家”和“网络动作 -> 领域动作”。
+        绗竴闃舵鍏堟墦閫氣€滄埧闂寸帺瀹?-> 寮曟搸鐜╁鈥濆拰鈥滅綉缁滃姩浣?-> 棰嗗煙鍔ㄤ綔鈥濄€?
         """
         try:
             import random
@@ -641,11 +393,13 @@ class GameServer:
             loop = asyncio.get_running_loop()
             engine.request_handler = NetworkRequestHandler(
                 engine,
-                request_callback=lambda request: self._request_game_response_sync(loop, room, request),
+                request_callback=lambda request: self._request_game_response_sync(
+                    loop, room, request
+                ),
                 connected_player_ids=set(room.players),
             )
 
-            # 初始化游戏
+            # 鍒濆鍖栨父鎴?
             player_count = room.max_players if room.ai_fill else room.player_count
             engine.setup_room_game(
                 [
@@ -656,7 +410,7 @@ class GameServer:
                 seed=seed,
             )
 
-            # 广播初始游戏状态
+            # 骞挎挱鍒濆娓告垙鐘舵€?
             state_data = {
                 "player_count": player_count,
                 "seed": seed,
@@ -669,7 +423,7 @@ class GameServer:
             }
             await self._broadcast_room(room, ServerMsg.game_state(state_data))
 
-            # 交互式游戏循环
+            # 浜や簰寮忔父鎴忓惊鐜?
             while engine.state == GameState.IN_PROGRESS:
                 current = engine.current_player
                 player_conn = room.players.get(current.id)
@@ -677,7 +431,7 @@ class GameServer:
                 if player_conn and not current.is_ai:
                     await self._run_human_turn(room, engine, player_conn, current)
                 else:
-                    # AI 回合
+                    # AI 鍥炲悎
                     await asyncio.to_thread(engine.run_headless_turn)
 
                 await self._broadcast_game_state(room, engine)
@@ -686,7 +440,7 @@ class GameServer:
                     break
                 engine.next_turn()
 
-            # 游戏结束
+            # 娓告垙缁撴潫
             winner = engine.winner_identity.value if engine.winner_identity else "unknown"
             await self._broadcast_room(
                 room,
@@ -699,7 +453,7 @@ class GameServer:
             room.state = RoomState.FINISHED
 
         except Exception as e:
-            logger.exception(f"游戏运行异常: {e}")
+            logger.exception(f"娓告垙杩愯寮傚父: {e}")
             await self._broadcast_room(
                 room,
                 ServerMsg.error(
@@ -711,7 +465,7 @@ class GameServer:
             room.state = RoomState.FINISHED
 
     async def _broadcast_game_state(self, room: Room, engine: GameEngine) -> None:
-        """广播当前游戏状态给房间内所有玩家."""
+        """骞挎挱褰撳墠娓告垙鐘舵€佺粰鎴块棿鍐呮墍鏈夌帺瀹?"""
         state_data = {
             "current_player": engine.current_player.id if engine.current_player else None,
             "round": engine.round_count,
@@ -737,7 +491,7 @@ class GameServer:
         player_conn: ConnectedPlayer,
         player: Player,
     ) -> None:
-        """执行真人玩家的主动回合流程."""
+        """鎵ц鐪熶汉鐜╁鐨勪富鍔ㄥ洖鍚堟祦绋?"""
         from game.enums import GamePhase
 
         player.reset_turn()
@@ -768,7 +522,7 @@ class GameServer:
         engine: GameEngine,
         player: Player,
     ) -> None:
-        """执行真人玩家的弃牌请求."""
+        """鎵ц鐪熶汉鐜╁鐨勫純鐗岃姹?"""
         discard_count = player.need_discard
         if discard_count <= 0:
             return
@@ -792,7 +546,7 @@ class GameServer:
         engine: GameEngine,
         player_conn: ConnectedPlayer,
     ) -> None:
-        """等待并执行真人玩家的主动动作直到结束回合或超时."""
+        """绛夊緟骞舵墽琛岀湡浜虹帺瀹剁殑涓诲姩鍔ㄤ綔鐩村埌缁撴潫鍥炲悎鎴栬秴鏃?"""
         action_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         room._pending_action = (player_conn.player_id, action_queue)
         try:
@@ -819,7 +573,7 @@ class GameServer:
         player: ConnectedPlayer,
         action_data: dict[str, Any],
     ) -> bool:
-        """执行一条真人主动动作，返回是否应结束回合."""
+        """鎵ц涓€鏉＄湡浜轰富鍔ㄥ姩浣滐紝杩斿洖鏄惁搴旂粨鏉熷洖鍚?"""
         if action_data.get("action_type") == "end_turn":
             return True
 
@@ -862,190 +616,34 @@ class GameServer:
         return False
 
     async def _handle_game_action(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        """处理玩家游戏操作.
-        当有 pending action queue 且玩家 ID 匹配时，将动作压入队列。
-        以推进异步游戏循环.
-        """
-        room = self.rooms.get(player.room_id or "")
-        if not room or room.state != RoomState.PLAYING:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.not_in_game"),
-                    code=400,
-                    error_code="E_GAME_NOT_IN_PROGRESS",
-                ),
-            )
-            return
-
-        # 解析当前等待中的真人动作队列
-        pending = room._pending_action
-        if pending is None:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("error.not_your_turn"),
-                    code=403,
-                    error_code="E_GAME_NOT_YOUR_TURN",
-                ),
-            )
-            return
-
-        expected_pid, action_queue = pending
-        if expected_pid != player.player_id:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("error.not_your_turn"),
-                    code=403,
-                    error_code="E_GAME_NOT_YOUR_TURN",
-                ),
-            )
-            return
-
-        await action_queue.put(msg.data)
+        await self._dispatcher.handle_game_action(player, msg)
 
     async def _handle_game_response(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        """处理玩家响应."""
-        room = self.rooms.get(player.room_id or "")
-        if not room or room.state != RoomState.PLAYING:
-            return
-        try:
-            request_id, response = decode_game_response(player.player_id, msg.data)
-        except ValueError:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.invalid_format"),
-                    code=400,
-                    error_code="E_PROTO_INVALID_FORMAT",
-                ),
-            )
-            return
-
-        pending = self._find_pending_request(
-            room,
-            player.player_id,
-            request_id,
-            response.request_type,
-        )
-        if pending is None:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("exc.invalid_action"),
-                    code=400,
-                    error_code="E_GAME_INVALID_RESPONSE",
-                ),
-            )
-            return
-
-        if not pending.future.done():
-            pending.future.set_result(response)
-
-        await self._broadcast_game_event(
-            room,
-            "player_response",
-            {
-                "request_id": pending.request_id,
-                "request_type": response.request_type.name.lower(),
-                "player_id": player.player_id,
-                "response": msg.data,
-            },
-        )
+        await self._dispatcher.handle_game_response(player, msg)
 
     async def _handle_hero_chosen(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        """处理选将."""
-        room = self.rooms.get(player.room_id or "")
-        if not room:
-            return
-
-        hero_id = msg.data.get("hero_id", "")
-        await self._broadcast_game_event(
-            room,
-            "hero_chosen",
-            {
-                "player_id": player.player_id,
-                "hero_id": hero_id,
-            },
-        )
+        await self._dispatcher.handle_hero_chosen(player, msg)
 
     async def _handle_chat(self, player: ConnectedPlayer, msg: ClientMsg) -> None:
-        """处理聊天 (含输入净化)."""
-        room = self.rooms.get(player.room_id or "")
-        if not room:
-            return
+        await self._dispatcher.handle_chat(player, msg)
 
-        text = msg.data.get("message", "")
-        text = sanitize_chat_message(text)
-        if text:
-            await self._broadcast_room(
-                room,
-                ServerMsg.chat_broadcast(player.name, text),
-                exclude=player.player_id,
-            )
-
-    # ==================== 断线重连 ====================
+    # ==================== 鏂嚎閲嶈繛 ====================
 
     async def reconnect_player(
         self, player: ConnectedPlayer, room_id: str, last_seq: int, token: str = ""
     ) -> bool:
-        """断线重连: 验证令牌并重放玩家缺失的事件.
+        """Compatibility wrapper for session-manager reconnect handling."""
+        return await self._session_manager.reconnect_player(
+            player,
+            room_id,
+            last_seq,
+            token=token,
+        )
 
-        Args:
-            player: 重连的玩家
-            room_id: 房间 ID
-            last_seq: 玩家最后收到的事件序号
-            token: 重连令牌
-
-        Returns:
-            是否成功重连
-        """
-        # 令牌验证
-        if token and not self._token_manager.verify(token, player.player_id):
-            logger.warning(
-                "Reconnect token verification failed player_id=%s room_id=%s",
-                player.player_id,
-                room_id,
-            )
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.invalid_token"),
-                    code=401,
-                    error_code="E_AUTH_INVALID_TOKEN",
-                ),
-            )
-            return False
-
-        room = self.rooms.get(room_id)
-        if not room:
-            await self._send(
-                player,
-                ServerMsg.error(
-                    _t("server.room_not_found"),
-                    code=404,
-                    error_code="E_ROOM_NOT_FOUND",
-                ),
-            )
-            return False
-
-        # 重新加入房间
-        room.players[player.player_id] = player
-        player.room_id = room_id
-
-        # 重放缺失的事件
-        missed = [e for e in room.event_log if e.seq > last_seq]
-        for event in missed:
-            await self._send(player, event)
-
-        logger.info(f"玩家 {player.name} 重连成功 (重放 {len(missed)} 条事件)")
-        return True
-
-    # ==================== 心跳超时检测 ====================
+    # ==================== 蹇冭烦瓒呮椂妫€娴?====================
 
     async def _heartbeat_checker(self) -> None:
-        """后台任务: 定期检查心跳超时的连接并清理。."""
+        """鍚庡彴浠诲姟: 瀹氭湡妫€鏌ュ績璺宠秴鏃剁殑杩炴帴骞舵竻鐞嗐€?"""
         while self._running:
             await asyncio.sleep(self._heartbeat_timeout / 2)
             now = time.time()
@@ -1056,25 +654,25 @@ class GameServer:
             for pid in stale:
                 stale_player = self.connections.get(pid)
                 if stale_player:
-                    logger.info(f"玩家 {pid} 心跳超时，断开连接")
+                    logger.info(f"鐜╁ {pid} 蹇冭烦瓒呮椂锛屾柇寮€杩炴帴")
                     with suppress(Exception):
                         await stale_player.websocket.close(1001, _t("server.heartbeat_timeout"))
                     await self._unregister(stale_player.websocket)
-            # 定期清理过期令牌
+            # 瀹氭湡娓呯悊杩囨湡浠ょ墝
             self._token_manager.cleanup_expired()
 
-    # ==================== 服务端生命周期 ====================
+    # ==================== 鏈嶅姟绔敓鍛藉懆鏈?====================
 
     async def _connection_handler(self, websocket: ServerConnection) -> None:
-        """处理单个 WebSocket 连接."""
-        # Origin 验证
+        """澶勭悊鍗曚釜 WebSocket 杩炴帴."""
+        # Origin 楠岃瘉
         if not self._check_origin(websocket):
             await websocket.close(1008, "Origin not allowed")
             return
 
         player = await self._register(websocket)
         if player is None:
-            return  # 连接被拒绝
+            return  # 杩炴帴琚嫆缁?
         try:
             async for raw_message in websocket:
                 payload = (
@@ -1084,27 +682,26 @@ class GameServer:
                 )
                 await self._handle_message(websocket, payload)
         except Exception as e:
-            logger.warning(f"连接异常 (玩家{player.player_id}): {e}")
+            logger.warning(f"杩炴帴寮傚父 (鐜╁{player.player_id}): {e}")
         finally:
             await self._unregister(websocket)
 
     def _build_ssl_context(self) -> ssl.SSLContext | None:
-        """构建 SSL 上下文 (如果配置了证书)。."""
+        """鏋勫缓 SSL 涓婁笅鏂?(濡傛灉閰嶇疆浜嗚瘉涔?銆?"""
         if not self._ssl_cert or not self._ssl_key:
             return None
 
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(self._ssl_cert, self._ssl_key)
-        logger.info("已加载 TLS 证书")
+        logger.info("宸插姞杞?TLS 璇佷功")
         return ctx
 
     def _check_origin(self, websocket: ServerConnection) -> bool:
-        """检查 WebSocket 握手中的 Origin 头。."""
+        """妫€鏌?WebSocket 鎻℃墜涓殑 Origin 澶淬€?"""
         remote_ip = self._get_remote_ip(websocket)
         if not self._origin_validator.is_enabled:
             logger.warning(
-                "Reject websocket handshake: origin allowlist disabled "
-                "(fail-closed) remote_ip=%s",
+                "Reject websocket handshake: origin allowlist disabled (fail-closed) remote_ip=%s",
                 remote_ip,
             )
             return False
@@ -1129,17 +726,17 @@ class GameServer:
         return True
 
     def _get_serve_origins(self) -> list[str] | None:
-        """为 websockets.serve 提供 origins 参数。."""
+        """涓?websockets.serve 鎻愪緵 origins 鍙傛暟銆?"""
         if not self._origin_validator.is_enabled:
             return None
         return list(self._origin_validator.allowed_origins)
 
     async def start(self) -> None:
-        """启动服务端."""
+        """鍚姩鏈嶅姟绔?"""
         try:
             import websockets
         except ImportError:
-            logger.error("需要安装 websockets: pip install websockets")
+            logger.error("闇€瑕佸畨瑁?websockets: pip install websockets")
             return
 
         self._running = True
@@ -1150,9 +747,9 @@ class GameServer:
                 "in plaintext. Use --ssl-cert and --ssl-key for production."
             )
         protocol = "wss" if ssl_ctx else "ws"
-        logger.info(f"三国杀服务端启动: {protocol}://{self.host}:{self.port}")
+        logger.info(f"涓夊浗鏉€鏈嶅姟绔惎鍔? {protocol}://{self.host}:{self.port}")
 
-        # 启动心跳超时检测后台任务
+        # 鍚姩蹇冭烦瓒呮椂妫€娴嬪悗鍙颁换鍔?
         self._heartbeat_task = asyncio.create_task(self._heartbeat_checker())
         serve_origins = self._get_serve_origins()
 
@@ -1168,24 +765,24 @@ class GameServer:
                 await asyncio.sleep(1)
 
     def stop(self) -> None:
-        """停止服务端."""
+        """鍋滄鏈嶅姟绔?"""
         self._running = False
         if self._heartbeat_task and not self._heartbeat_task.done():
             self._heartbeat_task.cancel()
-        logger.info("服务端停止")
+        logger.info("Game server stopped")
 
 
-# ==================== CLI 入口 ====================
+# ==================== CLI 鍏ュ彛 ====================
 
 
 def main() -> None:
-    """命令行启动服务端."""
+    """鍛戒护琛屽惎鍔ㄦ湇鍔＄."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="三国杀 WebSocket 服务端")
-    parser.add_argument("--host", default="127.0.0.1", help="监听地址")
-    parser.add_argument("--port", type=int, default=8765, help="监听端口")
-    parser.add_argument("-v", "--verbose", action="store_true", help="详细日志")
+    parser = argparse.ArgumentParser(description="Sanguosha WebSocket game server")
+    parser.add_argument("--host", default="127.0.0.1", help="鐩戝惉鍦板潃")
+    parser.add_argument("--port", type=int, default=8765, help="鐩戝惉绔彛")
+    parser.add_argument("-v", "--verbose", action="store_true", help="璇︾粏鏃ュ織")
 
     args = parser.parse_args()
 

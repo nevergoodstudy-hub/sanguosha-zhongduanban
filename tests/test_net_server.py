@@ -11,6 +11,7 @@ import pytest
 from game.actions import GameRequest, GameResponse, PlayCardAction, RequestType
 from net.protocol import ClientMsg, RoomState, ServerMsg
 from net.server import ConnectedPlayer, GameServer, Room
+from net.settings import ServerSettings
 
 # ==================== Room 数据模型测试 ====================
 
@@ -61,6 +62,33 @@ class TestGameServer:
         assert server.port == 9999
         assert len(server.connections) == 0
         assert len(server.rooms) == 0
+
+    def test_init_from_settings(self):
+        settings = ServerSettings(
+            host="0.0.0.0",
+            port=9100,
+            rate_limit_window=3.0,
+            rate_limit_max_msgs=99,
+            max_connections=500,
+            max_connections_per_ip=6,
+            max_message_size=123456,
+            heartbeat_timeout=80.0,
+            allowed_origins="https://game.example.com",
+            allow_localhost_dev=True,
+            ssl_cert="cert.pem",
+            ssl_key="key.pem",
+        )
+
+        server = GameServer(settings=settings)
+
+        assert server.host == "0.0.0.0"
+        assert server.port == 9100
+        assert server._max_connections == 500
+        assert server._max_message_size == 123456
+        assert server._heartbeat_timeout == 80.0
+        assert server._ssl_cert == "cert.pem"
+        assert server._ssl_key == "key.pem"
+        assert "https://game.example.com" in server._origin_validator.allowed_origins
 
     def test_default_host_is_loopback(self):
         server = GameServer()
@@ -464,7 +492,9 @@ class TestAuthoritativeTurnActions:
         room = Room(room_id="r1", host_id=1, state=RoomState.PLAYING)
         room.engine = MagicMock()
 
-        should_end_turn = await server._apply_human_action(room, player, {"action_type": "end_turn"})
+        should_end_turn = await server._apply_human_action(
+            room, player, {"action_type": "end_turn"}
+        )
 
         assert should_end_turn is True
         room.engine.execute_action.assert_not_called()

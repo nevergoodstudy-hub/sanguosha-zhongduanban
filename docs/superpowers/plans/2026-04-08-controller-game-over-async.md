@@ -15,7 +15,7 @@
 **Files:**
 - Test: `tests/test_game_controller_coverage.py`
 
-- [ ] **Step 1: Convert `_handle_game_over` tests to async boundary expectations**
+- [x] **Step 1: Convert `_handle_game_over` tests to async boundary expectations**
 
 ```python
 @pytest.mark.asyncio
@@ -27,7 +27,7 @@ async def test_lord_wins_lord_player(self):
     await ctrl._handle_game_over()
 ```
 
-- [ ] **Step 2: Run focused tests to verify they fail**
+- [x] **Step 2: Run focused tests to verify they fail**
 
 Run: `python -m pytest tests/test_game_controller_coverage.py -q -k "handle_game_over"`
 
@@ -39,14 +39,14 @@ Expected: FAIL because `_handle_game_over()` is still synchronous / not awaitabl
 - Modify: `game/runtime/controller_io.py`
 - Modify: `game/game_controller.py`
 
-- [ ] **Step 1: Add async game-over wrapper to `ControllerIO`**
+- [x] **Step 1: Add async game-over wrapper to `ControllerIO`**
 
 ```python
 async def show_game_over(self, winner_message: str, is_victory: bool) -> None:
     await self._run(self._ui.show_game_over, winner_message, is_victory)
 ```
 
-- [ ] **Step 2: Convert `_handle_game_over()` to async**
+- [x] **Step 2: Convert `_handle_game_over()` to async**
 
 ```python
 async def _handle_game_over(self) -> None:
@@ -54,13 +54,13 @@ async def _handle_game_over(self) -> None:
     await self._controller_io.show_game_over(winner_message, is_victory)
 ```
 
-- [ ] **Step 3: Await the helper from `_game_loop()`**
+- [x] **Step 3: Await the helper from `_game_loop()`**
 
 ```python
 await self._handle_game_over()
 ```
 
-- [ ] **Step 4: Verify focused tests**
+- [x] **Step 4: Verify focused tests**
 
 Run: `python -m pytest tests/test_game_controller_coverage.py -q -k "handle_game_over"`
 
@@ -73,19 +73,19 @@ Expected: PASS
 - Modify: `game/game_controller.py`
 - Modify: `tests/test_game_controller_coverage.py`
 
-- [ ] **Step 1: Run controller coverage**
+- [x] **Step 1: Run controller coverage**
 
 Run: `python -m pytest tests/test_game_controller_coverage.py -q`
 
-- [ ] **Step 2: Run regression slice**
+- [x] **Step 2: Run regression slice**
 
 Run: `python -m pytest tests/test_game.py tests/test_game_controller_coverage.py tests/test_request_handler_coverage.py tests/test_phase_fsm.py tests/test_subsystems.py -q`
 
-- [ ] **Step 3: Run style checks**
+- [x] **Step 3: Run style checks**
 
 Run: `python -m ruff check game/runtime/controller_io.py game/game_controller.py tests/test_game_controller_coverage.py docs/superpowers/plans/2026-04-08-controller-game-over-async.md`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add game/runtime/controller_io.py game/game_controller.py tests/test_game_controller_coverage.py docs/superpowers/plans/2026-04-08-controller-game-over-async.md

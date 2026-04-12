@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Any
-import uuid
 
 from i18n import t as _t
 

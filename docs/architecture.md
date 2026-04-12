@@ -2,130 +2,266 @@
 
 ## 概览
 
-三国杀命令行终端版采用事件驱动 + 分层架构，核心分为 5 个层级：
+本文档描述 `codex/deep-refactor` 之后的当前代码结构，重点同步以下变化：
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    入口层 (Entry)                         │
-│  main.py ── SanguoshaGame (CLI 控制器)                   │
-│  main.py ── argparse (--ui / --server / --connect)       │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼──────────────────────────────┐
-│                    UI 层 (Presentation)                   │
-│  ui/textual_ui/     ── SanguoshaApp (Textual TUI)       │
-│    ├── app.py       ── Textual App + Screen 路由         │
-│    ├── bridge.py    ── TextualBridge (引擎↔TUI 适配)     │
-│    ├── screens/     ── 6 个独立 Screen                   │
-│    ├── widgets/     ── CardWidget / HpBar / PlayerPanel  │
-│    ├── modals/      ── TargetModal / WuxieModal / ...    │
-│    └── styles/      ── game.tcss                         │
-│  ui/protocol.py     ── GameUI Protocol (类型抽象)        │
-│  ui/input_safety.py  ── 安全输入模块                     │
-└────────────────────────┬──────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│                  游戏逻辑层 (Game Core)                   │
-│  game/engine.py         ── GameEngine (核心引擎)         │
-│  game/player.py         ── Player / Identity / Equipment │
-│  game/card.py           ── Card / Deck / CardName 枚举   │
-│  game/hero.py           ── Hero / HeroRepository / Skill │
-│  game/skill.py          ── SkillSystem (技能执行)        │
-│  game/skill_dsl.py      ── DSL 定义加载                  │
-│  game/skill_interpreter.py ── DSL 解释器                 │
-│  game/damage_system.py  ── DamageSystem (伤害计算)       │
-│  game/turn_manager.py   ── TurnManager (回合管理)        │
-│  game/win_checker.py    ── WinChecker (胜负判定)         │
-│  game/constants.py      ── SkillId 枚举 / 常量           │
-│  game/exceptions.py     ── 自定义异常                    │
-│  game/save_system.py    ── SaveSystem (存档/读档)        │
-│  game/effects/          ── 卡牌效果注册系统              │
-│    ├── base.py          ── CardEffect 基类               │
-│    ├── basic.py         ── 基本牌效果 (杀/闪/桃)         │
-│    ├── trick.py         ── 锦囊牌效果                    │
-│    ├── data_driven.py   ── 数据驱动效果加载              │
-│    └── registry.py      ── EffectRegistry 注册表         │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│                 事件/动作层 (Event Bus)                   │
-│  game/events.py    ── EventBus / EventType / GameEvent   │
-│  game/actions.py   ── GameAction / GameRequest / Response│
-│  game/request_handler.py ── RequestHandler (UI 请求)     │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│                   AI 层 (Intelligence)                    │
-│  ai/bot.py  ── AIBot (决策引擎)                          │
-│    ├── 嘲讽值系统 (ThreatSystem)                         │
-│    ├── 局势评分 (evaluate_game_state)                    │
-│    ├── 身份推断 (infer_identity)                         │
-│    └── 3 难度级别 (Easy / Normal / Hard)                 │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│                  网络层 (Network)                         │
-│  net/server.py   ── GameServer (WebSocket 服务端)        │
-│  net/client.py   ── GameClient (WebSocket 客户端)        │
-│  net/protocol.py ── 消息协议定义                         │
-└─────────────────────────────────────────────────────────┘
-```
+- `main.py` 仍是唯一运行入口，但本地模式、服务端模式、客户端模式已经明显分层
+- 网络层不再把大部分逻辑都堆在 `net/server.py` / `net/client.py`
+- 服务端消息路由、会话生命周期、动作编解码、配置校验都已经拆分到独立模块
+- 构建与发布也从“脚本 + 手工说明”升级为“脚本 + GitHub Actions 工作流 + 文档”三件套
 
-## 模块依赖关系
+如需英文版总览，可参考根目录 [ARCHITECTURE.md](../ARCHITECTURE.md)。
 
-```
+## 入口与运行模式
+
+运行入口统一收敛在 `main.py`：
+
+| 模式 | 命令 | 主要入口 |
+|---|---|---|
+| 本地单机 / AI 对战 | `python main.py` | `game.game_controller.GameController` |
+| 服务端 | `python main.py --server [HOST:PORT]` | `net.settings.ServerSettings` -> `net.server.GameServer` |
+| 客户端 | `python main.py --connect HOST:PORT` | `net.settings.ClientSettings` -> `net.client.GameClient` |
+| 回放 | `python main.py --replay FILE` | 回放逻辑入口 |
+
+另外，`main.SanguoshaGame` 现在只是一个 legacy 兼容别名，实际推荐入口已经变为 `game.game_controller.GameController`。
+
+## 当前分层结构
+
+```text
 main.py
-  ├── game/engine.py ─────┐
-  │     ├── game/player.py │
-  │     ├── game/card.py   │  game/ 内部互相引用
-  │     ├── game/hero.py   │
-  │     ├── game/events.py │
-  │     ├── game/actions.py│
-  │     └── game/effects/  │
-  ├── ai/bot.py ──────────┤  AI 依赖 game/ 层
-  │     └── game/engine    │
-  └── ui/textual_ui/ ─────┘  UI 依赖 game/ 层 (Textual TUI 唯一)
+├─ 本地模式
+│  └─ game.game_controller.GameController
+│     └─ game.engine.GameEngine
+│        ├─ game.turn_manager.TurnManager
+│        ├─ game.combat.CombatSystem
+│        ├─ game.card_resolver.CardResolver
+│        ├─ game.equipment_system.EquipmentSystem
+│        ├─ game.judge_system.JudgeSystem
+│        ├─ game.skill.SkillSystem
+│        └─ game.events.EventBus
+├─ 服务端模式
+│  └─ net.settings.ServerSettings
+│     └─ net.server.GameServer
+│        ├─ net.server_dispatcher.ServerMessageDispatcher
+│        ├─ net.server_session.ServerSessionManager
+│        ├─ net.server_types.Room / ConnectedPlayer / PendingGameRequest
+│        ├─ net.action_codec / net.request_codec
+│        └─ game.engine.GameEngine (每个房间一个无界面引擎)
+└─ 客户端模式
+   └─ net.settings.ClientSettings
+      └─ net.client.GameClient
+         └─ net.client_session.ClientSession
 ```
 
-**关键原则:**
-- UI 层通过 `GameUI` Protocol 与引擎解耦
-- AI 层仅依赖 game/ 公开接口
-- 事件总线 (EventBus) 实现模块间松耦合
-- 效果注册表 (EffectRegistry) 实现卡牌效果可插拔
+## 本地游戏核心层
 
-## 数据流
+`game/` 依然是规则和回合系统的核心。
 
+### 主要职责
+
+- `game/game_controller.py`
+  - 本地流程总控
+  - 避免 `main.py` 直接依赖过多细节
+- `game/engine.py`
+  - 核心引擎协调器
+  - 组织阶段推进、请求处理、日志、胜负判定
+- `game/turn_manager.py`
+  - 管理准备/判定/摸牌/出牌/弃牌/结束的阶段推进
+- `game/combat.py`
+  - 处理 `杀`、`闪`、`决斗`、伤害等战斗链路
+- `game/card_resolver.py`
+  - 解析锦囊和非战斗牌效
+- `game/equipment_system.py`
+  - 装备牌的装备、卸下和效果应用
+- `game/judge_system.py`
+  - 判定区与延时锦囊结算
+- `game/skill.py`
+  - 武将技能执行与触发
+- `game/events.py`
+  - 事件总线与事件类型定义
+- `game/phase_fsm.py`
+  - 阶段切换合法性约束
+
+### AI 层
+
+- `ai/bot.py`
+  - AI 协调器
+- `ai/easy_strategy.py`
+  - 低复杂度决策
+- `ai/normal_strategy.py`
+  - 规则型决策
+- `ai/hard_strategy.py`
+  - 高优先级战术与局势评估
+
+## 网络层：重构后的拆分方式
+
+本次深度重构里，变化最大的就是 `net/`。
+
+### 1. 服务端运行时
+
+- `net/server.py`
+  - 负责 WebSocket 服务生命周期
+  - 持有房间表、连接表、广播辅助函数、房间引擎启动
+  - 不再独占所有消息处理和重连逻辑
+- `net/server_dispatcher.py`
+  - 负责客户端消息分发
+  - 处理建房、入房、离房、准备、开局、聊天、响应、心跳
+  - 在真正执行业务逻辑前完成格式校验、速率限制、路由
+- `net/server_session.py`
+  - 负责房间成员清理和断线重连回放
+  - 根据房间事件序号回放遗漏消息
+- `net/server_types.py`
+  - 放置 `Room`、`ConnectedPlayer`、`PendingGameRequest` 等轻量数据结构
+
+### 2. 客户端运行时
+
+- `net/client.py`
+  - `GameClient` 作为高层协议门面
+  - 对外暴露 `create_room()`、`join_room()`、`play_card()`、`use_skill()`、`respond()` 等接口
+  - 负责服务器消息分发、客户端本地状态、CLI 客户端入口
+- `net/client_session.py`
+  - 专注底层会话生命周期
+  - 包括连接、断开、接收循环、心跳循环、自动重连
+  - 使 `GameClient` 不必再同时承担“协议门面 + 传输重试器”双重职责
+
+### 3. 编解码与配置层
+
+- `net/action_codec.py`
+  - 把网络层 JSON 动作转换成领域层 `GameAction`
+  - 当前支持 `play_card`、`use_skill`、`discard`、`end_turn`
+- `net/request_codec.py`
+  - 把领域层 `GameRequest` / `GameResponse` 映射到网络消息
+- `net/settings.py`
+  - 用 Pydantic 模型统一校验 `ServerSettings` / `ClientSettings`
+  - 让 `host`、`port`、TLS 成对配置、重连参数、URL scheme 在启动时就被验证
+
+### 4. `net/session.py` 的当前定位
+
+`net/session.py` 仍然保留了通用会话工具，但它已经不是当前服务端断线重连主路径。
+
+当前 live reconnect 主路径是：
+
+```text
+GameServer -> ServerSessionManager
 ```
-用户输入 ──→ UI 层 ──→ main.py (Controller)
-                            │
-                            ▼
-                      GameEngine.execute_action()
-                            │
-                            ▼
-                      EventBus.publish(event)
-                            │
-                      ┌─────┼─────┐
-                      ▼     ▼     ▼
-                   SkillSystem  AI  UI (日志更新)
+
+而不是旧文档中暗示的：
+
+```text
+GameServer -> session.py
 ```
 
-## 数据文件
+## 当前关键数据流
 
+### 本地模式
+
+```text
+玩家输入 / TUI 操作
+  -> GameController
+  -> GameEngine.execute_action()
+  -> EventBus.publish(...)
+  -> 技能系统 / 战斗系统 / UI 更新 / AI 响应
 ```
-data/
-  ├── cards.json        ── 108 张标准牌库 (含军争扩展)
-  ├── card_effects.json ── 数据驱动卡牌效果定义
-  ├── heroes.json       ── 32 武将定义（含 2026-03 身份模式同步批次）
-  ├── heroes_new.json   ── 扩展武将 (待合并)
-  └── skill_dsl.json    ── 技能 DSL 声明
+
+### 客户端动作 -> 服务端 -> 引擎
+
+```text
+GameClient
+  -> ClientMsg
+  -> WebSocket
+  -> ServerMessageDispatcher
+  -> action_codec.decode_client_action()
+  -> GameAction
+  -> GameEngine
 ```
 
-## 已知架构问题
+### 引擎请求 -> 客户端响应
 
-1. **GameEngine 过大** (1400+ 行): 回合管理/效果/伤害/日志/胜负 混合，待进一步拆分
-2. **双重分发路径**: `_card_handlers` 旧字典 与 `effect_registry` 新系统并存
+```text
+GameEngine 发出 GameRequest
+  -> request_codec.encode_game_request()
+  -> ServerMsg.game_request(...)
+  -> 客户端展示交互
+  -> ClientMsg.game_response(...)
+  -> request_codec.decode_game_response()
+  -> GameResponse
+  -> 服务端完成等待中的请求 future
+```
 
-### 已解决
-- ✅ Screen 已拆分为 6 个独立文件 (`screens/` 目录)
-- ✅ SanguoshaGame 已重构为 GameController
-- ✅ DamageType 枚举已统一到 `card.py`
+### 断线重连
+
+```text
+断线
+  -> 房间保留按 seq 记录的事件日志
+  -> 客户端带 token + last_seq 重连
+  -> ServerSessionManager.reconnect_player()
+  -> 回放 seq > last_seq 的遗漏事件
+```
+
+## 构建与发布层
+
+除了运行时架构，本次重构还补齐了“构建 -> 校验 -> 发布”链路。
+
+### 本地构建脚本
+
+- `build.py`
+  - 统一管理 PyInstaller onefile / onedir 构建
+  - 新增输出文件名与目标路径辅助逻辑
+- `build_msix.py`
+  - 本地 Windows MSIX 打包验证入口
+
+### GitHub Actions
+
+- `.github/workflows/ci.yml`
+  - `ruff check`
+  - `ruff format --check`
+  - `mypy`
+  - 三平台 `pytest`
+  - coverage / junit 工件上传
+  - `pip-audit` + `bandit`
+  - `python -m build`
+- `.github/workflows/release.yml`
+  - 用 tag `v*.*.*` 触发正式发布
+  - 三平台生成 PyInstaller 资产
+  - Windows 打成 zip，Linux / macOS 打成 tar.gz 以保留可执行权限
+  - 使用 `gh release create` / `gh release upload` 发布 Release
+
+### 发布文档
+
+- `docs/release-process.md`
+  - 说明 tag 驱动发布规则、资产命名、手动校验模式和常见问题
+
+## 目录与数据文件
+
+```text
+ai/            AI 决策层
+data/          卡牌 / 武将 / 技能 DSL 数据
+docs/          中文设计与发布文档
+game/          核心规则与子系统
+i18n/          国际化资源
+net/           联机协议、服务端、客户端、会话与编解码
+tests/         单元测试与集成测试
+tools/         回放与辅助工具
+ui/            Textual TUI 与界面适配
+
+ARCHITECTURE.md        英文同步总览
+build.py               PyInstaller 构建脚本
+build_msix.py          Windows MSIX 打包脚本
+main.py                统一入口
+versioning.py          版本号派生逻辑
+```
+
+`data/` 目前仍包含卡牌、武将、技能 DSL 等核心资源，是运行时与打包产物必须带上的静态文件集合。
+
+## 当前设计原则
+
+- UI 通过协议与引擎隔离，不直接吞掉所有规则细节
+- 服务端的“消息分发”和“会话生命周期”已分开治理
+- 客户端的“高层 API”和“底层传输循环”已分开治理
+- 网络负载和领域动作之间增加显式编解码边界
+- 启动参数优先在配置模型层失败，而不是跑到运行时才出错
+
+## 当前仍需关注的点
+
+1. `GameEngine` 仍然偏大，后续还可以继续按“阶段推进 / 请求协商 / 胜负判定”拆分
+2. 文档维护现在分为中英文两份，后续改架构时应同步更新 `ARCHITECTURE.md` 与本文档
+3. 若服务端重连策略继续扩展，应该优先增强 `ServerSessionManager`，而不是把逻辑重新塞回 `server.py`

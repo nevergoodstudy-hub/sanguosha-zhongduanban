@@ -27,7 +27,9 @@ def _require_int_list(value: Any, field_name: str) -> list[int]:
 def _require_str_list(value: Any, field_name: str) -> list[str]:
     if value is None:
         return []
-    if not isinstance(value, list) or not all(isinstance(item, str) and item.strip() for item in value):
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
         raise ValueError(f"{field_name} must be a list of non-empty strings")
     return value
 
@@ -38,7 +40,9 @@ def _read_common_metadata(action_data: dict[str, Any]) -> dict[str, Any]:
         source_channel = "network"
 
     correlation_id = action_data.get("correlation_id")
-    if correlation_id is not None and (not isinstance(correlation_id, str) or not correlation_id.strip()):
+    if correlation_id is not None and (
+        not isinstance(correlation_id, str) or not correlation_id.strip()
+    ):
         correlation_id = None
 
     action_id = action_data.get("action_id")

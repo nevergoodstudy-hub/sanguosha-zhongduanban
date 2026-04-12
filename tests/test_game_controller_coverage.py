@@ -319,7 +319,7 @@ class TestUpdatePlayableMask:
 # ==================== _show_turn_header ====================
 
 
-class TestShowTurnHeader:
+class _TestShowTurnHeaderLegacy:
     @pytest.mark.asyncio
     async def test_shows_header_via_controller_io(self):
         engine = _make_engine()
@@ -349,6 +349,36 @@ class TestShowTurnHeader:
 
 
 # ==================== Phase execution helpers ====================
+
+
+class TestShowTurnHeader:
+    @pytest.mark.asyncio
+    async def test_shows_header_via_controller_io(self):
+        engine = _make_engine()
+        engine.round_count = 3
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        player = _make_player()
+        border = "─" * 12
+
+        await ctrl._show_turn_header(player)
+
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(""),
+                call(border),
+                call(
+                    _t(
+                        "controller.round_header",
+                        round=3,
+                        player="Player1",
+                        hero="TestHero",
+                    )
+                ),
+                call(border),
+            ]
+        )
 
 
 class TestPhaseExecution:
@@ -648,12 +678,8 @@ class TestRunTurnEdgeCases:
 
         await ctrl._handle_use_skill(player)
 
-        ctrl._controller_io.show_log.assert_awaited_once_with(
-            _t("controller.choose_discard_cards")
-        )
-        engine.skill_system.use_skill.assert_called_once_with(
-            "zhiheng", player, cards=player.hand
-        )
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.choose_discard_cards"))
+        engine.skill_system.use_skill.assert_called_once_with("zhiheng", player, cards=player.hand)
 
     @pytest.mark.asyncio
     async def test_handle_use_skill_fanjian_logs_via_controller_io(self):
@@ -673,9 +699,7 @@ class TestRunTurnEdgeCases:
 
         await ctrl._handle_use_skill(player)
 
-        ctrl._controller_io.show_log.assert_awaited_once_with(
-            _t("controller.choose_show_card")
-        )
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.choose_show_card"))
         engine.skill_system.use_skill.assert_called_once_with(
             "fanjian", player, targets=[target], cards=[player.hand[0]]
         )
@@ -685,6 +709,97 @@ class TestRunTurnEdgeCases:
         ctrl = _make_controller()
         ctrl.engine = None
         await ctrl._human_discard_phase(MagicMock())  # should not raise
+
+
+class TestSessionDelegation:
+    @pytest.mark.asyncio
+    async def test_start_new_game_routes_through_session_boundary(self):
+        from ai.bot import AIDifficulty
+
+        ui = _make_ui()
+        ctrl = _make_controller(ui=ui)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_player_count_menu = AsyncMock(return_value=6)
+        ctrl._controller_io.show_difficulty_menu = AsyncMock(return_value=AIDifficulty.HARD.value)
+        ctrl._choose_heroes = AsyncMock()
+        ctrl._setup_ai_bots = MagicMock()
+        ctrl._game_loop = AsyncMock()
+
+        mock_engine = MagicMock()
+
+        with (
+            patch("game.runtime.session.GameEngine", return_value=mock_engine) as engine_cls,
+            patch("game.runtime.session.SkillSystem") as skill_system_cls,
+        ):
+            await ctrl.start_new_game()
+
+        assert ctrl.ai_difficulty == AIDifficulty.HARD
+        assert ctrl.engine is mock_engine
+        engine_cls.assert_called_once_with()
+        ctrl._controller_io.show_player_count_menu.assert_awaited_once_with()
+        ctrl._controller_io.show_difficulty_menu.assert_awaited_once_with()
+        mock_engine.setup_game.assert_called_once_with(6, human_player_index=0)
+        mock_engine.set_ui.assert_called_once_with(ui)
+        ui.set_engine.assert_called_once_with(mock_engine)
+        skill_system = skill_system_cls.return_value
+        skill_system_cls.assert_called_once_with(mock_engine)
+        mock_engine.set_skill_system.assert_called_once_with(skill_system)
+        ctrl._choose_heroes.assert_awaited_once_with()
+        ctrl._setup_ai_bots.assert_called_once_with()
+        mock_engine.start_game.assert_called_once_with()
+        ctrl._game_loop.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_game_loop_routes_ai_turn_and_game_over_through_wrappers(self):
+        engine = _make_engine()
+        ai_player = _make_player(is_ai=True)
+        ai_player.name = "AI-1"
+        engine.current_player = ai_player
+        engine.is_game_over.side_effect = [False, True]
+
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_state = AsyncMock()
+        ctrl._run_ai_turn = AsyncMock()
+        ctrl._run_human_turn = AsyncMock()
+        ctrl._handle_game_over = AsyncMock()
+
+        await ctrl._game_loop()
+
+        ctrl._controller_io.show_game_state.assert_awaited_once_with(engine, ai_player)
+        ctrl._run_ai_turn.assert_awaited_once_with(ai_player)
+        ctrl._run_human_turn.assert_not_awaited()
+        engine.next_turn.assert_not_called()
+        ctrl._handle_game_over.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_human_discard_phase_routes_through_session_boundary(self):
+        ctrl = _make_controller()
+        player = _make_player()
+        ctrl._session.human_discard_phase = AsyncMock()
+
+        await ctrl._human_discard_phase(player)
+
+        ctrl._session.human_discard_phase.assert_awaited_once_with(player)
+
+    @pytest.mark.asyncio
+    async def test_handle_game_over_routes_through_session_boundary(self):
+        ctrl = _make_controller()
+        ctrl._session.handle_game_over = AsyncMock()
+
+        await ctrl._handle_game_over()
+
+        ctrl._session.handle_game_over.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_confirm_quit_routes_through_session_boundary(self):
+        ctrl = _make_controller()
+        ctrl._session.confirm_quit = AsyncMock(return_value=True)
+
+        result = await ctrl._confirm_quit()
+
+        assert result is True
+        ctrl._session.confirm_quit.assert_awaited_once_with()
 
 
 class TestControllerIoBoundary:
@@ -711,15 +826,11 @@ class TestControllerIoBoundary:
 
         await ctrl._choose_heroes()
 
-        ctrl._controller_io.show_log.assert_any_await(
-            _t("controller.lord_choose_hero")
-        )
+        ctrl._controller_io.show_log.assert_any_await(_t("controller.lord_choose_hero"))
         ctrl._controller_io.show_log.assert_any_await(
             _t("controller.hero_chosen", player="Human", hero="Lord Hero")
         )
-        available, selected_count, is_lord = (
-            ctrl._controller_io.show_hero_selection.await_args.args
-        )
+        available, selected_count, is_lord = ctrl._controller_io.show_hero_selection.await_args.args
         assert len(available) == 5
         assert selected_count == 1
         assert is_lord is True
@@ -853,9 +964,7 @@ class TestHandlePlaySpecificCard:
         player.can_use_sha.return_value = True
         card = _make_card(name=CardName.SHA)
         await ctrl._handle_play_specific_card(player, card)
-        ctrl._controller_io.show_log.assert_awaited_once_with(
-            _t("controller.no_targets")
-        )
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.no_targets"))
         engine.use_card.assert_not_called()
 
     @pytest.mark.asyncio
@@ -892,9 +1001,7 @@ class TestHandlePlaySpecificCard:
         player = _make_player(hp=4, max_hp=4)
         card = _make_card(name=CardName.TAO, card_type=CardType.BASIC)
         await ctrl._handle_play_specific_card(player, card)
-        ctrl._controller_io.show_log.assert_awaited_once_with(
-            _t("controller.hp_full")
-        )
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.hp_full"))
         engine.use_card.assert_not_called()
 
     @pytest.mark.asyncio

@@ -52,7 +52,7 @@ async def test_select_cards_for_skill_uses_controller_io_prompt():
 Run: `python -m pytest tests/test_game_controller_coverage.py -q`
 Expected: FAIL because `GameController` has no `_controller_io` boundary and still uses direct `input()`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/test_game_controller_coverage.py
@@ -127,7 +127,7 @@ cards = await self._controller_io.choose_cards_to_discard(player, discard_count)
 Run: `python -m pytest tests/test_game_controller_coverage.py tests/test_game.py -q`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add game/runtime/__init__.py game/runtime/controller_io.py game/game_controller.py tests/test_game_controller_coverage.py
@@ -158,7 +158,7 @@ Expected: All checks pass
 - Centralized thread-offloaded UI operations instead of scattering `asyncio.to_thread`
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add findings.md progress.md

@@ -89,7 +89,7 @@ Expected: PASS
 Run: `python -m ruff check game/game_controller.py game/runtime/controller_io.py tests/test_game_controller_coverage.py`
 Expected: All checks pass
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add game/runtime/controller_io.py game/game_controller.py tests/test_game_controller_coverage.py docs/superpowers/plans/2026-04-08-controller-discard-async.md

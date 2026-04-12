@@ -1,6 +1,5 @@
 """Tests for net.session module."""
 
-
 from net.session import PlayerSession, SessionManager
 
 

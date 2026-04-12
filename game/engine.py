@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Any
 logger = logging.getLogger(__name__)
 
 from .card import Card, CardName, CardSubtype, CardType, Deck  # noqa: E402
-from .constants import IdentityConfig, SkillId  # noqa: E402
+from .constants import SkillId  # noqa: E402
 from .events import EventBus, EventType, GameEvent  # noqa: E402
 from .hero import HeroRepository, Kingdom  # noqa: E402
 from .player import Identity, Player  # noqa: E402
@@ -73,6 +73,43 @@ _LOG_CATEGORY_MAP: dict[str, EventType] = {
 # 枚举已提取到 enums.py，此处 re-export 保持向后兼容
 # P2-4: 距离缓存
 from .distance_cache import DistanceCache  # noqa: E402
+from .engine_event_logging import (
+    log_event as _engine_log_event,
+)
+from .engine_event_logging import (
+    notify_cards_lost as _engine_notify_cards_lost,
+)
+from .engine_event_logging import (
+    notify_cards_obtained as _engine_notify_cards_obtained,
+)
+from .engine_phase_helpers import (
+    phase_discard as _engine_phase_discard,
+)
+from .engine_phase_helpers import (
+    phase_draw as _engine_phase_draw,
+)
+from .engine_phase_helpers import (
+    phase_end as _engine_phase_end,
+)
+from .engine_phase_helpers import (
+    phase_judge as _engine_phase_judge,
+)
+from .engine_phase_helpers import (
+    phase_play as _engine_phase_play,
+)
+from .engine_phase_helpers import (
+    phase_prepare as _engine_phase_prepare,
+)
+from .engine_setup_helpers import (
+    assign_identities as _engine_assign_identities,
+)
+from .engine_setup_helpers import (
+    ensure_can_start_game as _engine_ensure_can_start_game,
+)
+from .engine_setup_helpers import (
+    setup_game as _engine_setup_game,
+)
+from .engine_turn_helpers import next_turn as _engine_next_turn
 from .enums import GamePhase, GameState  # noqa: E402,F401  — 公共 API re-export
 
 # P0-4: 玩家管理器 (引擎分解 Step 1)
@@ -80,25 +117,6 @@ from .player_manager import PlayerManager  # noqa: E402
 
 # M1-T01: 导入 TurnManager（GamePhase 已在上方定义，不会循环导入）
 from .turn_manager import TurnManager  # noqa: E402
-from .engine_event_logging import (
-    log_event as _engine_log_event,
-    notify_cards_lost as _engine_notify_cards_lost,
-    notify_cards_obtained as _engine_notify_cards_obtained,
-)
-from .engine_setup_helpers import (
-    assign_identities as _engine_assign_identities,
-    ensure_can_start_game as _engine_ensure_can_start_game,
-    setup_game as _engine_setup_game,
-)
-from .engine_phase_helpers import (
-    phase_discard as _engine_phase_discard,
-    phase_draw as _engine_phase_draw,
-    phase_end as _engine_phase_end,
-    phase_judge as _engine_phase_judge,
-    phase_play as _engine_phase_play,
-    phase_prepare as _engine_phase_prepare,
-)
-from .engine_turn_helpers import next_turn as _engine_next_turn
 
 
 @dataclass(slots=True)
@@ -238,7 +256,9 @@ class GameEngine:
             cards = self.deck.draw(4)
             player.draw_cards(cards)
             self.notify_cards_obtained(player, cards, reason="initial_draw")
-            self.log_event("draw_cards", _t("game.draw_cards", player=player.name, count=len(cards)))
+            self.log_event(
+                "draw_cards", _t("game.draw_cards", player=player.name, count=len(cards))
+            )
 
     def _begin_started_game(self) -> None:
         """进入已开始状态并发布统一的开局生命周期事件."""
@@ -482,10 +502,17 @@ class GameEngine:
 
     def count_alive_kingdoms(self) -> int:
         """获取当前存活角色的势力数."""
-        return len({player.hero.kingdom.value for player in self.get_alive_players() if player.hero})
+        return len(
+            {player.hero.kingdom.value for player in self.get_alive_players() if player.hero}
+        )
 
     def record_card_usage(
-        self, player: Player, card: Card, targets: list[Player] | None = None, *, is_virtual: bool = False
+        self,
+        player: Player,
+        card: Card,
+        targets: list[Player] | None = None,
+        *,
+        is_virtual: bool = False,
     ) -> None:
         """记录回合内的用牌统计，供复杂技能条件判定使用."""
         used_types = set(player.get_turn_flag("used_card_types", set()))
