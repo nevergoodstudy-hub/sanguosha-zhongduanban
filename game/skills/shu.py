@@ -267,7 +267,9 @@ def handle_qingyuan(
     marked_ids = set(state.get("marked_player_ids", set()))
 
     if mode in {"mark", "mark_after_damage"}:
-        candidates = [other for other in engine.get_other_players(player) if other.id not in marked_ids]
+        candidates = [
+            other for other in engine.get_other_players(player) if other.id not in marked_ids
+        ]
         if target in candidates:
             chosen_target = target
         elif candidates:
@@ -279,7 +281,9 @@ def handle_qingyuan(
         state["marked_player_ids"] = marked_ids
         if mode == "mark_after_damage":
             state["first_damage_marked"] = True
-        engine.log_event("skill", f"{player.name}发动【轻缘】，令{chosen_target.name}获得“轻缘”标记")
+        engine.log_event(
+            "skill", f"{player.name}发动【轻缘】，令{chosen_target.name}获得“轻缘”标记"
+        )
         return True
 
     if mode != "trigger_obtain":
@@ -371,14 +375,18 @@ def handle_xuanhuo(
 
         friends = [other for other in get_friends(player, engine) if other.is_alive]
         enemies = [
-            other for other in engine.get_other_players(player) if other.is_alive and is_enemy(player, other)
+            other
+            for other in engine.get_other_players(player)
+            if other.is_alive and is_enemy(player, other)
         ]
 
         sha_options = []
         for friend in friends:
             sha_cards = friend.get_cards_by_name(CardName.SHA)
             targets_in_range = [
-                enemy for enemy in enemies if enemy != friend and engine.is_in_attack_range(friend, enemy)
+                enemy
+                for enemy in enemies
+                if enemy != friend and engine.is_in_attack_range(friend, enemy)
             ]
             if sha_cards and targets_in_range:
                 sha_options.append((friend, sha_cards[0], targets_in_range))
@@ -397,7 +405,9 @@ def handle_xuanhuo(
                 return False
 
             receiver = max(receiver_candidates, key=lambda target: (target.hand_count, target.hp))
-            forced_candidates = [other for other in engine.get_other_players(player) if other != receiver]
+            forced_candidates = [
+                other for other in engine.get_other_players(player) if other != receiver
+            ]
             if not forced_candidates:
                 return False
             preferred_targets = [other for other in enemies if other != receiver]
@@ -428,7 +438,9 @@ def handle_xuanhuo(
     player.remove_cards(cards)
     engine.notify_cards_lost(player, cards, source=player, to_player=receiver, reason="xuanhuo")
     receiver.draw_cards(cards)
-    engine.notify_cards_obtained(receiver, cards, source=player, from_player=player, reason="xuanhuo")
+    engine.notify_cards_obtained(
+        receiver, cards, source=player, from_player=player, reason="xuanhuo"
+    )
     engine.log_event("skill", f"{player.name}发动【眩惑】，交给{receiver.name}两张牌")
 
     if choice == "sha":
@@ -575,6 +587,7 @@ def handle_guying(
 ) -> bool:
     """固营：其他角色回合内失一牌后索回或换牌，并在下个准备阶段弃牌."""
     from ..card import CardType
+
     state = player.get_skill_state("guying")
 
     if mode == "prepare_discard":
@@ -668,14 +681,18 @@ def handle_muzhen(
         player.remove_cards(cards)
         engine.notify_cards_lost(player, cards, source=player, to_player=target, reason="muzhen")
         target.draw_cards(cards)
-        engine.notify_cards_obtained(target, cards, source=player, from_player=player, reason="muzhen")
+        engine.notify_cards_obtained(
+            target, cards, source=player, from_player=player, reason="muzhen"
+        )
 
         target_equipment = target.equipment.get_all_cards()
         if not target_equipment:
             return False
         if equip_card not in target_equipment:
             equip_card = target_equipment[0]
-        engine.equipment_sys.remove(target, equip_card, source=player, to_player=player, reason="muzhen")
+        engine.equipment_sys.remove(
+            target, equip_card, source=player, to_player=player, reason="muzhen"
+        )
         player.draw_cards([equip_card])
         engine.notify_cards_obtained(
             player,
@@ -691,7 +708,9 @@ def handle_muzhen(
     if option != 2 or state.get("option_two_used", False) or not cards:
         return False
 
-    equipment_cards = [card for card in cards if card.card_type == CardType.EQUIPMENT and card in player.hand]
+    equipment_cards = [
+        card for card in cards if card.card_type == CardType.EQUIPMENT and card in player.hand
+    ]
     if not equipment_cards or target.hand_count <= 0:
         return False
     equipment_card = equipment_cards[0]
@@ -725,7 +744,9 @@ def handle_muzhen(
     if stolen_card not in target.hand:
         stolen_card = target.hand[0]
     target.remove_card(stolen_card)
-    engine.notify_cards_lost(target, [stolen_card], source=player, to_player=player, reason="muzhen")
+    engine.notify_cards_lost(
+        target, [stolen_card], source=player, to_player=player, reason="muzhen"
+    )
     player.draw_cards([stolen_card])
     engine.notify_cards_obtained(
         player,
@@ -735,7 +756,9 @@ def handle_muzhen(
         reason="muzhen",
     )
     state["option_two_used"] = True
-    engine.log_event("skill", f"{player.name}发动【睦阵】第二项，将装备置入{target.name}装备区并获得其一张手牌")
+    engine.log_event(
+        "skill", f"{player.name}发动【睦阵】第二项，将装备置入{target.name}装备区并获得其一张手牌"
+    )
     return True
 
 

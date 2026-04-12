@@ -19,6 +19,8 @@ import sys
 import warnings
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from logging_config import setup_logging
 from versioning import get_project_version
 
@@ -71,7 +73,11 @@ def normalize_connect_url(connect: str) -> str:
     netloc_no_auth = parsed.netloc.rsplit("@", 1)[-1]
     if netloc_no_auth.startswith("["):
         right_bracket = netloc_no_auth.find("]")
-        port_str = netloc_no_auth[right_bracket + 2 :] if right_bracket != -1 and netloc_no_auth[right_bracket + 1 : right_bracket + 2] == ":" else ""
+        port_str = (
+            netloc_no_auth[right_bracket + 2 :]
+            if right_bracket != -1 and netloc_no_auth[right_bracket + 1 : right_bracket + 2] == ":"
+            else ""
+        )
     else:
         port_str = netloc_no_auth.rsplit(":", 1)[1] if ":" in netloc_no_auth else ""
 
@@ -210,6 +216,7 @@ def main():
 
         from game.config import get_config
         from net.server import GameServer
+        from net.settings import ServerSettings
 
         cfg = get_config()
         config_errors = cfg.validate()
@@ -227,20 +234,14 @@ def main():
         host, _, port = args.server.partition(":")
         host = host or "127.0.0.1"
         port = int(port) if port else 8765
-        server = GameServer(
-            host=host,
-            port=port,
-            rate_limit_window=cfg.ws_rate_limit_window,
-            rate_limit_max_msgs=cfg.ws_rate_limit_max_msgs,
-            max_connections=cfg.ws_max_connections,
-            max_connections_per_ip=cfg.ws_max_connections_per_ip,
-            max_message_size=cfg.ws_max_message_size,
-            heartbeat_timeout=cfg.ws_heartbeat_timeout,
-            allowed_origins=cfg.ws_allowed_origins,
-            allow_localhost_dev=cfg.ws_dev_allow_localhost,
-            ssl_cert=cfg.ws_ssl_cert,
-            ssl_key=cfg.ws_ssl_key,
-        )
+        try:
+            settings = ServerSettings.from_config(cfg, host=host, port=port)
+        except ValidationError as exc:
+            print("[ERROR] 配置校验失败:")
+            print(exc)
+            sys.exit(2)
+
+        server = GameServer(settings=settings)
         asyncio.run(server.start())
         return
 
@@ -248,7 +249,9 @@ def main():
     if args.connect is not None:
         import asyncio
 
+        from game.config import get_config
         from net.client import cli_client_main
+        from net.settings import ClientSettings
 
         try:
             url = normalize_connect_url(args.connect)
@@ -257,7 +260,15 @@ def main():
             sys.exit(2)
 
         name = args.name or "玩家"
-        asyncio.run(cli_client_main(url, name))
+        cfg = get_config()
+        try:
+            settings = ClientSettings.from_config(cfg, server_url=url)
+        except ValidationError as exc:
+            print("[ERROR] 配置校验失败:")
+            print(exc)
+            sys.exit(2)
+
+        asyncio.run(cli_client_main(url, name, settings=settings))
         return
 
     # 回放模式

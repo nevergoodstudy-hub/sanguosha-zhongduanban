@@ -54,10 +54,14 @@ def test_setup_headless_game_initializes_skill_system():
 def test_ai_xuanhuo_triggers_at_draw_phase_end_without_manual_targets():
     engine = create_engine_with_ai(["jiefazheng", "liubei", "caocao"], AIDifficulty.NORMAL)
     player, receiver, other_enemy = engine.players[:3]
-    give_one = make_card("ai_xuanhuo_give_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL)
+    give_one = make_card(
+        "ai_xuanhuo_give_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL
+    )
     give_two = make_card("ai_xuanhuo_give_2", name=CardName.SHAN, subtype=CardSubtype.DODGE)
     take_one = make_card("ai_xuanhuo_take_1", name=CardName.SHA, subtype=CardSubtype.ATTACK)
-    take_two = make_card("ai_xuanhuo_take_2", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL)
+    take_two = make_card(
+        "ai_xuanhuo_take_2", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL
+    )
     blocker = make_card("ai_xuanhuo_blocker", name=CardName.SHAN, subtype=CardSubtype.DODGE)
 
     player.hand = [give_one, give_two]
@@ -76,7 +80,9 @@ def test_ai_xuanhuo_triggers_at_draw_phase_end_without_manual_targets():
 def test_normal_ai_uses_muzhen_when_target_has_equipment():
     engine = create_engine_with_ai(["xiangchong", "liubei"], AIDifficulty.NORMAL)
     player, target = engine.players[:2]
-    gift_one = make_card("ai_muzhen_gift_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL)
+    gift_one = make_card(
+        "ai_muzhen_gift_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL
+    )
     gift_two = make_card("ai_muzhen_gift_2", name=CardName.SHAN, subtype=CardSubtype.DODGE)
     target_weapon = make_card(
         "ai_muzhen_weapon",

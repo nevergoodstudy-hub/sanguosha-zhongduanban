@@ -18,6 +18,26 @@ PROJECT_ROOT = Path(__file__).parent.resolve()
 SEP = ";" if sys.platform == "win32" else ":"
 
 
+def executable_suffix(*, platform: str | None = None) -> str:
+    """Return the executable suffix for one-file builds on the target platform."""
+    platform_name = (platform or sys.platform).lower()
+    return ".exe" if platform_name.startswith("win") else ""
+
+
+def expected_output_path(
+    name: str,
+    *,
+    onedir: bool = False,
+    project_root: Path = PROJECT_ROOT,
+    platform: str | None = None,
+) -> Path:
+    """Return the expected dist path produced by the current build mode."""
+    dist_dir = project_root / "dist"
+    if onedir:
+        return dist_dir / name
+    return dist_dir / f"{name}{executable_suffix(platform=platform)}"
+
+
 def build(*, onedir: bool = False, debug: bool = False, name: str = "sanguosha") -> int:
     # 清理
     for d in ("dist", "build"):
@@ -89,6 +109,11 @@ def build(*, onedir: bool = False, debug: bool = False, name: str = "sanguosha")
             elif item.is_dir():
                 total = sum(f.stat().st_size for f in item.rglob("*") if f.is_file())
                 print(f"  Output: {item.name}/ ({total / (1024 * 1024):.1f} MB)")
+
+    expected_output = expected_output_path(name, onedir=onedir, project_root=PROJECT_ROOT)
+    if result.returncode == 0 and not expected_output.exists():
+        print(f"ERROR: Expected build output not found: {expected_output}")
+        return 1
 
     return result.returncode
 

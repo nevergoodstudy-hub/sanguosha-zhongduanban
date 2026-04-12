@@ -193,7 +193,9 @@ class SkillSystem:
         if not self.can_use_skill(skill_id, player):
             return False
 
-        result = self.trigger_skill(skill_id, player, self.engine, targets=targets, cards=cards, **kwargs)
+        result = self.trigger_skill(
+            skill_id, player, self.engine, targets=targets, cards=cards, **kwargs
+        )
 
         if result:
             # 记录使用次数
@@ -230,6 +232,7 @@ class SkillSystem:
         而非由引擎在代码中内联调用。
         """
         from .events import EventType
+
         event_bus.subscribe(EventType.GAME_START, self._on_game_start)
         event_bus.subscribe(EventType.TURN_START, self._on_turn_start)
         event_bus.subscribe(EventType.TURN_END, self._on_turn_end)
@@ -510,16 +513,14 @@ SKILL_DESCRIPTIONS = {
     "jijiang": {
         "name": "激将",
         "description": (
-            "主公技。当你需要使用或打出【杀】时，"
-            "你可以令其他蜀势力角色选择是否打出一张【杀】。"
+            "主公技。当你需要使用或打出【杀】时，你可以令其他蜀势力角色选择是否打出一张【杀】。"
         ),
     },
     "jianxiong": {"name": "奸雄", "description": "当你受到伤害后，你可以获得造成伤害的牌。"},
     "hujia": {
         "name": "护驾",
         "description": (
-            "主公技。当你需要使用或打出【闪】时，"
-            "你可以令其他魏势力角色选择是否打出一张【闪】。"
+            "主公技。当你需要使用或打出【闪】时，你可以令其他魏势力角色选择是否打出一张【闪】。"
         ),
     },
     "zhiheng": {

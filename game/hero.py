@@ -53,7 +53,6 @@ class SkillType(Enum):
     TRANSFORM = "transform"  # 转化技能
 
 
-
 @dataclass
 class Skill:
     """技能类.

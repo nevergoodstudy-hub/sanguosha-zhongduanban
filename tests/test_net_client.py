@@ -8,6 +8,7 @@ import pytest
 
 from net.client import GameClient
 from net.protocol import ClientMsg, MsgType, ServerMsg
+from net.settings import ClientSettings
 
 
 class TestGameClientInit:
@@ -22,6 +23,23 @@ class TestGameClientInit:
     def test_custom_url(self):
         client = GameClient("ws://192.168.1.1:9999")
         assert client.server_url == "ws://192.168.1.1:9999"
+
+    def test_settings_override_defaults(self):
+        settings = ClientSettings(
+            server_url="wss://game.example.com/socket",
+            auto_reconnect=False,
+            reconnect_delay=5.5,
+            max_reconnect_attempts=9,
+            heartbeat_interval=22.0,
+        )
+
+        client = GameClient(settings=settings)
+
+        assert client.server_url == "wss://game.example.com/socket"
+        assert client.auto_reconnect is False
+        assert client.reconnect_delay == 5.5
+        assert client.max_reconnect_attempts == 9
+        assert client._heartbeat_interval == 22.0
 
 
 class TestGameClientHandlers:

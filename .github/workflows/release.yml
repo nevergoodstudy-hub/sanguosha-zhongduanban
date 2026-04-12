@@ -1,23 +1,26 @@
-# 多平台构建 + 自动 Release 工作流
-# 触发条件: push 语义化版本 tag（vX.Y.Z）或手动触发
-# 构建: Windows (.exe) + macOS (binary) + Linux (binary)
-# 发布: 自动创建 GitHub Release 并上传三平台产物
-
 name: Release
 
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
 
-permissions:
-  contents: write
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DEFAULT_PYTHON_VERSION: "3.14"
+
+permissions: {}
 
 jobs:
   build:
-    name: Build - ${{ matrix.platform.name }}
+    name: Build ${{ matrix.platform.name }}
     runs-on: ${{ matrix.platform.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -25,87 +28,106 @@ jobs:
           - name: Windows
             os: windows-latest
             build_name: sanguosha-windows-amd64
-            artifact: sanguosha-windows-amd64.exe
+            asset_name: sanguosha-windows-amd64.zip
           - name: Linux
             os: ubuntu-latest
             build_name: sanguosha-linux-amd64
-            artifact: sanguosha-linux-amd64
+            asset_name: sanguosha-linux-amd64.tar.gz
           - name: macOS
             os: macos-latest
             build_name: sanguosha-macos-amd64
-            artifact: sanguosha-macos-amd64
+            asset_name: sanguosha-macos-amd64.tar.gz
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Setup Python 3.14
-        uses: actions/setup-python@v6
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
-          python-version: '3.14'
-          cache: 'pip'
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+          cache: pip
 
-      - name: Install dependencies
+      - name: Install build dependencies from project metadata
         run: |
-          pip install rich textual websockets pyinstaller
+          python -m pip install --upgrade pip
+          python -m pip install ".[build]"
 
-      - name: Build with PyInstaller
+      - name: Build executable
+        run: python build.py --name ${{ matrix.platform.build_name }}
+
+      - name: Verify expected output
+        run: >
+          python -c "from build import expected_output_path; path = expected_output_path('${{ matrix.platform.build_name }}'); print(path); raise SystemExit(0 if path.exists() else 1)"
+
+      - name: Package Windows asset
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          python build.py --name ${{ matrix.platform.build_name }}
+          New-Item -ItemType Directory -Force -Path release-assets | Out-Null
+          Compress-Archive -Path "dist/${{ matrix.platform.build_name }}.exe" -DestinationPath "release-assets/${{ matrix.platform.asset_name }}" -Force
 
-      - name: Verify build output
+      - name: Package POSIX asset
+        if: runner.os != 'Windows'
         shell: bash
         run: |
-          echo "=== dist/ contents ==="
-          ls -la dist/
-          echo "=== Build OK ==="
+          mkdir -p release-assets
+          tar -C dist -czf "release-assets/${{ matrix.platform.asset_name }}" "${{ matrix.platform.build_name }}"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload packaged asset
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: ${{ matrix.platform.artifact }}
-          path: dist/${{ matrix.platform.build_name }}*
+          name: ${{ matrix.platform.asset_name }}
+          path: release-assets/${{ matrix.platform.asset_name }}
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
 
   release:
-    name: Create GitHub Release
-    needs: build
+    name: Publish GitHub Release
+    needs:
+      - build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - name: Download packaged assets
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          path: release-assets/
+          pattern: "*"
+          path: release-assets
+          merge-multiple: true
 
-      - name: List release assets
+      - name: Show release assets
+        run: ls -lah release-assets
+
+      - name: Write release body
         run: |
-          echo "=== Release assets ==="
-          find release-assets/ -type f
-          echo "===================="
+          cat > release-body.md <<'EOF'
+          ## Sanguosha CLI ${{ github.ref_name }}
 
-      - name: Create Release & Upload Assets
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Sanguosha CLI ${{ github.ref_name }}
-          body: |
-            ## Sanguosha CLI ${{ github.ref_name }}
+          ### Downloads
+          - Windows (x64): `sanguosha-windows-amd64.zip`
+          - Linux (x64): `sanguosha-linux-amd64.tar.gz`
+          - macOS (x64): `sanguosha-macos-amd64.tar.gz`
 
-            ### Downloads
-            | Platform | File |
-            |---|---|
-            | Windows (x64) | `sanguosha-windows-amd64.exe` |
-            | Linux (x64) | `sanguosha-linux-amd64` |
-            | macOS (x64) | `sanguosha-macos-amd64` |
+          ### Notes
+          - Linux and macOS archives preserve executable permissions inside the tarball.
+          - Windows ships as a zip archive containing the PyInstaller output.
+          - Build target uses Python 3.14 and PyInstaller.
+          EOF
 
-            ### Quick Start
-            - Windows: double-click `.exe`
-            - Linux/macOS: `chmod +x sanguosha-*-amd64 && ./sanguosha-*-amd64`
+      - name: Create release if it does not exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${{ github.ref_name }}" >/dev/null 2>&1 || \
+          gh release create "${{ github.ref_name }}" \
+            --title "Sanguosha CLI ${{ github.ref_name }}" \
+            --notes-file release-body.md
 
-            ### Build Info
-            - Python 3.14 + PyInstaller 6.18
-            - Textual TUI cross-platform interface
-            - See generated Release Notes and `CHANGELOG.md` for details
-          files: |
-            release-assets/**/*
-          fail_on_unmatched_files: false
-          generate_release_notes: true
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" release-assets/* --clobber

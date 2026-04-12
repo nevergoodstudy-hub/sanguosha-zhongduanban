@@ -1,213 +1,178 @@
-# 三国杀命令行版 (Sanguosha Terminal) - 项目改进报告
+# Deep Refactor Progress Report
 
-## 项目概述
+This document summarizes the branch-level refactor work on
+`codex/deep-refactor`. It replaces the older report that described the project
+ as a mostly monolithic CLI build with a partially outdated multiplayer and
+packaging story.
 
-**项目名称**: 三国杀命令行版 (Sanguosha Terminal)  
-**版本**: 4.0.0  
-**类型**: Python 卡牌游戏  
-**支持平台**: Windows, macOS, Linux
+## Refactor Scope
 
-### 主要功能
+The current branch is focused on four major areas:
 
-- 🎮 经典三国杀卡牌游戏（2-8人身份局）
-- ⚔️ 20+ 武将角色
-- 🃏 完整的卡牌系统（标准包 + 军争包）
-- 🤖 3级AI难度（简单/普通/困难）
-- 🎨 现代化TUI界面（Rich + Textual）
-- 🌐 网络对战支持（WebSocket）
+1. Runtime, controller, and network architecture cleanup
+2. Build and release pipeline hardening
+3. MSIX packaging alignment with the PyInstaller build flow
+4. Documentation refresh so contributors see the current system, not the
+   pre-refactor layout
 
----
+## Major Improvements Landed
 
-## 已完成的改进
+### 1. Local runtime orchestration is now split by concern
 
-### 1. 测试修复 (P2-6)
+The local game controller is no longer carrying long inline implementations for
+session startup, turn flow, and play-phase prompts.
 
-**问题**: 测试文件中使用相对路径导致在不同工作目录下运行时找不到数据文件
+- `game.game_controller.GameController` is now a thin facade over runtime
+  coordinators
+- `game.runtime.session.SessionCoordinator` owns session lifecycle and game-over
+  handling
+- `game.runtime.turns.TurnCoordinator` owns phase and turn sequencing
+- `game.runtime.play_phase.PlayPhaseCoordinator` owns play-phase interaction
+  branches and async prompt logging
+- `game.runtime.startup.StartupCoordinator` owns hero selection and AI bot
+  startup
 
-**解决方案**: 
-- 使用 `Path(__file__).parent` 获取正确的项目根目录
-- 所有测试文件使用绝对路径引用数据文件
+This removes the old unreachable legacy fallback tail from
+`game/game_controller.py` and keeps controller seams small enough for targeted
+tests and monkeypatch-based coverage.
 
-```python
-# 修复前
-deck = Deck("data/cards.json")  # 相对路径，运行时找不到
+### 2. Multiplayer responsibilities are now split by concern
 
-# 修复后
-_TEST_DIR = Path(__file__).parent
-_PROJECT_ROOT = _TEST_DIR.parent
-_DATA_PATH = _PROJECT_ROOT / "data" / "cards.json"
-deck = Deck(str(_DATA_PATH))  # 绝对路径
-```
+The multiplayer stack is no longer described or implemented as a single
+"session" blob.
 
-**状态**: ✅ 已修复 - 1529个测试全部通过
+- `net.client.py` is the high-level multiplayer client facade
+- `net.client_session.py` owns transport lifecycle, reconnect, heartbeat, and
+  receive loops
+- `net.server.py` owns room-level runtime and WebSocket server orchestration
+- `net.server_dispatcher.py` owns decoded message routing and room/action
+  commands
+- `net.server_session.py` owns reconnect replay and room cleanup behavior
+- `net.settings.py` validates startup configuration with Pydantic models before
+  runtime
 
----
+This split reduces coupling between transport, request routing, and game-room
+state transitions.
 
-### 2. 安全漏洞修复 (P0-3)
+### 3. Build outputs are now name-aware
 
-**问题**: Origin 验证在白名单为空时返回 True（CWE-1385）
+The desktop build flow is centered on `build.py`.
 
-**解决方案**: 
-- 修改为 FAIL-CLOSED 模式：未配置白名单时拒绝所有连接
+- `python build.py --name <value>` controls the produced artifact name
+- `build.expected_output_path(...)` is the authoritative way to resolve output
+  paths
+- CI and release workflows now package named outputs instead of assuming a
+  single hard-coded executable path
 
-```python
-# 修复前
-if not self._allowed:
-    return True  # 危险！允许所有连接
+This makes local builds, CI builds, and release assets follow the same naming
+model.
 
-# 修复后
-if not self._allowed:
-    return False  # 安全！未配置时拒绝所有
-```
+### 4. Release automation is tag-driven and cross-platform
 
-**状态**: ✅ 已修复
+Release automation now builds and publishes platform artifacts through GitHub
+Actions.
 
----
+- CI installs the project from `pyproject.toml`
+- Release artifacts are created from tag pushes matching `v*.*.*`
+- Windows assets are shipped as `.zip`
+- Linux and macOS assets are shipped as `.tar.gz` so executable permissions are
+  preserved
 
-### 3. P0问题分析
+### 5. MSIX packaging now follows the selected build output
 
-| 问题 | 状态 | 说明 |
-|------|------|------|
-| P0-1: time.sleep() 阻塞 | ✅ 已解决 | 项目使用 asyncio，未发现同步 time.sleep() |
-| P0-2: 技能对人不可用 | ✅ 已验证 | 代码已正确处理人类玩家技能请求 |
-| P0-3: Origin 验证漏洞 | ✅ 已修复 | FAIL-CLOSED 模式已实现 |
-| P0-4: God Object | ⚠️ 长期改进 | 架构问题，需要渐进式重构 |
-| P0-5: 阻塞UI调用 | ⚠️ 长期改进 | 已在异步框架中重构 |
+`build_msix.py` was refactored so it no longer assumes a single fixed file like
+`dist/sanguosha.exe`.
 
----
+Current capabilities:
 
-### 4. 打包配置
+- package a build selected by `--exe-name`
+- package an explicit file selected by `--exe-path`
+- support both onefile and onedir PyInstaller outputs
+- rename the executable referenced inside the package with
+  `--package-executable`
+- stage from the chosen PyInstaller payload instead of copying unrelated source
+  directories into the package root
 
-**新增文件**:
+### 6. Packaging docs were refreshed
 
-- `AppxManifest.xml` - Microsoft Store 应用清单
-- `build_msix.py` - MSIX 打包脚本
+The packaging docs now describe:
 
-**支持**:
-- ✅ PyInstaller 打包 (.exe)
-- ✅ MSIX 打包 (Microsoft Store)
-- ✅ Windows Store 提交
+- real asset requirements in `Assets/`
+- placeholder assets as a local-validation-only path
+- the current `build.py` -> `build_msix.py` handoff
+- current Microsoft tooling expectations around `makeappx.exe` and signing
 
----
+## Verification Run During This Refactor Slice
 
-## 项目结构
-
-```
-sanguosha_backup_20260121_071454/
-├── game/                 # 游戏核心逻辑
-│   ├── engine.py        # 游戏引擎 (God Object)
-│   ├── combat.py        # 战斗系统
-│   ├── skill.py         # 技能系统
-│   ├── card.py          # 卡牌系统
-│   ├── events.py        # 事件总线
-│   └── ...
-├── ai/                  # AI系统
-│   └── bot.py
-├── ui/                  # UI系统
-│   ├── rich_ui.py       # Rich终端UI
-│   └── textual_ui/      # Textual TUI
-├── net/                 # 网络系统
-│   ├── server.py        # 游戏服务器
-│   ├── client.py        # 客户端
-│   └── security.py      # 安全模块
-├── tests/               # 测试套件 (1529个测试)
-├── data/                # 游戏数据
-│   ├── cards.json       # 卡牌数据
-│   └── heroes.json      # 武将数据
-├── i18n/                # 国际化
-├── build_msix.py        # MSIX打包脚本
-└── AppxManifest.xml     # Store清单
-```
-
----
-
-## 运行测试
+The following targeted checks were run during the controller/runtime, build,
+and network refactor slices:
 
 ```bash
-# 运行所有测试
-cd sanguosha_backup_20260121_071454
-python -m pytest -v
-
-# 运行特定测试
-python -m pytest tests/test_combat.py -v
-
-# 生成覆盖率报告
-python -m pytest --cov=game --cov-report=html
+pytest tests/test_game.py tests/test_game_controller_coverage.py tests/test_request_handler_coverage.py tests/test_phase_fsm.py tests/test_subsystems.py -q
+pytest tests/test_build_script.py tests/test_build_msix.py tests/test_dependency_metadata.py tests/test_versioning.py -q
+pytest tests/test_net_client.py tests/test_net_client_session.py tests/test_net_server.py tests/test_net_server_session.py tests/test_net_server_dispatcher.py tests/test_net_settings.py tests/test_main_connect_cli_integration.py tests/test_main_server_cli_integration.py -q
+ruff check game/game_controller.py tests/test_game_controller_coverage.py
 ```
 
----
+Targeted result:
 
-## 构建发布版本
+- controller/runtime regression slice: passing
+- build/release regression slice: passing
+- network/client/server regression slice: passing
+- targeted controller lint checks: passing
 
-### 方式1: PyInstaller (推荐用于分发)
+Final branch verification was then rerun against the whole repository before
+GitHub publication:
 
 ```bash
-# 安装依赖
-pip install -e .
-
-# 构建exe
-pyinstaller sanguosha.spec
-
-# 输出: dist/sanguosha-v3.5.0-windows.exe
+python -m pytest tests -q --randomly-seed=1318985398
+python -m ruff check .
 ```
 
-### 方式2: MSIX (用于Microsoft Store)
+Final result:
 
-```bash
-# 先构建exe
-pyinstaller sanguosha.spec
+- full test suite: `1694 passed`
+- repository-wide Ruff check: passing
 
-# 然后运行MSIX打包
-python build_msix.py
+The verification coverage now includes:
 
-# 输出: dist/Sanguosha.Terminal.Game_4.0.0.msix
-```
+- controller hero-selection, skill-log, discard, play-card, and game-over async
+  boundaries
+- build-script naming, dependency metadata, versioning, and MSIX packaging
+- client/session reconnect lifecycle and server dispatcher/session behavior
 
----
+## Files Most Directly Affected
 
-## 已知问题与后续改进
+- `build.py`
+- `build_msix.py`
+- `.github/workflows/ci.yml`
+- `.github/workflows/release.yml`
+- `net/client.py`
+- `net/client_session.py`
+- `net/server.py`
+- `net/server_dispatcher.py`
+- `net/server_session.py`
+- `net/settings.py`
+- `ARCHITECTURE.md`
+- `docs/architecture.md`
+- `docs/release-process.md`
 
-### P1 优先级
+## Remaining Follow-Up
 
-- [ ] 服务器端游戏逻辑实现（中继模式需要升级）
-- [ ] 异步 EventBus
-- [ ] FSM 状态转换验证
-- [ ] 玩家重连机制
-- [ ] WSS (TLS) 加密
+This branch has moved the codebase a long way, but there is still follow-up
+work worth doing:
 
-### P2 优先级
+- run the broader build-script and release-path verification set before cutting
+  a release
+- keep README and contributor docs aligned with the branch architecture
+- continue shrinking responsibility inside the core gameplay engine where it is
+  still acting as a large coordinator
+- add end-to-end validation for release packaging and signed MSIX builds on a
+  Windows machine with the required SDK tools installed
 
-- [ ] 技能 DSL 数据驱动
-- [ ] 完善 i18n 多语言
-- [ ] 移除 print() 残留
-- [ ] 补充类型提示
+## Bottom Line
 
-### P3 优先级
-
-- [ ] 存档/回放系统
-- [ ] 观战系统
-- [ ] 比赛历史统计
-- [ ] 插件系统
-
----
-
-## 技术栈
-
-- **Python**: 3.10+
-- **UI**: Rich, Textual
-- **网络**: websockets, asyncio
-- **测试**: pytest, Hypothesis
-- **代码质量**: ruff, mypy
-- **打包**: PyInstaller, MSIX
-
----
-
-## 许可证
-
-MIT License
-
----
-
-## 贡献者
-
-Sanguosha Team
+The project is no longer just a terminal card game with an add-on network mode.
+It now has a clearer multiplayer architecture, a reproducible build/release
+pipeline, and an MSIX packaging flow that matches the actual build artifacts
+being produced.

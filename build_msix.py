@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""MSIX 包构建脚本.
-
-将三国杀游戏打包为 Microsoft Store 可用的 MSIX 格式.
-
-前置要求:
-    - Windows 10/11 SDK
-    - makeappx.exe 在 PATH 中
-"""
+"""Build an MSIX package from the current PyInstaller output."""
 
 from __future__ import annotations
 
@@ -16,13 +9,18 @@ import subprocess
 import sys
 from pathlib import Path
 
+import build as pyinstaller_build
 from versioning import read_declared_version
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 DIST_DIR = PROJECT_ROOT / "dist"
 ASSETS_DIR = PROJECT_ROOT / "Assets"
 MSIX_DIR = PROJECT_ROOT / "msix_output"
+
+DEFAULT_EXE_NAME = "sanguosha"
+DEFAULT_PACKAGE_EXECUTABLE = "sanguosha.exe"
 DEFAULT_CERT_PASSWORD_ENV = "SANGUOSHA_MSIX_CERT_PASSWORD"
+
 REQUIRED_ASSET_FILES = (
     "StoreLogo.png",
     "Square44x44Logo.png",
@@ -30,6 +28,7 @@ REQUIRED_ASSET_FILES = (
     "Wide310x150Logo.png",
     "SplashScreen.png",
 )
+
 PLACEHOLDER_ASSET_SIZES = {
     "StoreLogo.png": 50,
     "Square44x44Logo.png": 44,
@@ -37,6 +36,7 @@ PLACEHOLDER_ASSET_SIZES = {
     "Wide310x150Logo.png": 310,
     "SplashScreen.png": 620,
 }
+
 PLACEHOLDER_PNG = (
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00"
     b"\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f"
@@ -47,53 +47,73 @@ PLACEHOLDER_PNG = (
 
 
 def find_makeappx() -> Path | None:
-    """查找 Windows SDK 中的 makeappx.exe."""
-    # 常见SDK路径
+    """Find makeappx.exe from common Windows SDK locations or PATH."""
     sdk_paths = [
         r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\makeappx.exe",
         r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.22000.0\x64\makeappx.exe",
         r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx.exe",
         r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64\makeappx.exe",
-        # VS集成的NuGet包
-        r"C:\Program Files (x86)\Microsoft Visual Studio\Shared\NuGetPackages\microsoft.windows.sdk.buildtools\10.0.26100.1742\bin\x64\makeappx.exe",
+        (
+            r"C:\Program Files (x86)\Microsoft Visual Studio\Shared\NuGetPackages"
+            r"\microsoft.windows.sdk.buildtools\10.0.26100.1742\bin\x64\makeappx.exe"
+        ),
     ]
-    for path in sdk_paths:
-        if Path(path).exists():
-            return Path(path)
+    for raw_path in sdk_paths:
+        candidate = Path(raw_path)
+        if candidate.exists():
+            return candidate
 
-    # 尝试从 PATH 查找
     try:
-        result = subprocess.run(
-            ["where", "makeappx"],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            return Path(result.stdout.strip().split("\n")[0])
-    except Exception:
-        pass
+        result = subprocess.run(["where", "makeappx"], capture_output=True, text=True)
+    except OSError:
+        result = None
 
-    # 尝试搜索Windows Kits目录
-    kits_base = r"C:\Program Files (x86)\Windows Kits\10\bin"
-    if Path(kits_base).exists():
-        for version_dir in sorted(Path(kits_base).iterdir(), reverse=True):
-            if version_dir.is_dir():
-                makeappx_path = version_dir / "x64" / "makeappx.exe"
-                if makeappx_path.exists():
-                    return makeappx_path
+    if result and result.returncode == 0:
+        first_match = result.stdout.strip().splitlines()[0]
+        return Path(first_match)
+
+    kits_base = Path(r"C:\Program Files (x86)\Windows Kits\10\bin")
+    if kits_base.exists():
+        for version_dir in sorted(kits_base.iterdir(), reverse=True):
+            candidate = version_dir / "x64" / "makeappx.exe"
+            if candidate.exists():
+                return candidate
+
+    return None
+
+
+def find_signtool(makeappx_path: Path | None = None) -> Path | None:
+    """Find signtool.exe near makeappx.exe or from PATH."""
+    search_paths: list[Path] = []
+    if makeappx_path is not None:
+        search_paths.append(makeappx_path.parent / "signtool.exe")
+
+    for candidate in search_paths:
+        if candidate.exists():
+            return candidate
+
+    try:
+        result = subprocess.run(["where", "signtool"], capture_output=True, text=True)
+    except OSError:
+        result = None
+
+    if result and result.returncode == 0:
+        first_match = result.stdout.strip().splitlines()[0]
+        return Path(first_match)
 
     return None
 
 
 def get_missing_assets(assets_dir: Path = ASSETS_DIR) -> list[str]:
-    """返回缺失的必需资源文件名列表."""
+    """Return required asset filenames that are missing from a directory."""
     return [name for name in REQUIRED_ASSET_FILES if not (assets_dir / name).exists()]
 
 
 def is_placeholder_asset(asset_path: Path) -> bool:
-    """检测单个资源文件是否仍为开发占位图标."""
+    """Return True when the asset still matches the generated placeholder PNG."""
     if not asset_path.exists() or not asset_path.is_file():
         return False
+
     try:
         return asset_path.read_bytes() == PLACEHOLDER_PNG
     except OSError:
@@ -101,45 +121,54 @@ def is_placeholder_asset(asset_path: Path) -> bool:
 
 
 def get_placeholder_assets(assets_dir: Path = ASSETS_DIR) -> list[str]:
-    """返回仍为开发占位图标的资源文件名列表."""
+    """Return required assets that still use the development placeholder image."""
     return [name for name in REQUIRED_ASSET_FILES if is_placeholder_asset(assets_dir / name)]
 
 
 def create_assets(assets_dir: Path = ASSETS_DIR) -> None:
-    """创建开发占位资源文件."""
+    """Create placeholder assets for local validation only."""
     assets_dir.mkdir(parents=True, exist_ok=True)
-    for name, size in PLACEHOLDER_ASSET_SIZES.items():
-        path = assets_dir / name
-        if not path.exists():
-            print(f"  注意: 创建开发占位图标 {name} ({size}px)，请勿用于正式发布")
-            path.write_bytes(PLACEHOLDER_PNG)
+    for name in REQUIRED_ASSET_FILES:
+        target = assets_dir / name
+        if target.exists():
+            continue
+
+        size = PLACEHOLDER_ASSET_SIZES[name]
+        print(f"  Note: creating placeholder asset {name} ({size}px).")
+        target.write_bytes(PLACEHOLDER_PNG)
 
 
 def ensure_assets(
-    *, assets_dir: Path = ASSETS_DIR, allow_placeholder_assets: bool = False
+    *,
+    assets_dir: Path = ASSETS_DIR,
+    allow_placeholder_assets: bool = False,
 ) -> bool:
-    """确保目标目录包含构建所需资源."""
+    """Ensure the source asset directory contains all required files."""
     missing_assets = get_missing_assets(assets_dir)
     if not missing_assets:
         return True
 
     if not allow_placeholder_assets:
-        print("错误: 缺少以下 MSIX 资源文件:")
+        print("Error: missing required MSIX asset files:")
         for name in missing_assets:
             print(f"  - {name}")
-        print("请提供真实资源文件，或仅在开发验证时显式传入 --allow-placeholder-assets。")
+        print("Provide real assets, or pass --allow-placeholder-assets for local validation.")
         return False
 
-    print("警告: 正在生成开发占位图标，请勿将其用于正式发布。")
+    print("Warning: generating placeholder MSIX assets for local validation only.")
     create_assets(assets_dir)
     return get_missing_assets(assets_dir) == []
 
 
 def prepare_msix_assets(
-    *, source_dir: Path = ASSETS_DIR, dest_dir: Path, allow_placeholder_assets: bool = False
+    *,
+    source_dir: Path = ASSETS_DIR,
+    dest_dir: Path,
+    allow_placeholder_assets: bool = False,
 ) -> bool:
-    """准备 MSIX 输出目录中的资源文件."""
+    """Copy real assets or explicitly allowed placeholders into the staging directory."""
     dest_dir.mkdir(parents=True, exist_ok=True)
+
     missing_source_assets = get_missing_assets(source_dir)
     placeholder_source_assets = get_placeholder_assets(source_dir)
     if not missing_source_assets and not placeholder_source_assets:
@@ -149,41 +178,44 @@ def prepare_msix_assets(
 
     if not allow_placeholder_assets:
         if missing_source_assets:
-            print("错误: 缺少以下 MSIX 资源文件:")
+            print("Error: missing required MSIX asset files:")
             for name in missing_source_assets:
                 print(f"  - {name}")
         if placeholder_source_assets:
-            print("错误: 以下 MSIX 资源文件仍是开发占位图标:")
+            print("Error: placeholder assets are not allowed for a normal MSIX build:")
             for name in placeholder_source_assets:
                 print(f"  - {name}")
-        print("请在 Assets 目录提供真实资源文件，或仅在开发验证时显式传入 --allow-placeholder-assets。")
+        print("Provide real assets, or pass --allow-placeholder-assets for local validation.")
         return False
-    print("警告: Assets 目录包含缺失或占位资源，正在输出目录中准备开发占位图标。")
+
+    print("Warning: preparing placeholder assets in the MSIX staging directory.")
     for name in REQUIRED_ASSET_FILES:
         src = source_dir / name
         dst = dest_dir / name
         if src.exists():
             shutil.copy2(src, dst)
             if name in placeholder_source_assets:
-                print(f"  注意: 复用开发占位图标 {name}，请勿用于正式发布")
+                print(f"  Note: reusing placeholder asset {name}.")
             continue
-        print(f"  注意: 缺少 {name}，正在输出目录中生成开发占位图标")
+
+        print(f"  Note: creating placeholder asset {name} in the staging directory.")
         dst.write_bytes(PLACEHOLDER_PNG)
 
     return get_missing_assets(dest_dir) == []
 
 
 def resolve_cert_password(
-    cert_password: str, password_env: str = DEFAULT_CERT_PASSWORD_ENV
+    cert_password: str,
+    password_env: str = DEFAULT_CERT_PASSWORD_ENV,
 ) -> str:
-    """解析证书密码，优先显式参数，其次环境变量."""
+    """Resolve the certificate password from an explicit value or an env var."""
     if cert_password:
         return cert_password
     return os.environ.get(password_env, "")
 
 
 def get_msix_identity_version(version: str | None = None) -> str:
-    """将项目版本转换为 MSIX 需要的四段数字版本号."""
+    """Normalize the project version into the four-part MSIX identity format."""
     raw_version = version or read_declared_version()
     core_version = raw_version.split("+", 1)[0].split("-", 1)[0]
     parts: list[str] = []
@@ -200,43 +232,128 @@ def get_msix_identity_version(version: str | None = None) -> str:
     return ".".join(parts[:4])
 
 
-def build_msix(
+def normalize_package_executable_name(
+    name: str = DEFAULT_PACKAGE_EXECUTABLE,
     *,
-    sign: bool = False,
-    cert_path: str = "",
-    cert_password: str = "",
-    cert_password_env: str = DEFAULT_CERT_PASSWORD_ENV,
-    allow_placeholder_assets: bool = False,
-) -> int:
-    """构建 MSIX 包.
+    platform: str | None = None,
+) -> str:
+    """Normalize the executable filename used inside the MSIX package."""
+    raw_name = (name or DEFAULT_PACKAGE_EXECUTABLE).strip()
+    packaged_name = Path(raw_name).name or DEFAULT_PACKAGE_EXECUTABLE
 
-    Args:
-        sign: 是否签名
-        cert_path: 证书路径
-        cert_password: 证书密码
-        cert_password_env: 读取证书密码的环境变量名
-        allow_placeholder_assets: 是否允许生成开发占位图标
+    suffix = pyinstaller_build.executable_suffix(platform=platform)
+    if suffix and not packaged_name.lower().endswith(suffix):
+        packaged_name = f"{packaged_name}{suffix}"
 
-    Returns:
-        0 表示成功
-    """
-    # 清理输出目录
-    if MSIX_DIR.exists():
-        shutil.rmtree(MSIX_DIR)
-    MSIX_DIR.mkdir()
-
-    # 检查可执行文件
-    exe_path = DIST_DIR / "sanguosha.exe"
-    if not exe_path.exists():
-        print("错误: 未找到可执行文件, 请先运行: python build.py")
-        return 1
+    return packaged_name
 
 
-    # 复制文件到 MSIX 目录
-    print("准备 MSIX 内容...")
+def resolve_source_executable(
+    *,
+    exe_path: str = "",
+    exe_name: str = DEFAULT_EXE_NAME,
+    dist_dir: Path = DIST_DIR,
+    project_root: Path = PROJECT_ROOT,
+    platform: str | None = None,
+) -> Path | None:
+    """Resolve the built executable produced by build.py."""
+    if exe_path:
+        explicit_path = Path(exe_path)
+        if not explicit_path.is_absolute():
+            explicit_path = project_root / explicit_path
+        explicit_path = explicit_path.resolve()
+        if explicit_path.exists() and explicit_path.is_file():
+            return explicit_path
+        return None
 
-    # 创建 AppxManifest.xml
-    manifest_content = f"""<?xml version="1.0" encoding="utf-8"?>
+    requested_name = (exe_name or DEFAULT_EXE_NAME).strip()
+    requested_stem = Path(requested_name).stem or DEFAULT_EXE_NAME
+    windows_platform = platform or sys.platform
+    onefile_path = pyinstaller_build.expected_output_path(
+        requested_stem,
+        project_root=project_root,
+        platform=windows_platform,
+    )
+    onedir_dir = pyinstaller_build.expected_output_path(
+        requested_stem,
+        onedir=True,
+        project_root=project_root,
+        platform=windows_platform,
+    )
+    onedir_exe = onedir_dir / normalize_package_executable_name(
+        requested_stem,
+        platform=windows_platform,
+    )
+
+    direct_name = dist_dir / requested_name
+    nested_name = dist_dir / requested_stem / requested_name
+
+    candidates: list[Path] = []
+    for candidate in (onefile_path, onedir_exe, direct_name, nested_name):
+        if candidate not in candidates:
+            candidates.append(candidate)
+
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_file():
+            return candidate.resolve()
+
+    return None
+
+
+def resolve_payload_root(source_executable: Path, *, dist_dir: Path = DIST_DIR) -> Path:
+    """Return the selected PyInstaller payload source for the staged package."""
+    try:
+        relative_path = source_executable.relative_to(dist_dir)
+    except ValueError:
+        return source_executable
+
+    if len(relative_path.parts) == 1:
+        return source_executable
+    return source_executable.parent
+
+
+def copy_path(source: Path, target: Path) -> None:
+    """Copy a file or directory, replacing the target when needed."""
+    if target.exists():
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
+
+    if source.is_dir():
+        shutil.copytree(source, target)
+        return
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, target)
+
+
+def stage_dist_payload(
+    *,
+    source_executable: Path,
+    dest_dir: Path,
+    package_executable: str = DEFAULT_PACKAGE_EXECUTABLE,
+    dist_dir: Path = DIST_DIR,
+) -> Path:
+    """Stage the chosen PyInstaller payload and rename the main executable if needed."""
+    payload_root = resolve_payload_root(source_executable, dist_dir=dist_dir)
+    packaged_executable_name = normalize_package_executable_name(package_executable)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    if payload_root.is_file():
+        copy_path(payload_root, dest_dir / packaged_executable_name)
+        return dest_dir / packaged_executable_name
+
+    for item in payload_root.iterdir():
+        target_name = packaged_executable_name if item.resolve() == source_executable else item.name
+        copy_path(item, dest_dir / target_name)
+
+    return dest_dir / packaged_executable_name
+
+
+def build_manifest(*, package_executable: str) -> str:
+    """Return the AppxManifest.xml content for the staged package."""
+    return f"""<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
          xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
          xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
@@ -250,7 +367,7 @@ def build_msix(
   <Properties>
     <DisplayName>三国杀 Terminal</DisplayName>
     <PublisherDisplayName>Sanguosha Team</PublisherDisplayName>
-    <Description>三国杀命令行终端游戏 - A classic Chinese card game in your terminal</Description>
+    <Description>三国杀命令行终端游戏</Description>
     <Logo>Assets\\StoreLogo.png</Logo>
   </Properties>
 
@@ -260,7 +377,9 @@ def build_msix(
   </Resources>
 
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+    <TargetDeviceFamily Name="Windows.Desktop"
+                        MinVersion="10.0.17763.0"
+                        MaxVersionTested="10.0.22621.0" />
   </Dependencies>
 
   <Capabilities>
@@ -269,7 +388,7 @@ def build_msix(
 
   <Applications>
     <Application Id="App"
-                 Executable="sanguosha.exe"
+                 Executable="{package_executable}"
                  EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements DisplayName="三国杀 Terminal"
                           Description="三国杀命令行终端游戏"
@@ -281,68 +400,94 @@ def build_msix(
       </uap:VisualElements>
     </Application>
   </Applications>
-</Package>"""
+</Package>
+"""
 
-    (MSIX_DIR / "AppxManifest.xml").write_text(manifest_content, encoding="utf-8")
 
-    msix_assets = MSIX_DIR / "Assets"
-    print("检查资源文件...")
+def build_msix(
+    *,
+    sign: bool = False,
+    cert_path: str = "",
+    cert_password: str = "",
+    cert_password_env: str = DEFAULT_CERT_PASSWORD_ENV,
+    allow_placeholder_assets: bool = False,
+    exe_path: str = "",
+    exe_name: str = DEFAULT_EXE_NAME,
+    package_executable: str = DEFAULT_PACKAGE_EXECUTABLE,
+) -> int:
+    """Build an MSIX package from the current dist payload."""
+    packaged_executable_name = normalize_package_executable_name(package_executable)
+    source_executable = resolve_source_executable(exe_path=exe_path, exe_name=exe_name)
+    if source_executable is None:
+        print("Error: built executable not found.")
+        print("Run a fresh PyInstaller build first, for example:")
+        print(f"  python build.py --name {exe_name}")
+        print("Or provide an explicit file via --exe-path.")
+        return 1
+
+    if MSIX_DIR.exists():
+        shutil.rmtree(MSIX_DIR)
+    MSIX_DIR.mkdir(parents=True)
+
+    print("Preparing MSIX staging directory...")
+    manifest_path = MSIX_DIR / "AppxManifest.xml"
+    manifest_path.write_text(
+        build_manifest(package_executable=packaged_executable_name),
+        encoding="utf-8",
+    )
+
+    msix_assets_dir = MSIX_DIR / "Assets"
     if not prepare_msix_assets(
         source_dir=ASSETS_DIR,
-        dest_dir=msix_assets,
+        dest_dir=msix_assets_dir,
         allow_placeholder_assets=allow_placeholder_assets,
     ):
         return 1
 
-    # 复制可执行文件和数据
-    for item in DIST_DIR.glob("*"):
-        if item.is_file():
-            shutil.copy2(item, MSIX_DIR / item.name)
+    packaged_executable_path = stage_dist_payload(
+        source_executable=source_executable,
+        dest_dir=MSIX_DIR,
+        package_executable=packaged_executable_name,
+        dist_dir=DIST_DIR,
+    )
+    if not packaged_executable_path.exists():
+        print(f"Error: staged package executable is missing: {packaged_executable_path}")
+        return 1
 
-    # 复制数据文件夹
-    for data_dir in ["data", "i18n", "ui"]:
-        src = PROJECT_ROOT / data_dir
-        if src.exists():
-            dst = MSIX_DIR / data_dir
-            if dst.exists():
-                shutil.rmtree(dst)
-            shutil.copytree(src, dst)
-
-    # 查找 makeappx
-    makeappx = find_makeappx()
-    if not makeappx:
-        print("警告: 找不到 makeappx.exe, 无法创建 MSIX 包")
-        print("请安装 Windows SDK 并确保 makeappx.exe 在 PATH 中")
-        print(f"MSIX 预备内容已准备在: {MSIX_DIR}")
+    makeappx_path = find_makeappx()
+    if makeappx_path is None:
+        print("Warning: makeappx.exe was not found. The staging directory is ready, but no .msix")
+        print("package was produced.")
+        print(f"Staging directory: {MSIX_DIR}")
         return 0
 
-    # 创建 MSIX
     msix_path = PROJECT_ROOT / "sanguosha.msix"
-    print(f"创建 MSIX 包: {msix_path}")
-
+    print(f"Packing MSIX package: {msix_path}")
     result = subprocess.run(
-        [str(makeappx), "pack", "/d", str(MSIX_DIR), "/p", str(msix_path), "/o"],
+        [str(makeappx_path), "pack", "/d", str(MSIX_DIR), "/p", str(msix_path), "/o"],
         capture_output=True,
-        text=True
+        text=True,
     )
-
     if result.returncode != 0:
-        print("错误: makeappx 失败")
-        print(result.stderr)
+        print("Error: makeappx.exe failed.")
+        if result.stdout.strip():
+            print(result.stdout.strip())
+        if result.stderr.strip():
+            print(result.stderr.strip())
         return 1
 
-    # 签名
-    if sign and not cert_path:
-        print("错误: 启用签名时必须提供 --cert 证书路径")
-        return 1
+    if sign:
+        if not cert_path:
+            print("Error: --sign requires --cert to be provided.")
+            return 1
 
-    if sign and cert_path:
-        signtool = makeappx.parent / "signtool.exe"
-        if signtool.exists():
+        signtool_path = find_signtool(makeappx_path)
+        if signtool_path is None:
+            print("Warning: signtool.exe was not found, so the package was not signed.")
+        else:
             resolved_password = resolve_cert_password(cert_password, cert_password_env)
-            print("签名 MSIX 包...")
             sign_cmd = [
-                str(signtool),
+                str(signtool_path),
                 "sign",
                 "/fd",
                 "SHA256",
@@ -353,51 +498,75 @@ def build_msix(
                 sign_cmd.extend(["/p", resolved_password])
             else:
                 print(
-                    f"提示: 未提供显式证书密码；可通过环境变量 {cert_password_env} 提供，"
-                    "当前将尝试无密码签名。"
+                    "Note: no certificate password was provided. Trying to sign without /p; "
+                    f"set {cert_password_env} if your certificate requires one."
                 )
             sign_cmd.append(str(msix_path))
-            result = subprocess.run(
-                sign_cmd,
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode != 0:
-                print("警告: 签名失败")
-                print(result.stderr)
-        else:
-            print("警告: 找不到 signtool.exe, 跳过签名")
 
-    print(f"\n完成! 输出: {msix_path}")
-    print(f"大小: {msix_path.stat().st_size / (1024*1024):.1f} MB")
+            sign_result = subprocess.run(sign_cmd, capture_output=True, text=True)
+            if sign_result.returncode != 0:
+                print("Warning: signing failed.")
+                if sign_result.stdout.strip():
+                    print(sign_result.stdout.strip())
+                if sign_result.stderr.strip():
+                    print(sign_result.stderr.strip())
 
+    print(f"Done. Output package: {msix_path}")
+    print(f"Main executable inside package: {packaged_executable_name}")
+    print(f"Staged source executable: {source_executable}")
+    print(f"Package size: {msix_path.stat().st_size / (1024 * 1024):.1f} MB")
     return 0
 
 
 if __name__ == "__main__":
     import argparse
 
-    p = argparse.ArgumentParser(description="构建 MSIX 包")
-    p.add_argument("--sign", action="store_true", help="签名 MSIX 包")
-    p.add_argument("--cert", default="", help="证书路径")
-    p.add_argument("--password", default="", help="证书密码（不推荐，优先使用 --password-env）")
-    p.add_argument(
+    parser = argparse.ArgumentParser(
+        description="Build an MSIX package from the current PyInstaller output."
+    )
+    parser.add_argument("--sign", action="store_true", help="Sign the produced MSIX package.")
+    parser.add_argument("--cert", default="", help="Path to the signing certificate (.pfx).")
+    parser.add_argument(
+        "--password",
+        default="",
+        help="Certificate password. Prefer --password-env in normal use.",
+    )
+    parser.add_argument(
         "--password-env",
         default=DEFAULT_CERT_PASSWORD_ENV,
-        help="从环境变量读取证书密码",
+        help="Environment variable that stores the certificate password.",
     )
-    p.add_argument(
+    parser.add_argument(
         "--allow-placeholder-assets",
         action="store_true",
-        help="允许自动生成开发占位图标",
+        help="Allow generated placeholder assets for local validation builds.",
     )
-    a = p.parse_args()
+    parser.add_argument(
+        "--exe-name",
+        default=DEFAULT_EXE_NAME,
+        help="Executable name produced by build.py --name (default: sanguosha).",
+    )
+    parser.add_argument(
+        "--exe-path",
+        default="",
+        help="Explicit path to a built executable. Overrides --exe-name.",
+    )
+    parser.add_argument(
+        "--package-executable",
+        default=DEFAULT_PACKAGE_EXECUTABLE,
+        help="Executable filename referenced inside the MSIX manifest.",
+    )
+    args = parser.parse_args()
+
     sys.exit(
         build_msix(
-            sign=a.sign,
-            cert_path=a.cert,
-            cert_password=a.password,
-            cert_password_env=a.password_env,
-            allow_placeholder_assets=a.allow_placeholder_assets,
+            sign=args.sign,
+            cert_path=args.cert,
+            cert_password=args.password,
+            cert_password_env=args.password_env,
+            allow_placeholder_assets=args.allow_placeholder_assets,
+            exe_name=args.exe_name,
+            exe_path=args.exe_path,
+            package_executable=args.package_executable,
         )
     )

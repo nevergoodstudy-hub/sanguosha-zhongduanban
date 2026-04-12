@@ -3,12 +3,12 @@
 将纯函数与渲染片段从 game_play.py 抽离，降低主屏幕文件复杂度。
 """
 
+# ruff: noqa: D415
 from __future__ import annotations
 
 import logging
 import re
 from typing import Any
-
 
 logger = logging.getLogger(__name__)
 
@@ -201,10 +201,9 @@ def handle_card_play(screen: Any, player: Any, card: Any) -> None:
     if card.card_type == CardType.EQUIPMENT:
         screen._execute_play_card_action(player, card)
     elif card.name == CardName.SHA:
-        if not player.can_use_sha():
-            if not player.has_skill(SkillId.PAOXIAO):
-                screen._post_log("⚠ 本回合已使用过杀")
-                return
+        if not player.can_use_sha() and not player.has_skill(SkillId.PAOXIAO):
+            screen._post_log("⚠ 本回合已使用过杀")
+            return
         targets = engine.get_targets_in_range(player)
         if not targets:
             screen._post_log("⚠ 没有可攻击的目标")
@@ -241,9 +240,7 @@ def handle_card_play(screen: Any, player: Any, card: Any) -> None:
             engine.use_card(player, card, [target])
     elif card.name == CardName.LEBUSISHU:
         others = engine.get_other_players(player)
-        valid = [
-            t for t in others if not any(c.name == CardName.LEBUSISHU for c in t.judge_area)
-        ]
+        valid = [t for t in others if not any(c.name == CardName.LEBUSISHU for c in t.judge_area)]
         if not valid:
             screen._post_log("⚠ 没有有效目标")
             return
@@ -309,7 +306,7 @@ def handle_card_play(screen: Any, player: Any, card: Any) -> None:
         engine.use_card(player, card)
 
 
-def handle_skill_button(screen: Any) -> None:
+def _legacy_handle_skill_button(screen: Any) -> None:  # noqa: D415
     """处理技能按钮行为。"""
     engine = screen.engine
     human = engine.human_player
@@ -321,8 +318,36 @@ def handle_skill_button(screen: Any) -> None:
             screen._log("⚠ 当前无可用技能")
 
 
-def handle_button_pressed(screen: Any, btn_id: str) -> None:
+def _legacy_handle_button_pressed(screen: Any, btn_id: str) -> None:  # noqa: D415
     """处理主界面按钮点击。"""
+    if btn_id.startswith("hcard-"):
+        idx = int(btn_id.split("-")[1])
+        screen._respond(f"card:{idx}")
+    elif btn_id == "btn-end":
+        screen._respond("end")
+    elif btn_id == "btn-play":
+        return
+    elif btn_id == "btn-skill":
+        handle_skill_button(screen)
+    elif btn_id.startswith("target-"):
+        idx = int(btn_id.split("-")[1])
+        screen._respond(f"target:{idx}")
+
+
+def handle_skill_button(screen: Any) -> None:
+    """Handle the skill button behavior."""
+    engine = screen.engine
+    human = engine.human_player
+    if engine.skill_system and human:
+        usable = engine.skill_system.get_usable_skills(human)
+        if usable:
+            screen._respond(f"skill:{usable[0]}")
+        else:
+            screen._log("⚠ 当前无可用技能")
+
+
+def handle_button_pressed(screen: Any, btn_id: str) -> None:
+    """Handle clicks on the main gameplay buttons."""
     if btn_id.startswith("hcard-"):
         idx = int(btn_id.split("-")[1])
         screen._respond(f"card:{idx}")

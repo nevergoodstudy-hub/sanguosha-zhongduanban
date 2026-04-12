@@ -33,6 +33,17 @@ class CombatSystem:
     def __init__(self, ctx: GameContext) -> None:
         self.ctx = ctx
 
+    def _request_skill_conversion_card(
+        self,
+        player: Player,
+        skill_name: str,
+        candidates: list[Card],
+    ) -> Card | None:
+        """通过统一请求边界选择转换技要使用的牌."""
+        if not candidates:
+            return None
+        return self.ctx.request_handler.request_skill_card(player, skill_name, candidates)
+
     # ==================== 杀 ====================
 
     def use_sha(self, player: Player, card: Card, targets: list[Player]) -> bool:
@@ -196,12 +207,7 @@ class CombatSystem:
             if player.has_skill(SkillId.LONGDAN):
                 sha_cards = player.get_cards_by_name(CardName.SHA)
                 if sha_cards:
-                    if player.is_ai:
-                        card = sha_cards[0]
-                    else:
-                        card = ctx.request_handler.request_skill_card(
-                            player, "longdan_as_shan", sha_cards
-                        )
+                    card = self._request_skill_conversion_card(player, "longdan_as_shan", sha_cards)
                     if card:
                         player.remove_card(card)
                         ctx.deck.discard([card])
@@ -216,14 +222,13 @@ class CombatSystem:
             if player.has_skill(SkillId.ZHONGSHEN):
                 zhongshen_state = player.get_skill_state(SkillId.ZHONGSHEN)
                 obtained_ids = set(zhongshen_state.get("round_red_card_ids", set()))
-                red_cards = [card for card in player.hand if card.is_red and card.id in obtained_ids]
+                red_cards = [
+                    card for card in player.hand if card.is_red and card.id in obtained_ids
+                ]
                 if red_cards:
-                    if player.is_ai:
-                        card = red_cards[0]
-                    else:
-                        card = ctx.request_handler.request_skill_card(
-                            player, "zhongshen_as_shan", red_cards
-                        )
+                    card = self._request_skill_conversion_card(
+                        player, "zhongshen_as_shan", red_cards
+                    )
                     if card:
                         player.remove_card(card)
                         ctx.deck.discard([card])
@@ -256,12 +261,7 @@ class CombatSystem:
             if player.has_skill(SkillId.WUSHENG):
                 red_cards = player.get_red_cards()
                 if red_cards:
-                    if player.is_ai:
-                        card = red_cards[0]
-                    else:
-                        card = ctx.request_handler.request_skill_card(
-                            player, "wusheng_as_sha", red_cards
-                        )
+                    card = self._request_skill_conversion_card(player, "wusheng_as_sha", red_cards)
                     if card:
                         player.remove_card(card)
                         ctx.deck.discard([card])
@@ -276,12 +276,7 @@ class CombatSystem:
             if player.has_skill(SkillId.LONGDAN):
                 shan_cards = player.get_cards_by_name(CardName.SHAN)
                 if shan_cards:
-                    if player.is_ai:
-                        card = shan_cards[0]
-                    else:
-                        card = ctx.request_handler.request_skill_card(
-                            player, "longdan_as_sha", shan_cards
-                        )
+                    card = self._request_skill_conversion_card(player, "longdan_as_sha", shan_cards)
                     if card:
                         player.remove_card(card)
                         ctx.deck.discard([card])

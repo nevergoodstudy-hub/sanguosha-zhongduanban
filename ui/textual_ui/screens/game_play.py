@@ -499,7 +499,9 @@ class GamePlayScreen(Screen):
             auto_discard = list(player.hand[-player.need_discard :])
             self._execute_discard_action(player, auto_discard)
 
-    def _execute_play_card_action(self, player: Player, card, targets: list[Player] | None = None) -> bool:
+    def _execute_play_card_action(
+        self, player: Player, card, targets: list[Player] | None = None
+    ) -> bool:
         from game.actions import PlayCardAction
 
         if targets is None:
@@ -568,6 +570,7 @@ class GamePlayScreen(Screen):
     def _wait_for_target(self, player, targets, prompt: str) -> Player | None:
         """等待目标选择（worker 线程阻塞，通过 call_from_thread 调度 UI modal）."""
         from ui.textual_ui.modals.target_modal import TargetSelectModal
+
         idx = self._run_modal_and_wait(
             lambda: TargetSelectModal(targets=targets, prompt=prompt),
             timeout=65.0,
@@ -584,6 +587,7 @@ class GamePlayScreen(Screen):
     ) -> list[Player] | None:
         """等待多目标选择（worker 线程阻塞）。返回 Player 列表或 None(取消)."""
         from ui.textual_ui.modals.multi_target_modal import MultiTargetModal
+
         indices = self._run_modal_and_wait(
             lambda: MultiTargetModal(
                 targets=targets, prompt=prompt, min_count=min_count, max_count=max_count

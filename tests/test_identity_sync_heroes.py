@@ -58,12 +58,16 @@ def test_jinming_resolve_supports_success_and_failure_paths():
     player = engine.players[0]
     player.hand.clear()
     engine.deck.draw_pile = [
-        make_card(f"jinming_draw_{index}", name=CardName.TAO, subtype=CardSubtype.HEAL, number=index + 1)
+        make_card(
+            f"jinming_draw_{index}", name=CardName.TAO, subtype=CardSubtype.HEAL, number=index + 1
+        )
         for index in range(5)
     ]
 
     state = player.get_skill_state(SkillId.JINMING)
-    assert engine.skill_system.trigger_skill(SkillId.JINMING, player, engine, mode="choose", option=1)
+    assert engine.skill_system.trigger_skill(
+        SkillId.JINMING, player, engine, mode="choose", option=1
+    )
     player.set_turn_flag("recovered_hp_amount", 1)
     hp_before_success = player.hp
     assert engine.skill_system.trigger_skill(SkillId.JINMING, player, engine, mode="resolve")
@@ -71,7 +75,9 @@ def test_jinming_resolve_supports_success_and_failure_paths():
     assert player.hp == hp_before_success
     assert state.get("deleted_options", set()) == set()
 
-    assert engine.skill_system.trigger_skill(SkillId.JINMING, player, engine, mode="choose", option=4)
+    assert engine.skill_system.trigger_skill(
+        SkillId.JINMING, player, engine, mode="choose", option=4
+    )
     hp_before_failure = player.hp
     assert engine.skill_system.trigger_skill(SkillId.JINMING, player, engine, mode="resolve")
     assert player.hand_count == 5
@@ -134,14 +140,20 @@ def test_qingyuan_marks_at_game_start_and_steals_when_marked_target_gains_cards(
     marked_ids = state["marked_player_ids"]
     assert len(marked_ids) == 1
 
-    marked_target = next(candidate for candidate in engine.players[1:] if candidate.id in marked_ids)
+    marked_target = next(
+        candidate for candidate in engine.players[1:] if candidate.id in marked_ids
+    )
     marked_target.hand.clear()
-    gained_card = make_card("qingyuan_gain", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL)
+    gained_card = make_card(
+        "qingyuan_gain", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL
+    )
     marked_target.draw_cards([gained_card])
     engine.current_player_index = engine.players.index(marked_target)
     hand_before = player.hand_count
 
-    engine.notify_cards_obtained(marked_target, [gained_card], source=marked_target, reason="test_gain")
+    engine.notify_cards_obtained(
+        marked_target, [gained_card], source=marked_target, reason="test_gain"
+    )
 
     assert player.hand_count == hand_before + 1
     assert marked_target.hand_count == 0
@@ -172,7 +184,9 @@ def test_zishou_draws_extra_cards_and_discards_them_after_dealing_damage():
     player = engine.players[0]
     player.hand.clear()
     engine.deck.draw_pile = [
-        make_card(f"zishou_draw_{index}", name=CardName.TAO, subtype=CardSubtype.HEAL, number=index + 1)
+        make_card(
+            f"zishou_draw_{index}", name=CardName.TAO, subtype=CardSubtype.HEAL, number=index + 1
+        )
         for index in range(5)
     ]
 
@@ -211,10 +225,16 @@ def test_zongshi_increases_hand_limit_and_prevents_first_damage_per_kingdom():
 def test_xuanhuo_take_branch_transfers_two_cards_each_way():
     engine = create_engine(["jiefazheng", "liubei", "caocao"])
     player, receiver, forced_target = engine.players[:3]
-    give_one = make_card("xuanhuo_give_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL)
-    give_two = make_card("xuanhuo_give_2", name=CardName.SHAN, suit=CardSuit.DIAMOND, subtype=CardSubtype.DODGE)
+    give_one = make_card(
+        "xuanhuo_give_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL
+    )
+    give_two = make_card(
+        "xuanhuo_give_2", name=CardName.SHAN, suit=CardSuit.DIAMOND, subtype=CardSubtype.DODGE
+    )
     take_one = make_card("xuanhuo_take_1", name=CardName.SHA, subtype=CardSubtype.ATTACK)
-    take_two = make_card("xuanhuo_take_2", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL)
+    take_two = make_card(
+        "xuanhuo_take_2", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL
+    )
     player.hand = [give_one, give_two]
     receiver.hand = [take_one, take_two]
 
@@ -238,7 +258,9 @@ def test_enyuan_rewards_large_obtain_and_punishes_damage_source_without_red_card
     player, source = engine.players[:2]
     player.hand.clear()
     obtained_cards = [
-        make_card("enyuan_obtain_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL),
+        make_card(
+            "enyuan_obtain_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL
+        ),
         make_card("enyuan_obtain_2", name=CardName.SHAN, subtype=CardSubtype.DODGE),
     ]
 
@@ -264,7 +286,9 @@ def test_guying_triggers_on_single_card_loss_and_resolves_prepare_discard():
     player = engine.players[0]
     current_player = engine.players[1]
     lost_card = make_card("guying_lost", name=CardName.SHAN, subtype=CardSubtype.DODGE)
-    gift_card = make_card("guying_gift", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL)
+    gift_card = make_card(
+        "guying_gift", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL
+    )
     player.hand = [lost_card]
     current_player.hand = [gift_card]
     engine.current_player_index = 1
@@ -285,7 +309,9 @@ def test_guying_triggers_on_single_card_loss_and_resolves_prepare_discard():
 def test_muzhen_supports_both_options_once_each():
     engine = create_engine(["xiangchong", "liubei", "caocao"])
     player, target_one, target_two = engine.players[:3]
-    give_one = make_card("muzhen_give_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL)
+    give_one = make_card(
+        "muzhen_give_1", name=CardName.TAO, suit=CardSuit.HEART, subtype=CardSubtype.HEAL
+    )
     give_two = make_card("muzhen_give_2", name=CardName.SHAN, subtype=CardSubtype.DODGE)
     placed_armor = make_card(
         "muzhen_armor",

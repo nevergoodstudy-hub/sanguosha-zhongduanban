@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/TUI-Textual-blueviolet" alt="Textual">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-green" alt="Platform">
   <img src="https://img.shields.io/badge/code%20style-ruff-261230.svg" alt="Code style: ruff">
-  <img src="https://img.shields.io/badge/tests-targeted%20regressions%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-full%20suite%20passing-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/identity%20sync-5%20heroes-blue" alt="Identity Sync">
 </p>
 
@@ -27,6 +27,7 @@
 > - 当前仅保留最新稳定版本 `v4.1.1`
 > - 新版本发布仅使用语义化版本标签 `vX.Y.Z`（例如 `v4.1.2`）
 > - 发布流程文档：`docs/release-process.md`
+> - 架构文档：`ARCHITECTURE.md`（英文同步版） / `docs/architecture.md`（中文设计版）
 
 
 全鼠标点击交互的终端三国杀，基于 [Textual](https://textual.textualize.io/) TUI 框架构建。
@@ -100,20 +101,44 @@
 ```bash
 git clone https://github.com/nevergoodstudy-hub/sanguosha-zhongduanban.git
 cd sanguosha-zhongduanban
-pip install -e .
+python -m pip install -e .
 python main.py
 ```
+
+#### 开发 / 调试环境（推荐）
+
+如果你要运行测试、打包发布，或者排查本地依赖问题，优先使用项目元数据安装开发环境，而不是手动逐个安装依赖：
+
+```bash
+python -m pip install -e ".[dev]"
+python -c "from pydantic.version import version_info; print(version_info())"
+```
+
+For CI/release parity, prefer `python -m pip install ".[dev]"` when you want a regular (non-editable) install.
+
+`version_info()` 可以快速确认当前环境里的 `pydantic` / `pydantic-core` 组合是否与仓库当前声明一致。
 
 ### 方式三：自行构建
 
 ```bash
-pip install pyinstaller
+python -m pip install ".[build]"
 python build.py                               # 生成 dist/sanguosha.exe (单文件)
 python build.py --onedir                      # 目录模式
+python build.py --name sanguosha-dev          # 自定义输出名称
 python build_msix.py --allow-placeholder-assets  # Windows 本地验证 MSIX（开发占位资源）
 ```
 
 GitHub Release 标签构建会产出 Windows / Linux / macOS 的 PyInstaller 制品；`build_msix.py` 主要用于本地 Windows 打包验证。
+
+#### CI / Release 自动化
+
+- `CI` 工作流：运行 Ruff、MyPy、三平台 pytest、coverage/junit 工件上传、安全扫描与 `python -m build`
+- `Release` 工作流：仅在推送 `v*.*.*` 标签时创建/更新 GitHub Release
+- 发布资产：
+  - Windows: `sanguosha-windows-amd64.zip`
+  - Linux: `sanguosha-linux-amd64.tar.gz`
+  - macOS: `sanguosha-macos-amd64.tar.gz`
+- Release 上传方式已统一为 `gh release create` / `gh release upload`，不再依赖第三方 release action
 
 ### 其他模式
 
@@ -335,7 +360,8 @@ sanguosha/
 ### 运行测试
 
 ```bash
-pip install -e ".[dev]"
+python -m pip install ".[dev]"
+python -c "from pydantic.version import version_info; print(version_info())"            # 快速确认 runtime/core 版本组合
 python -m pytest tests/ -v                                                                 # 全量测试
 python -m pytest tests/test_identity_sync_state.py tests/test_identity_sync_heroes.py tests/test_identity_sync_ai.py tests/test_integration.py -q
 python -m pytest --cov=game --cov=ai                                                       # 含覆盖率报告

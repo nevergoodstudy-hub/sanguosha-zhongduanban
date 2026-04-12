@@ -118,6 +118,7 @@ class GameEvent:
     @property
     def target(self) -> Player | None:
         return self.data.get("target")
+
     @property
     def player(self) -> Player | None:
         return self.data.get("player")
@@ -133,6 +134,7 @@ class GameEvent:
     @property
     def damage(self) -> int:
         return self.data.get("damage", 0)
+
     @property
     def cards(self) -> list[Card]:
         return self.data.get("cards", [])

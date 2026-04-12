@@ -157,9 +157,7 @@ class EasyStrategy:
                 return engine.use_card(player, card)
 
         elif (
-            card.subtype == CardSubtype.ALCOHOL
-            and not player.alcohol_used
-            and player.can_use_sha()
+            card.subtype == CardSubtype.ALCOHOL and not player.alcohol_used and player.can_use_sha()
         ):
             sha = player.get_cards_by_name(CardName.SHA)
             if sha:

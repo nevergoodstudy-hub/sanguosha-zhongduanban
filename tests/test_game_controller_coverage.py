@@ -1,6 +1,7 @@
 """Tests for game.game_controller pure-logic helper methods."""
 
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
@@ -8,6 +9,7 @@ from game.card import CardName, CardType
 from game.engine import GamePhase, GameState
 from game.game_controller import GameController
 from game.player import Identity
+from i18n import t as _t
 
 
 def _make_ui():
@@ -58,6 +60,14 @@ def _make_player(is_ai=False, hp=4, max_hp=4, hand=None):
     player.need_discard = 0
     player.identity = Identity.LORD
     return player
+
+
+def _make_hero(hero_id: str, name: str, *, is_lord_skill: bool = False):
+    return SimpleNamespace(
+        id=hero_id,
+        name=name,
+        skills=[SimpleNamespace(is_lord_skill=is_lord_skill)],
+    )
 
 
 # ==================== __init__ ====================
@@ -309,85 +319,214 @@ class TestUpdatePlayableMask:
 # ==================== _show_turn_header ====================
 
 
-class TestShowTurnHeader:
-    def test_shows_header(self):
+class _TestShowTurnHeaderLegacy:
+    @pytest.mark.asyncio
+    async def test_shows_header_via_controller_io(self):
         engine = _make_engine()
         engine.round_count = 3
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player()
-        ctrl._show_turn_header(player)
-        assert ctrl.ui.show_log.call_count >= 3  # multiple lines
+
+        await ctrl._show_turn_header(player)
+
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(""),
+                call("鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲"),
+                call(
+                    _t(
+                        "controller.round_header",
+                        round=3,
+                        player="Player1",
+                        hero="TestHero",
+                    )
+                ),
+                call("鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲"),
+            ]
+        )
 
 
 # ==================== Phase execution helpers ====================
 
 
-class TestPhaseExecution:
-    def test_execute_prepare_phase(self):
+class TestShowTurnHeader:
+    @pytest.mark.asyncio
+    async def test_shows_header_via_controller_io(self):
         engine = _make_engine()
+        engine.round_count = 3
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player()
-        ctrl._execute_prepare_phase(player)
+        border = "─" * 12
+
+        await ctrl._show_turn_header(player)
+
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(""),
+                call(border),
+                call(
+                    _t(
+                        "controller.round_header",
+                        round=3,
+                        player="Player1",
+                        hero="TestHero",
+                    )
+                ),
+                call(border),
+            ]
+        )
+
+
+class TestPhaseExecution:
+    @pytest.mark.asyncio
+    async def test_execute_prepare_phase(self):
+        engine = _make_engine()
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        player = _make_player()
+
+        await ctrl._execute_prepare_phase(player)
+
         engine.phase_prepare.assert_called_once_with(player)
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.phase_prepare"))
 
-    def test_execute_draw_phase(self):
+    @pytest.mark.asyncio
+    async def test_execute_draw_phase(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(is_ai=True)
         player.hand_count = 4
-        ctrl._execute_draw_phase(player)
+        engine.phase_draw.side_effect = lambda current: setattr(current, "hand_count", 6)
+
+        drawn = await ctrl._execute_draw_phase(player)
+
         engine.phase_draw.assert_called_once_with(player)
+        assert drawn == 2
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.phase_draw")),
+                call(_t("controller.drew_cards_ai", player="Player1", count=2)),
+            ]
+        )
 
-    def test_execute_draw_phase_human(self):
+    @pytest.mark.asyncio
+    async def test_execute_draw_phase_human(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(is_ai=False)
         player.hand_count = 4
-        ctrl._execute_draw_phase(player)
+        engine.phase_draw.side_effect = lambda current: setattr(current, "hand_count", 5)
+
+        drawn = await ctrl._execute_draw_phase(player)
+
         engine.phase_draw.assert_called_once()
+        assert drawn == 1
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.phase_draw")),
+                call(_t("controller.drew_cards_human", count=1, hand_count=5)),
+            ]
+        )
 
-    def test_execute_end_phase_ai(self):
+    @pytest.mark.asyncio
+    async def test_execute_end_phase_ai(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(is_ai=True)
-        ctrl._execute_end_phase(player)
-        engine.phase_end.assert_called_once_with(player)
 
-    def test_execute_end_phase_human(self):
+        await ctrl._execute_end_phase(player)
+
+        engine.phase_end.assert_called_once_with(player)
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.phase_end")),
+                call(_t("controller.turn_end_ai", player="Player1")),
+            ]
+        )
+
+    @pytest.mark.asyncio
+    async def test_execute_end_phase_human(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(is_ai=False)
-        ctrl._execute_end_phase(player)
-        engine.phase_end.assert_called_once()
 
-    def test_execute_discard_phase_no_discard(self):
+        await ctrl._execute_end_phase(player)
+
+        engine.phase_end.assert_called_once()
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.phase_end")),
+                call(_t("controller.turn_end_human")),
+            ]
+        )
+
+    @pytest.mark.asyncio
+    async def test_execute_discard_phase_no_discard(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         player.need_discard = 0
-        ctrl._execute_discard_phase(player)
+        await ctrl._execute_discard_phase(player)
         # Should do nothing
         engine.phase_discard.assert_not_called()
 
-    def test_execute_discard_phase_ai(self):
+    @pytest.mark.asyncio
+    async def test_execute_discard_phase_ai(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player(is_ai=True)
         player.need_discard = 2
-        ctrl._execute_discard_phase(player)
+        await ctrl._execute_discard_phase(player)
         engine.phase_discard.assert_called_once_with(player)
+
+    @pytest.mark.asyncio
+    async def test_execute_discard_phase_human_routes_through_controller_io(self):
+        engine = _make_engine()
+        ctrl = _make_controller(engine=engine)
+        player = _make_player(is_ai=False)
+        player.need_discard = 2
+        selected = [MagicMock(), MagicMock()]
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.show_game_state = AsyncMock()
+        ctrl._controller_io.choose_cards_to_discard = AsyncMock(return_value=selected)
+
+        await ctrl._execute_discard_phase(player)
+
+        ctrl._controller_io.show_game_state.assert_awaited_once()
+        ctrl._controller_io.choose_cards_to_discard.assert_awaited_once_with(player, 2)
+        engine.discard_cards.assert_called_once_with(player, selected)
 
 
 # ==================== _handle_game_over ====================
 
 
 class TestHandleGameOver:
-    def test_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._handle_game_over()  # no error
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-    def test_lord_wins_lord_player(self):
+        await ctrl._handle_game_over()  # no error
+        ctrl._controller_io.show_game_over.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_lord_wins_lord_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Lord wins!"
         engine.winner_identity = Identity.LORD
@@ -395,11 +534,14 @@ class TestHandleGameOver:
         human.identity = Identity.LORD
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Lord wins!", True)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Lord wins!", True)
 
-    def test_lord_wins_loyalist_player(self):
+    @pytest.mark.asyncio
+    async def test_lord_wins_loyalist_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Lord wins!"
         engine.winner_identity = Identity.LORD
@@ -407,11 +549,14 @@ class TestHandleGameOver:
         human.identity = Identity.LOYALIST
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Lord wins!", True)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Lord wins!", True)
 
-    def test_rebel_wins_rebel_player(self):
+    @pytest.mark.asyncio
+    async def test_rebel_wins_rebel_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Rebels win!"
         engine.winner_identity = Identity.REBEL
@@ -419,11 +564,14 @@ class TestHandleGameOver:
         human.identity = Identity.REBEL
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Rebels win!", True)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Rebels win!", True)
 
-    def test_spy_wins_spy_player(self):
+    @pytest.mark.asyncio
+    async def test_spy_wins_spy_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Spy wins!"
         engine.winner_identity = Identity.SPY
@@ -431,11 +579,14 @@ class TestHandleGameOver:
         human.identity = Identity.SPY
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Spy wins!", True)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Spy wins!", True)
 
-    def test_loss(self):
+    @pytest.mark.asyncio
+    async def test_loss(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Lord wins!"
         engine.winner_identity = Identity.LORD
@@ -443,18 +594,23 @@ class TestHandleGameOver:
         human.identity = Identity.REBEL
         engine.human_player = human
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Lord wins!", False)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Lord wins!", False)
 
-    def test_no_human_player(self):
+    @pytest.mark.asyncio
+    async def test_no_human_player(self):
         engine = _make_engine()
         engine.get_winner_message.return_value = "Game over"
         engine.human_player = None
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_over = AsyncMock()
 
-        ctrl._handle_game_over()
-        ctrl.ui.show_game_over.assert_called_once_with("Game over", False)
+        await ctrl._handle_game_over()
+        ctrl._controller_io.show_game_over.assert_awaited_once_with("Game over", False)
 
 
 # ==================== Edge cases for _run_ai_turn / _run_human_turn ====================
@@ -479,10 +635,11 @@ class TestRunTurnEdgeCases:
         ctrl.engine = None
         await ctrl._game_loop()  # should not raise
 
-    def test_choose_heroes_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_choose_heroes_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._choose_heroes()  # should not raise
+        await ctrl._choose_heroes()  # should not raise
 
     def test_setup_ai_bots_no_engine(self):
         ctrl = _make_controller()
@@ -495,10 +652,11 @@ class TestRunTurnEdgeCases:
         ctrl.engine = None
         await ctrl._human_play_phase(MagicMock())  # should not raise
 
-    def test_handle_play_specific_card_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_handle_play_specific_card_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._handle_play_specific_card(MagicMock(), MagicMock())  # should not raise
+        await ctrl._handle_play_specific_card(MagicMock(), MagicMock())  # should not raise
 
     @pytest.mark.asyncio
     async def test_handle_use_skill_no_engine(self):
@@ -506,25 +664,284 @@ class TestRunTurnEdgeCases:
         ctrl.engine = None
         await ctrl._handle_use_skill(MagicMock())  # should not raise
 
-    def test_human_discard_phase_no_engine(self):
+    @pytest.mark.asyncio
+    async def test_handle_use_skill_zhiheng_logs_via_controller_io(self):
+        engine = _make_engine()
+        engine.skill_system = MagicMock()
+        engine.skill_system.get_usable_skills.return_value = ["zhiheng"]
+        player = _make_player(hand=[_make_card(name=CardName.SHA)])
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.show_skill_menu = MagicMock(return_value="zhiheng")
+        ctrl._select_cards_for_skill = AsyncMock(return_value=player.hand)
+
+        await ctrl._handle_use_skill(player)
+
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.choose_discard_cards"))
+        engine.skill_system.use_skill.assert_called_once_with("zhiheng", player, cards=player.hand)
+
+    @pytest.mark.asyncio
+    async def test_handle_use_skill_fanjian_logs_via_controller_io(self):
+        engine = _make_engine()
+        engine.skill_system = MagicMock()
+        engine.skill_system.get_usable_skills.return_value = ["fanjian"]
+        player = _make_player(hand=[_make_card(name=CardName.SHA)])
+        target = _make_player()
+        target.name = "Target"
+        engine.get_other_players.return_value = [target]
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.show_skill_menu = MagicMock(return_value="fanjian")
+        ctrl._controller_io.choose_card_to_play = MagicMock(return_value=player.hand[0])
+        ctrl._controller_io.choose_target = MagicMock(return_value=target)
+
+        await ctrl._handle_use_skill(player)
+
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.choose_show_card"))
+        engine.skill_system.use_skill.assert_called_once_with(
+            "fanjian", player, targets=[target], cards=[player.hand[0]]
+        )
+
+    @pytest.mark.asyncio
+    async def test_human_discard_phase_no_engine(self):
         ctrl = _make_controller()
         ctrl.engine = None
-        ctrl._human_discard_phase(MagicMock())  # should not raise
+        await ctrl._human_discard_phase(MagicMock())  # should not raise
+
+
+class TestSessionDelegation:
+    @pytest.mark.asyncio
+    async def test_start_new_game_routes_through_session_boundary(self):
+        from ai.bot import AIDifficulty
+
+        ui = _make_ui()
+        ctrl = _make_controller(ui=ui)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_player_count_menu = AsyncMock(return_value=6)
+        ctrl._controller_io.show_difficulty_menu = AsyncMock(return_value=AIDifficulty.HARD.value)
+        ctrl._choose_heroes = AsyncMock()
+        ctrl._setup_ai_bots = MagicMock()
+        ctrl._game_loop = AsyncMock()
+
+        mock_engine = MagicMock()
+
+        with (
+            patch("game.runtime.session.GameEngine", return_value=mock_engine) as engine_cls,
+            patch("game.runtime.session.SkillSystem") as skill_system_cls,
+        ):
+            await ctrl.start_new_game()
+
+        assert ctrl.ai_difficulty == AIDifficulty.HARD
+        assert ctrl.engine is mock_engine
+        engine_cls.assert_called_once_with()
+        ctrl._controller_io.show_player_count_menu.assert_awaited_once_with()
+        ctrl._controller_io.show_difficulty_menu.assert_awaited_once_with()
+        mock_engine.setup_game.assert_called_once_with(6, human_player_index=0)
+        mock_engine.set_ui.assert_called_once_with(ui)
+        ui.set_engine.assert_called_once_with(mock_engine)
+        skill_system = skill_system_cls.return_value
+        skill_system_cls.assert_called_once_with(mock_engine)
+        mock_engine.set_skill_system.assert_called_once_with(skill_system)
+        ctrl._choose_heroes.assert_awaited_once_with()
+        ctrl._setup_ai_bots.assert_called_once_with()
+        mock_engine.start_game.assert_called_once_with()
+        ctrl._game_loop.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_game_loop_routes_ai_turn_and_game_over_through_wrappers(self):
+        engine = _make_engine()
+        ai_player = _make_player(is_ai=True)
+        ai_player.name = "AI-1"
+        engine.current_player = ai_player
+        engine.is_game_over.side_effect = [False, True]
+
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_game_state = AsyncMock()
+        ctrl._run_ai_turn = AsyncMock()
+        ctrl._run_human_turn = AsyncMock()
+        ctrl._handle_game_over = AsyncMock()
+
+        await ctrl._game_loop()
+
+        ctrl._controller_io.show_game_state.assert_awaited_once_with(engine, ai_player)
+        ctrl._run_ai_turn.assert_awaited_once_with(ai_player)
+        ctrl._run_human_turn.assert_not_awaited()
+        engine.next_turn.assert_not_called()
+        ctrl._handle_game_over.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_human_discard_phase_routes_through_session_boundary(self):
+        ctrl = _make_controller()
+        player = _make_player()
+        ctrl._session.human_discard_phase = AsyncMock()
+
+        await ctrl._human_discard_phase(player)
+
+        ctrl._session.human_discard_phase.assert_awaited_once_with(player)
+
+    @pytest.mark.asyncio
+    async def test_handle_game_over_routes_through_session_boundary(self):
+        ctrl = _make_controller()
+        ctrl._session.handle_game_over = AsyncMock()
+
+        await ctrl._handle_game_over()
+
+        ctrl._session.handle_game_over.assert_awaited_once_with()
+
+    @pytest.mark.asyncio
+    async def test_confirm_quit_routes_through_session_boundary(self):
+        ctrl = _make_controller()
+        ctrl._session.confirm_quit = AsyncMock(return_value=True)
+
+        result = await ctrl._confirm_quit()
+
+        assert result is True
+        ctrl._session.confirm_quit.assert_awaited_once_with()
+
+
+class TestControllerIoBoundary:
+    @pytest.mark.asyncio
+    async def test_choose_heroes_lord_routes_through_controller_io(self):
+        engine = _make_engine()
+        human = _make_player(is_ai=False)
+        human.id = 1
+        human.name = "Human"
+        human.identity = Identity.LORD
+        human.hero = None
+        engine.human_player = human
+        engine.players = [human]
+
+        lord_hero = _make_hero("lord_hero", "Lord Hero", is_lord_skill=True)
+        normal_heroes = [_make_hero(f"hero_{i}", f"Hero {i}") for i in range(4)]
+        engine.hero_repo = MagicMock()
+        engine.hero_repo.get_all_heroes.return_value = [lord_hero, *normal_heroes]
+
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.show_hero_selection = AsyncMock(return_value=[lord_hero])
+
+        await ctrl._choose_heroes()
+
+        ctrl._controller_io.show_log.assert_any_await(_t("controller.lord_choose_hero"))
+        ctrl._controller_io.show_log.assert_any_await(
+            _t("controller.hero_chosen", player="Human", hero="Lord Hero")
+        )
+        available, selected_count, is_lord = ctrl._controller_io.show_hero_selection.await_args.args
+        assert len(available) == 5
+        assert selected_count == 1
+        assert is_lord is True
+        human.set_hero.assert_called_once()
+        engine.choose_heroes.assert_called_once_with({})
+
+    @pytest.mark.asyncio
+    async def test_auto_choose_heroes_for_ai_routes_logs_through_controller_io(self):
+        engine = _make_engine()
+        ai_player = _make_player(is_ai=True)
+        ai_player.id = 2
+        ai_player.name = "AI-1"
+        ai_player.hero = None
+        engine.players = [ai_player]
+
+        chosen_hero = _make_hero("ai_hero", "AI Hero")
+        engine.hero_repo = MagicMock()
+        engine.hero_repo.get_all_heroes.return_value = [chosen_hero]
+
+        ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._select_hero_for_ai = MagicMock(return_value=chosen_hero)
+
+        result = await ctrl._auto_choose_heroes_for_ai([])
+
+        assert result == {2: "ai_hero"}
+        ctrl._select_hero_for_ai.assert_called_once()
+        assert ctrl._select_hero_for_ai.call_args.args[0] is ai_player
+        ctrl._controller_io.show_log.assert_awaited_once_with(
+            _t("controller.hero_chosen", player="AI-1", hero="AI Hero")
+        )
+
+    @pytest.mark.asyncio
+    async def test_confirm_quit_uses_controller_io_prompt(self):
+        ctrl = _make_controller()
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.prompt_text = AsyncMock(return_value="Y")
+
+        with patch("game.game_controller.input", return_value="N"):
+            result = await ctrl._confirm_quit()
+
+        assert result is True
+        ctrl._controller_io.prompt_text.assert_awaited_once_with(_t("controller.confirm_quit"))
+
+    @pytest.mark.asyncio
+    async def test_select_cards_for_skill_uses_controller_io_logs(self):
+        engine = _make_engine()
+        ctrl = _make_controller(engine=engine)
+        card_a = _make_card(name=CardName.SHA)
+        card_b = _make_card(name=CardName.SHAN)
+        player = _make_player(hand=[card_a, card_b])
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.prompt_text = AsyncMock(return_value="1 2")
+
+        with patch("game.game_controller.input", return_value=""):
+            result = await ctrl._select_cards_for_skill(player, 1, 2)
+
+        assert result == [card_a, card_b]
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.select_cards", min=1, max=2)),
+                call(f"  [1] {card_a.display_name}"),
+                call(f"  [2] {card_b.display_name}"),
+            ]
+        )
+        ctrl._controller_io.prompt_text.assert_awaited_once_with(_t("controller.input_prompt"))
+
+    @pytest.mark.asyncio
+    async def test_select_cards_for_skill_invalid_choice_logs_range_error(self):
+        engine = _make_engine()
+        ctrl = _make_controller(engine=engine)
+        card_a = _make_card(name=CardName.SHA)
+        player = _make_player(hand=[card_a])
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
+        ctrl._controller_io.prompt_text = AsyncMock(side_effect=["2", "1"])
+
+        result = await ctrl._select_cards_for_skill(player, 1, 1)
+
+        assert result == [card_a]
+        ctrl._controller_io.show_log.assert_has_awaits(
+            [
+                call(_t("controller.select_cards", min=1, max=1)),
+                call(f"  [1] {card_a.display_name}"),
+                call(_t("controller.select_cards_range", min=1, max=1)),
+            ]
+        )
 
 
 # ==================== _handle_play_specific_card branches ====================
 
 
 class TestHandlePlaySpecificCard:
-    def test_equipment(self):
+    @pytest.mark.asyncio
+    async def test_handle_play_specific_card_equipment_logs_via_controller_io(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player()
         card = _make_card(card_type=CardType.EQUIPMENT)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
+        ctrl._controller_io.show_log.assert_awaited_once_with(
+            _t("controller.equipped", card=card.name)
+        )
         engine.use_card.assert_called_once()
 
-    def test_sha_with_target(self):
+    @pytest.mark.asyncio
+    async def test_sha_with_target(self):
         engine = _make_engine()
         target = MagicMock(name="Target")
         engine.get_targets_in_range.return_value = [target]
@@ -533,30 +950,36 @@ class TestHandlePlaySpecificCard:
         player.can_use_sha.return_value = True
         ctrl.ui.choose_target.return_value = target
         card = _make_card(name=CardName.SHA)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_sha_no_targets(self):
+    @pytest.mark.asyncio
+    async def test_handle_play_specific_card_sha_no_targets_logs_via_controller_io(self):
         engine = _make_engine()
         engine.get_targets_in_range.return_value = []
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player()
         player.can_use_sha.return_value = True
         card = _make_card(name=CardName.SHA)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.no_targets"))
         engine.use_card.assert_not_called()
 
-    def test_sha_cannot_use_no_paoxiao(self):
+    @pytest.mark.asyncio
+    async def test_sha_cannot_use_no_paoxiao(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         player.can_use_sha.return_value = False
         player.has_skill.return_value = False
         card = _make_card(name=CardName.SHA)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_sha_cannot_use_has_paoxiao(self):
+    @pytest.mark.asyncio
+    async def test_sha_cannot_use_has_paoxiao(self):
         engine = _make_engine()
         target = MagicMock()
         engine.get_targets_in_range.return_value = [target]
@@ -566,58 +989,68 @@ class TestHandlePlaySpecificCard:
         player.has_skill.return_value = True
         ctrl.ui.choose_target.return_value = target
         card = _make_card(name=CardName.SHA)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_tao_hp_full(self):
+    @pytest.mark.asyncio
+    async def test_handle_play_specific_card_tao_hp_full_logs_via_controller_io(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
+        ctrl._controller_io = MagicMock()
+        ctrl._controller_io.show_log = AsyncMock()
         player = _make_player(hp=4, max_hp=4)
         card = _make_card(name=CardName.TAO, card_type=CardType.BASIC)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
+        ctrl._controller_io.show_log.assert_awaited_once_with(_t("controller.hp_full"))
         engine.use_card.assert_not_called()
 
-    def test_tao_ok(self):
+    @pytest.mark.asyncio
+    async def test_tao_ok(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player(hp=2, max_hp=4)
         card = _make_card(name=CardName.TAO, card_type=CardType.BASIC)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_shan_not_playable(self):
+    @pytest.mark.asyncio
+    async def test_shan_not_playable(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.SHAN, card_type=CardType.BASIC)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_wuzhong(self):
+    @pytest.mark.asyncio
+    async def test_wuzhong(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.WUZHONG, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_nanman(self):
+    @pytest.mark.asyncio
+    async def test_nanman(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.NANMAN, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_taoyuan(self):
+    @pytest.mark.asyncio
+    async def test_taoyuan(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.TAOYUAN, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_juedou_with_target(self):
+    @pytest.mark.asyncio
+    async def test_juedou_with_target(self):
         engine = _make_engine()
         target = MagicMock()
         engine.get_other_players.return_value = [target]
@@ -625,19 +1058,21 @@ class TestHandlePlaySpecificCard:
         ctrl.ui.choose_target.return_value = target
         player = _make_player()
         card = _make_card(name=CardName.JUEDOU, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_juedou_no_others(self):
+    @pytest.mark.asyncio
+    async def test_juedou_no_others(self):
         engine = _make_engine()
         engine.get_other_players.return_value = []
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.JUEDOU, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_guohe_with_target(self):
+    @pytest.mark.asyncio
+    async def test_guohe_with_target(self):
         engine = _make_engine()
         target = MagicMock()
         target.has_any_card.return_value = True
@@ -646,10 +1081,11 @@ class TestHandlePlaySpecificCard:
         ctrl.ui.choose_target.return_value = target
         player = _make_player()
         card = _make_card(name=CardName.GUOHE, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_guohe_no_valid_targets(self):
+    @pytest.mark.asyncio
+    async def test_guohe_no_valid_targets(self):
         engine = _make_engine()
         target = MagicMock()
         target.has_any_card.return_value = False
@@ -657,10 +1093,11 @@ class TestHandlePlaySpecificCard:
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.GUOHE, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_shunshou_with_target(self):
+    @pytest.mark.asyncio
+    async def test_shunshou_with_target(self):
         engine = _make_engine()
         target = MagicMock()
         target.has_any_card.return_value = True
@@ -670,10 +1107,11 @@ class TestHandlePlaySpecificCard:
         ctrl.ui.choose_target.return_value = target
         player = _make_player()
         card = _make_card(name=CardName.SHUNSHOU, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()
 
-    def test_shunshou_no_valid(self):
+    @pytest.mark.asyncio
+    async def test_shunshou_no_valid(self):
         engine = _make_engine()
         target = MagicMock()
         target.has_any_card.return_value = True
@@ -682,13 +1120,14 @@ class TestHandlePlaySpecificCard:
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.SHUNSHOU, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_not_called()
 
-    def test_other_card(self):
+    @pytest.mark.asyncio
+    async def test_other_card(self):
         engine = _make_engine()
         ctrl = _make_controller(engine=engine)
         player = _make_player()
         card = _make_card(name=CardName.TIESUO, card_type=CardType.TRICK)
-        ctrl._handle_play_specific_card(player, card)
+        await ctrl._handle_play_specific_card(player, card)
         engine.use_card.assert_called_once()

@@ -34,13 +34,17 @@ def handle_wushuang(player: Player, engine: GameEngine, **kwargs) -> bool:
 
 
 @skill_handler("jinming")
-def handle_jinming(player: Player, engine: GameEngine, mode: str = "choose", option: int | None = None, **kwargs) -> bool:
+def handle_jinming(
+    player: Player, engine: GameEngine, mode: str = "choose", option: int | None = None, **kwargs
+) -> bool:
     """矜名：回合开始选项，回合结束按记录结算条件并可能删除选项."""
     state = player.get_skill_state("jinming")
     deleted_options = set(state.get("deleted_options", set()))
 
     if mode == "choose":
-        available_options = [candidate for candidate in (1, 2, 3, 4) if candidate not in deleted_options]
+        available_options = [
+            candidate for candidate in (1, 2, 3, 4) if candidate not in deleted_options
+        ]
         if not available_options:
             state["current_option"] = None
             return False
@@ -85,7 +89,9 @@ def handle_jinming(player: Player, engine: GameEngine, mode: str = "choose", opt
         deleted_options.add(current_option)
         state["deleted_options"] = deleted_options
         player.hp -= 1
-        engine.log_event("skill", f"{player.name}未满足【矜名】条件，失去1点体力并删除选项{current_option}")
+        engine.log_event(
+            "skill", f"{player.name}未满足【矜名】条件，失去1点体力并删除选项{current_option}"
+        )
         if player.hp <= 0:
             player.is_dying = True
             engine._handle_dying(player)
@@ -169,7 +175,9 @@ def handle_yanliang(
         return False
 
     if card is None:
-        equipment_cards = [candidate for candidate in donor.hand if candidate.card_type == CardType.EQUIPMENT]
+        equipment_cards = [
+            candidate for candidate in donor.hand if candidate.card_type == CardType.EQUIPMENT
+        ]
         if not equipment_cards:
             return False
         card = equipment_cards[0]
@@ -190,7 +198,9 @@ def handle_yanliang(
         number=card.number,
     )
     donor.set_turn_flag("yanliang_used", True)
-    engine.log_event("skill", f"{donor.name}响应{player.name}的【厌粱】，交出{card.display_name}并视为使用【酒】")
+    engine.log_event(
+        "skill", f"{donor.name}响应{player.name}的【厌粱】，交出{card.display_name}并视为使用【酒】"
+    )
     return engine.card_resolver.use_jiu(donor, virtual_jiu)
 
 
@@ -229,7 +239,9 @@ def handle_zishou(
     if not player.get_turn_flag("zishou_damaged_others", False):
         return False
 
-    discard_count = min(player.hand_count, int(player.get_turn_flag("zishou_draw_count", extra_count)))
+    discard_count = min(
+        player.hand_count, int(player.get_turn_flag("zishou_draw_count", extra_count))
+    )
     if discard_count <= 0:
         return False
 
@@ -267,7 +279,9 @@ def handle_zongshi(
     if drawn_cards:
         source.draw_cards(drawn_cards)
         engine.notify_cards_obtained(source, drawn_cards, source=player, reason="zongshi")
-    engine.log_event("skill", f"{player.name}发动【宗室】，防止了来自{source.name}的伤害并令其摸一张牌")
+    engine.log_event(
+        "skill", f"{player.name}发动【宗室】，防止了来自{source.name}的伤害并令其摸一张牌"
+    )
     return True
 
 

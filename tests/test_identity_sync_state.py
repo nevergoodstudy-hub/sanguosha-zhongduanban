@@ -91,9 +91,7 @@ def test_next_turn_wrap_resets_round_flags_and_emits_round_lifecycle_events():
 
     assert engine.current_player == lord
     assert engine.round_count == 2
-    assert all(
-        player.get_round_flag("zhongshen_red_enabled") is False for player in engine.players
-    )
+    assert all(player.get_round_flag("zhongshen_red_enabled") is False for player in engine.players)
     assert rounds == [
         (EventType.ROUND_END, 1),
         (EventType.ROUND_START, 2),

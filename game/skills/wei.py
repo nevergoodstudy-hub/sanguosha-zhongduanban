@@ -119,7 +119,9 @@ def handle_guicai(player: Player, engine: GameEngine, judge_card: Card = None, *
         if selected:
             player.remove_card(selected)
             engine.deck.discard([selected])
-            engine.log_event("skill", _t("skill_msg.guicai", name=player.name, card=selected.display_name))
+            engine.log_event(
+                "skill", _t("skill_msg.guicai", name=player.name, card=selected.display_name)
+            )
             return True
             pass
 

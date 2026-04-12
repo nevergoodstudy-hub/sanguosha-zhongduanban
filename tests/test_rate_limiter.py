@@ -1,6 +1,5 @@
 """Tests for net.rate_limiter module."""
 
-
 from net.rate_limiter import ConnectionRateLimiter, TokenBucket
 
 

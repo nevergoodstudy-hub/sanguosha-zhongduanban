@@ -1,155 +1,215 @@
-# GitHub Actions CI 工作流
-# 三国杀项目持续集成配置
-
 name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
 
-permissions:
-  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEFAULT_PYTHON_VERSION: "3.14"
+
+permissions: {}
 
 jobs:
-  # 代码质量检查: lint + 格式检查
   lint:
-    name: Lint & Format (Ruff)
+    name: Lint & Format
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.14'
-      - run: pip install ruff
-      - name: Ruff lint
-        run: ruff check . --config pyproject.toml --output-format=github
-      - name: Ruff format check
-        run: ruff format --check . --config pyproject.toml
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-  # 类型检查
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+
+      - name: Ruff lint
+        run: python -m ruff check .
+
+      - name: Ruff format check
+        run: python -m ruff format --check .
+
   typecheck:
     name: Type Check (MyPy)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.14'
-      - run: pip install mypy rich colorama textual websockets
-      - run: mypy game/ ai/ ui/ net/ --config-file pyproject.toml
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-  # 单元测试 + 集成测试 + 覆盖率 (三平台)
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+
+      - name: Run MyPy
+        run: python -m mypy main.py game ai net --config-file pyproject.toml
+
   test:
-    name: Test (Python ${{ matrix.python-version }} / ${{ matrix.os }})
+    name: Tests (${{ matrix.os }} / py${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.10', '3.14']
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        python-version:
+          - "3.10"
+          - "3.14"
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-      - name: Install dependencies
+          cache: pip
+
+      - name: Install dev dependencies
         run: |
-          pip install -r requirements.txt
-          pip install pytest-randomly hypothesis
-      - name: Run tests with coverage
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+
+      - name: Run test suite
+        run: python -m pytest tests/ -v --tb=short --maxfail=1
+
+  coverage:
+    name: Coverage & JUnit
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+      - test
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+
+      - name: Run coverage pass
         run: >
           python -m pytest tests/ -v --tb=short
           --cov=game --cov=ai --cov=ui --cov=net
           --cov-report=term-missing
           --cov-report=xml:coverage.xml
           --junitxml=junit.xml
-      - name: Upload test artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
+          name: coverage-report
           path: |
             coverage.xml
             junit.xml
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
 
-  # 安全扫描
   security:
     name: Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
-          python-version: '3.14'
-      - name: Install dependencies
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install security tooling
         run: |
-          pip install -r requirements.txt
-          pip install pip-audit bandit
-      - name: Dependency vulnerability audit
-        run: pip-audit
-      - name: Static security analysis (Bandit)
-        run: bandit -r game/ ai/ net/ -ll -ii
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+          python -m pip install bandit pip-audit
 
-  # 构建检查
-  build:
-    name: Build Package
+      - name: Audit pinned dependencies
+        run: pip-audit -r requirements.txt
+
+      - name: Run Bandit on packages
+        run: bandit -r game ai net -ll -ii
+
+      - name: Run Bandit on top-level entrypoint
+        run: bandit main.py -ll -ii
+
+  package:
+    name: Build Wheel & Sdist
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, test]
+    needs:
+      - lint
+      - typecheck
+      - test
+      - coverage
+      - security
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
-          python-version: '3.14'
-      - run: pip install build
-      - run: python -m build
-      - uses: actions/upload-artifact@v4
+          python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install build backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+
+      - name: Build distribution artifacts
+        run: python -m build
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: dist
+          name: python-dist
           path: dist/
-
-  # 多平台 EXE 构建 (仅 main 分支)
-  build-exe:
-    name: Build ${{ matrix.platform.name }}
-    needs: [lint, typecheck, test]
-    runs-on: ${{ matrix.platform.os }}
-    if: github.ref == 'refs/heads/main'
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - name: Windows EXE
-            os: windows-latest
-            build_name: sanguosha-windows-amd64
-          - name: Linux Binary
-            os: ubuntu-latest
-            build_name: sanguosha-linux-amd64
-          - name: macOS Binary
-            os: macos-latest
-            build_name: sanguosha-macos-amd64
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.14'
-      - run: pip install rich textual websockets pyinstaller
-      - run: python build.py --name ${{ matrix.platform.build_name }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.platform.build_name }}
-          path: dist/${{ matrix.platform.build_name }}*
-
-  # 导入检查
-  import-check:
-    name: Import Check
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.14'
-      - run: pip install rich colorama textual websockets
-      - run: python -c "import game; import ai; import ui; import net; print('All modules OK')"
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
